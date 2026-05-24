@@ -1,0 +1,33 @@
+<svg viewBox="0 0 420 100"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — logotipo horizontal">
+
+  <defs>
+    <linearGradient id="ibg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="sh" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.20"/>
+      <stop offset="55%"  stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ISOTIPO -->
+  <rect x="0" y="0" width="100" height="100" rx="22" fill="url(#ibg)"/>
+  <rect x="0" y="0" width="100" height="100" rx="22" fill="url(#sh)"/>
+  <circle cx="50" cy="56" r="18" fill="none" stroke="white" stroke-width="10"/>
+  <circle cx="76" cy="26" r="11.5" fill="white"/>
+  <circle cx="76" cy="26" r="9"    fill="#7A8B6E"/>
+  <circle cx="76" cy="26" r="3"    fill="white"/>
+
+  <!-- WORDMARK en blanco para fondos oscuros -->
+  <text y="70"
+        font-family="'Merriweather', Georgia, 'Times New Roman', serif"
+        xml:space="preserve">
+    <tspan x="116" font-size="40" font-weight="900" fill="white" letter-spacing="-1">Opo</tspan><tspan font-size="40" font-weight="400" fill="rgba(255,255,255,0.85)" letter-spacing="-0.5">Noticias</tspan>
+  </text>
+
+</svg>
