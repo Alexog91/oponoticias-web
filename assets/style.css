@@ -168,13 +168,13 @@ img, svg { max-width: 100%; display: block; }
 /* ============================================================
    TICKER (banda BOE)
    ============================================================ */
-.ticker { background: var(--ink); color: #fff; overflow: hidden; padding: 13px 0; }
-.ticker-inner { display: flex; align-items: center; gap: 14px; }
+.ticker { background: var(--ink); color: #fff; display: flex; align-items: center; padding: 0; overflow: hidden; }
 .ticker-label {
   flex-shrink: 0; background: var(--secondary); color: var(--ink);
   font-size: 0.72rem; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
-  padding: 5px 12px; border-radius: 6px; margin-left: 24px;
+  padding: 5px 12px; border-radius: 6px; margin: 0 16px 0 24px; white-space: nowrap; z-index: 2;
 }
+.ticker-inner { flex: 1; overflow: hidden; padding: 13px 0; }
 .ticker-track { display: flex; gap: 44px; white-space: nowrap; animation: scroll-x 34s linear infinite; }
 .ticker:hover .ticker-track { animation-play-state: paused; }
 .ticker-track span { font-size: 0.88rem; opacity: 0.82; }
@@ -260,11 +260,9 @@ img, svg { max-width: 100%; display: block; }
    PUBLICIDAD
    ============================================================ */
 .ad-slot {
-  background: var(--accent-light); border: 1px dashed var(--line); border-radius: var(--radius);
-  display: grid; place-items: center; text-align: center; color: var(--gray);
-  font-size: 0.78rem; letter-spacing: 1px; text-transform: uppercase; min-height: 110px;
+  display: none; /* oculto hasta tener anunciantes */
 }
-.ad-slot.ad-leaderboard { min-height: 130px; }
+.ad-slot.ad-leaderboard { display: none; }
 
 /* ============================================================
    FOOTER
