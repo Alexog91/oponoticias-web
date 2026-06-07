@@ -136,71 +136,164 @@
     </div>
 
 
-    <!-- ═══════════ ÚLTIMAS CONVOCATORIAS ═══════════ -->
-    <section class="section" id="ultimas">
+    <!-- ═══════════ EL DIARIO DEL OPOSITOR (3 columnas) ═══════════ -->
+    <section class="section diario-section" id="ultimas">
       <div class="container">
-        <div class="feed-head reveal">
-          <div>
-            <span class="eyebrow">Recién publicadas</span>
-            <h2 class="section-title">Últimas convocatorias</h2>
-          </div>
-          <a href="#categorias" class="btn btn-ghost">Ver por categoría →</a>
+
+        <!-- Cabecera tipo periódico -->
+        <div class="diario-masthead reveal">
+          <span class="diario-date" id="diarioDate">Diario del opositor</span>
+          <h2 class="diario-name">El Diario del Opositor</h2>
+          <span class="diario-tagline">Noticias, convocatorias y consejos · todo sobre oposiciones en un solo lugar</span>
         </div>
 
-        <!-- Featured grande -->
-        <article class="feature-lead reveal">
-          <div class="feature-lead-media">
-            <span class="eyebrow">Destacada · Educación</span>
-            <h2>Profesores de cuerpos docentes en Almería: convocatoria 2026</h2>
+        <div class="diario-grid">
+
+          <!-- ── COLUMNA IZQUIERDA · NOTICIAS ── -->
+          <aside class="diario-col col-news reveal reveal-d1" aria-label="Noticias de oposiciones">
+            <div class="col-head">
+              <span class="col-kicker">Actualidad</span>
+              <h3 class="col-title">Noticias</h3>
+            </div>
+
+            <!-- Datos de ejemplo · se nutrirán del RSS (paso 3) -->
+            <article class="news-item">
+              <a href="#" class="news-link">
+                <h4>El Gobierno aprueba la mayor oferta de empleo público de la última década</h4>
+                <div class="news-meta"><span class="news-src">20minutos</span><span>hace 2 h</span></div>
+              </a>
+            </article>
+            <article class="news-item">
+              <a href="#" class="news-link">
+                <h4>Sanidad convoca 5.000 nuevas plazas de enfermería para 2026</h4>
+                <div class="news-meta"><span class="news-src">20minutos</span><span>hace 5 h</span></div>
+              </a>
+            </article>
+            <article class="news-item">
+              <a href="#" class="news-link">
+                <h4>Cambios en el temario de las oposiciones a Justicia: lo que debes saber</h4>
+                <div class="news-meta"><span class="news-src">20minutos</span><span>ayer</span></div>
+              </a>
+            </article>
+            <article class="news-item">
+              <a href="#" class="news-link">
+                <h4>Educación adelanta a junio el calendario de oposiciones docentes</h4>
+                <div class="news-meta"><span class="news-src">20minutos</span><span>ayer</span></div>
+              </a>
+            </article>
+            <article class="news-item">
+              <a href="#" class="news-link">
+                <h4>Cómo afecta la nueva ley de función pública a los procesos selectivos</h4>
+                <div class="news-meta"><span class="news-src">20minutos</span><span>hace 2 días</span></div>
+              </a>
+            </article>
+
+            <a href="https://www.20minutos.es/minuteca/oposiciones/" class="col-more" rel="noopener" target="_blank">Más noticias →</a>
+          </aside>
+
+          <!-- ── COLUMNA CENTRAL · CONVOCATORIAS BOE ── -->
+          <div class="diario-col col-main reveal reveal-d2">
+            <div class="col-head">
+              <span class="col-kicker">Hoy en el BOE</span>
+              <h3 class="col-title">Convocatorias</h3>
+            </div>
+
+            <!-- loader.js rellena este grid con datos reales de Supabase -->
+            <div class="conv-grid">
+              <article class="conv-card">
+                <div class="conv-card-strip"></div>
+                <div class="conv-card-body">
+                  <span class="conv-tag">Sanidad</span>
+                  <h3><a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html">Personal estatutario fijo, Grupo A1</a></h3>
+                  <p>El INGESA convoca proceso selectivo por concurso para personal sanitario del Subgrupo A1.</p>
+                  <div class="conv-meta"><span class="src">BOE-A-2026-10613</span><span>16 may</span></div>
+                </div>
+              </article>
+              <article class="conv-card">
+                <div class="conv-card-strip"></div>
+                <div class="conv-card-body">
+                  <span class="conv-tag">Sanidad</span>
+                  <h3><a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html">Matrón/a — Enfermería Obstétrico-Ginecológica</a></h3>
+                  <p>Proceso selectivo por concurso, sistema general de acceso libre, para plaza de matrón/a.</p>
+                  <div class="conv-meta"><span class="src">BOE-A-2026-10614</span><span>16 may</span></div>
+                </div>
+              </article>
+              <article class="conv-card">
+                <div class="conv-card-strip"></div>
+                <div class="conv-card-body">
+                  <span class="conv-tag">Admón. Local</span>
+                  <h3><a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html">Varias plazas — Ayuntamiento de Santa Coloma de Gramenet</a></h3>
+                  <p>Convocatoria para proveer varias plazas de personal funcionario y laboral en Barcelona.</p>
+                  <div class="conv-meta"><span class="src">BOE-A-2026-10617</span><span>16 may</span></div>
+                </div>
+              </article>
+            </div>
+
+            <a href="#categorias" class="col-more">Ver todas por categoría →</a>
           </div>
-          <div class="feature-lead-body">
-            <p style="color:var(--gray); margin-bottom:18px;">La Junta de Andalucía abre proceso selectivo para varias especialidades del cuerpo de profesores. Te explicamos plazos, requisitos y cómo solicitarlo, paso a paso.</p>
-            <div class="conv-meta" style="border:none; padding:0;">
-              <span class="src">BOE · 16 may 2026</span>
-              <a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html" class="conv-readmore">Leer resumen →</a>
-            </div>
-          </div>
-        </article>
 
-        <div class="conv-grid">
-          <article class="conv-card reveal reveal-d1">
-            <div class="conv-card-strip"></div>
-            <div class="conv-card-body">
-              <span class="conv-tag">Sanidad</span>
-              <h3><a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html">Personal estatutario fijo, Grupo A1 — acceso libre y promoción interna</a></h3>
-              <p>El INGESA convoca proceso selectivo por concurso para personal sanitario del Subgrupo A1.</p>
-              <div class="conv-meta">
-                <span class="src">BOE-A-2026-10613</span>
-                <span>16 may</span>
-              </div>
+          <!-- ── COLUMNA DERECHA · BLOG + CREADORES ── -->
+          <aside class="diario-col col-aside reveal reveal-d3" aria-label="Blog y creadores">
+            <div class="col-head">
+              <span class="col-kicker">Para estudiar mejor</span>
+              <h3 class="col-title">Blog</h3>
             </div>
-          </article>
 
-          <article class="conv-card reveal reveal-d2">
-            <div class="conv-card-strip"></div>
-            <div class="conv-card-body">
-              <span class="conv-tag">Sanidad</span>
-              <h3><a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html">Matrón/a — Enfermería Obstétrico-Ginecológica</a></h3>
-              <p>Proceso selectivo por concurso, sistema general de acceso libre, para plaza de matrón/a.</p>
-              <div class="conv-meta">
-                <span class="src">BOE-A-2026-10614</span>
-                <span>16 may</span>
-              </div>
-            </div>
-          </article>
+            <!-- Datos de ejemplo · artículos IA (paso 4) -->
+            <article class="blog-item">
+              <a href="#" class="blog-link">
+                <span class="blog-tag">Técnicas de estudio</span>
+                <h4>El método de repaso espaciado para memorizar el temario sin agobios</h4>
+                <span class="blog-read">5 min de lectura</span>
+              </a>
+            </article>
+            <article class="blog-item">
+              <a href="#" class="blog-link">
+                <span class="blog-tag">Guía</span>
+                <h4>Cómo organizar 6 meses de preparación: plan semana a semana</h4>
+                <span class="blog-read">8 min de lectura</span>
+              </a>
+            </article>
+            <article class="blog-item">
+              <a href="#" class="blog-link">
+                <span class="blog-tag">Motivación</span>
+                <h4>Gestionar la ansiedad antes del examen: 7 estrategias que funcionan</h4>
+                <span class="blog-read">6 min de lectura</span>
+              </a>
+            </article>
 
-          <article class="conv-card reveal reveal-d3">
-            <div class="conv-card-strip"></div>
-            <div class="conv-card-body">
-              <span class="conv-tag">Admón. Local</span>
-              <h3><a href="convocatoria/profesor-cuerpos-docentes-almeria-2026.html">Varias plazas — Ayuntamiento de Santa Coloma de Gramenet</a></h3>
-              <p>Convocatoria para proveer varias plazas de personal funcionario y laboral en Barcelona.</p>
-              <div class="conv-meta">
-                <span class="src">BOE-A-2026-10617</span>
-                <span>16 may</span>
+            <a href="#" class="col-more">Ver todo el blog →</a>
+
+            <!-- Creadores recomendados (solo enlaces editoriales) -->
+            <div class="creators">
+              <div class="col-head">
+                <span class="col-kicker">Recomendados</span>
+                <h3 class="col-title">Creadores</h3>
               </div>
+              <a href="#" class="creator-item" rel="noopener" target="_blank">
+                <span class="creator-avatar">O</span>
+                <span class="creator-info">
+                  <span class="creator-name">Opositoras al Día</span>
+                  <span class="creator-handle">Consejos y rutinas · Instagram</span>
+                </span>
+              </a>
+              <a href="#" class="creator-item" rel="noopener" target="_blank">
+                <span class="creator-avatar">E</span>
+                <span class="creator-info">
+                  <span class="creator-name">Estudia con Marta</span>
+                  <span class="creator-handle">Técnicas de estudio · YouTube</span>
+                </span>
+              </a>
+              <a href="#" class="creator-item" rel="noopener" target="_blank">
+                <span class="creator-avatar">F</span>
+                <span class="creator-info">
+                  <span class="creator-name">Funcionario en Ruta</span>
+                  <span class="creator-handle">Experiencias reales · TikTok</span>
+                </span>
+              </a>
             </div>
-          </article>
+          </aside>
+
         </div>
       </div>
     </section>
@@ -356,5 +449,16 @@
 
   <script src="assets/script.js" defer></script>
   <script src="assets/loader.js" defer></script>
+  <script>
+    // Fecha de la cabecera del diario
+    (function () {
+      var el = document.getElementById('diarioDate');
+      if (!el) return;
+      var dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+      var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+      var d = new Date();
+      el.textContent = dias[d.getDay()] + ', ' + d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+    })();
+  </script>
 </body>
 </html>
