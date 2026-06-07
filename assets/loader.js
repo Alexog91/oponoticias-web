@@ -34,6 +34,21 @@ function truncar(texto, max) {
   return texto.length > max ? texto.slice(0, max).trimEnd() + '…' : texto;
 }
 
+function tiempoRelativo(str) {
+  const d = parseFecha(str);
+  if (!d) return '';
+  const seg = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (seg < 60)       return 'ahora';
+  const min = Math.floor(seg / 60);
+  if (min < 60)       return `hace ${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 24)         return `hace ${h} h`;
+  const dias = Math.floor(h / 24);
+  if (dias === 1)     return 'ayer';
+  if (dias < 7)       return `hace ${dias} días`;
+  return fmtCorto(str);
+}
+
 function extraerOrganismo(titulo) {
   const match = titulo.match(/,\s+(?:de la|del|de los|de las|de)\s+(.+?)(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)/i);
   if (match) return match[1].trim();
@@ -285,6 +300,155 @@ async function cargarPortada() {
   });
 }
 
+/* ── COLUMNA DE NOTICIAS (RSS · index.html) ─────────────────────────────── */
+
+async function cargarNoticias() {
+  const col = document.querySelector('.col-news');
+  if (!col) return;
+
+  let noticias;
+  try {
+    noticias = await supaFetch('noticias_rss?select=*&order=fecha_pub.desc&limit=6');
+  } catch (err) {
+    // La tabla aún no existe o no es accesible → se mantiene el contenido de ejemplo
+    console.warn('[OpoNoticias] noticias_rss no disponible todavía:', err.message);
+    return;
+  }
+
+  if (!noticias || !noticias.length) return;
+
+  // Quitar los items de ejemplo, conservando cabecera y enlace "Más noticias"
+  col.querySelectorAll('.news-item').forEach(n => n.remove());
+  const more = col.querySelector('.col-more');
+
+  noticias.forEach(n => {
+    const art = document.createElement('article');
+    art.className = 'news-item';
+    art.innerHTML = `
+      <a href="${n.enlace}" class="news-link" target="_blank" rel="noopener">
+        <h4>${n.titulo}</h4>
+        <div class="news-meta">
+          <span class="news-src">${n.fuente || '20minutos'}</span>
+          <span>${tiempoRelativo(n.fecha_pub)}</span>
+        </div>
+      </a>`;
+    if (more) col.insertBefore(art, more);
+    else col.appendChild(art);
+  });
+}
+
+/* ── COMUNIDAD AUTÓNOMA: inferencia desde el texto ──────────────────────── */
+/* Si en el futuro existe la columna `comunidad_autonoma`, se usa directamente.
+   Mientras tanto se infiere de la provincia (entre paréntesis o en el texto),
+   del nombre de la comunidad o de la capital. Lo que no se reconoce → null. */
+
+const PROVINCIA_CA = {
+  // Andalucía
+  'ALMERÍA':'Andalucía','ALMERIA':'Andalucía','CÁDIZ':'Andalucía','CADIZ':'Andalucía',
+  'CÓRDOBA':'Andalucía','CORDOBA':'Andalucía','GRANADA':'Andalucía','HUELVA':'Andalucía',
+  'JAÉN':'Andalucía','JAEN':'Andalucía','MÁLAGA':'Andalucía','MALAGA':'Andalucía','SEVILLA':'Andalucía',
+  // Aragón
+  'HUESCA':'Aragón','TERUEL':'Aragón','ZARAGOZA':'Aragón',
+  // Asturias / Cantabria / La Rioja / Murcia / Navarra (uniprovinciales)
+  'ASTURIAS':'Asturias','CANTABRIA':'Cantabria','LA RIOJA':'La Rioja','RIOJA':'La Rioja',
+  'MURCIA':'Murcia','NAVARRA':'Navarra',
+  // Baleares / Canarias
+  'BALEARES':'Baleares','ILLES BALEARS':'Baleares','MALLORCA':'Baleares','MENORCA':'Baleares','IBIZA':'Baleares',
+  'LAS PALMAS':'Canarias','SANTA CRUZ DE TENERIFE':'Canarias','TENERIFE':'Canarias',
+  // Castilla-La Mancha
+  'ALBACETE':'Castilla-La Mancha','CIUDAD REAL':'Castilla-La Mancha','CUENCA':'Castilla-La Mancha',
+  'GUADALAJARA':'Castilla-La Mancha','TOLEDO':'Castilla-La Mancha',
+  // Castilla y León
+  'ÁVILA':'Castilla y León','AVILA':'Castilla y León','BURGOS':'Castilla y León','LEÓN':'Castilla y León','LEON':'Castilla y León',
+  'PALENCIA':'Castilla y León','SALAMANCA':'Castilla y León','SEGOVIA':'Castilla y León','SORIA':'Castilla y León',
+  'VALLADOLID':'Castilla y León','ZAMORA':'Castilla y León',
+  // Cataluña
+  'BARCELONA':'Cataluña','GIRONA':'Cataluña','GERONA':'Cataluña','LLEIDA':'Cataluña','LÉRIDA':'Cataluña','LERIDA':'Cataluña','TARRAGONA':'Cataluña',
+  // Comunidad Valenciana
+  'ALICANTE':'Comunidad Valenciana','ALACANT':'Comunidad Valenciana','CASTELLÓN':'Comunidad Valenciana','CASTELLON':'Comunidad Valenciana',
+  'CASTELLÓ':'Comunidad Valenciana','VALENCIA':'Comunidad Valenciana','VALÈNCIA':'Comunidad Valenciana',
+  // Extremadura
+  'BADAJOZ':'Extremadura','CÁCERES':'Extremadura','CACERES':'Extremadura',
+  // Galicia
+  'A CORUÑA':'Galicia','LA CORUÑA':'Galicia','CORUÑA':'Galicia','LUGO':'Galicia','OURENSE':'Galicia','ORENSE':'Galicia','PONTEVEDRA':'Galicia',
+  // Madrid
+  'MADRID':'Madrid',
+  // País Vasco
+  'ÁLAVA':'País Vasco','ALAVA':'País Vasco','ARABA':'País Vasco','GUIPÚZCOA':'País Vasco','GUIPUZCOA':'País Vasco',
+  'GIPUZKOA':'País Vasco','VIZCAYA':'País Vasco','BIZKAIA':'País Vasco',
+  // Ciudades autónomas
+  'CEUTA':'Ceuta','MELILLA':'Melilla',
+};
+
+// Capitales/ciudades notables que no coinciden con el nombre de su provincia
+const CIUDAD_CA = {
+  'GIJÓN':'Asturias','GIJON':'Asturias','OVIEDO':'Asturias','VIGO':'Galicia','SANTIAGO DE COMPOSTELA':'Galicia',
+  'BILBAO':'País Vasco','SAN SEBASTIÁN':'País Vasco','VITORIA':'País Vasco','PALMA':'Baleares',
+  'JEREZ':'Andalucía','MARBELLA':'Andalucía','VIGO':'Galicia',
+};
+
+// Nombres de comunidad / organismos autonómicos que aparecen literalmente
+const CCAA_DIRECTAS = [
+  ['JUNTA DE ANDALUCÍA','Andalucía'],['JUNTA DE ANDALUCIA','Andalucía'],
+  ['GOBIERNO DE ARAGÓN','Aragón'],['PRINCIPADO DE ASTURIAS','Asturias'],
+  ['GOVERN DE LES ILLES BALEARS','Baleares'],['GOBIERNO DE CANARIAS','Canarias'],
+  ['GOBIERNO DE CANTABRIA','Cantabria'],['CASTILLA-LA MANCHA','Castilla-La Mancha'],
+  ['CASTILLA LA MANCHA','Castilla-La Mancha'],['JUNTA DE CASTILLA Y LEÓN','Castilla y León'],
+  ['CASTILLA Y LEÓN','Castilla y León'],['GENERALITAT DE CATAL','Cataluña'],['CATALUÑA','Cataluña'],['CATALUNYA','Cataluña'],
+  ['GENERALITAT VALENCIANA','Comunidad Valenciana'],['COMUNITAT VALENCIANA','Comunidad Valenciana'],['COMUNIDAD VALENCIANA','Comunidad Valenciana'],
+  ['JUNTA DE EXTREMADURA','Extremadura'],['XUNTA DE GALICIA','Galicia'],['GALICIA','Galicia'],
+  ['GOBIERNO DE LA RIOJA','La Rioja'],['COMUNIDAD DE MADRID','Madrid'],['COMUNIDAD AUTÓNOMA DE MADRID','Madrid'],
+  ['REGIÓN DE MURCIA','Murcia'],['GOBIERNO DE NAVARRA','Navarra'],['COMUNIDAD FORAL DE NAVARRA','Navarra'],
+  ['GOBIERNO VASCO','País Vasco'],['PAÍS VASCO','País Vasco'],['EUSKADI','País Vasco'],
+];
+
+// Organismos de ámbito estatal → "Nacional/Estatal"
+const ORGANISMOS_NACIONALES = [
+  'MINISTERIO','INSTITUTO NACIONAL','ADMINISTRACIÓN GENERAL DEL ESTADO','INGESA',
+  'AGENCIA ESTATAL','AGENCIA TRIBUTARIA','CONSEJO GENERAL','GUARDIA CIVIL',
+  'POLICÍA NACIONAL','FUERZAS ARMADAS','SEGURIDAD SOCIAL','CORREOS','AENA','ADIF',
+];
+
+/** Devuelve un nombre de comunidad (o "Nacional/Estatal") o null si no se reconoce. */
+function inferirCA(c) {
+  if (c.comunidad_autonoma) return c.comunidad_autonoma;   // exacto, si existe la columna
+  const blob = ((c.resumen_claude || '') + ' ' + (c.titulo || '')).toUpperCase();
+
+  // 1 · Provincia entre paréntesis: "... (HUELVA)" → muy fiable
+  const paren = blob.match(/\(([^)]+)\)/g);
+  if (paren) {
+    for (const p of paren) {
+      const dentro = p.replace(/[()]/g, '').trim();
+      if (PROVINCIA_CA[dentro]) return PROVINCIA_CA[dentro];
+    }
+  }
+  // 2 · Nombre de comunidad / organismo autonómico literal
+  for (const [clave, ca] of CCAA_DIRECTAS) {
+    if (blob.includes(clave)) return ca;
+  }
+  // 3 · Provincia como palabra suelta
+  for (const prov in PROVINCIA_CA) {
+    const re = new RegExp('(^|[^A-ZÁÉÍÓÚÑ])' + prov.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^A-ZÁÉÍÓÚÑ]|$)');
+    if (re.test(blob)) return PROVINCIA_CA[prov];
+  }
+  // 4 · Ciudad notable
+  for (const ciudad in CIUDAD_CA) {
+    if (blob.includes(ciudad)) return CIUDAD_CA[ciudad];
+  }
+  // 5 · Organismo estatal
+  if (ORGANISMOS_NACIONALES.some(o => blob.includes(o))) return 'Nacional/Estatal';
+
+  return null;
+}
+
+// Orden preferente para el desplegable
+const ORDEN_CA = [
+  'Andalucía','Aragón','Asturias','Baleares','Canarias','Cantabria',
+  'Castilla-La Mancha','Castilla y León','Cataluña','Comunidad Valenciana',
+  'Extremadura','Galicia','La Rioja','Madrid','Murcia','Navarra','País Vasco',
+  'Ceuta','Melilla','Nacional/Estatal',
+];
+
 /* ── PÁGINA DE CATEGORÍA ────────────────────────────────────────────────── */
 
 async function cargarCategoria(categoria) {
@@ -307,6 +471,14 @@ async function cargarCategoria(categoria) {
     return;
   }
 
+  // Inferir comunidad de cada convocatoria
+  convs.forEach(c => { c._ca = inferirCA(c); });
+
+  // Comunidades presentes (para poblar el desplegable y el contador)
+  const caPresentes = ORDEN_CA.filter(ca => convs.some(c => c._ca === ca));
+  const statCom = document.querySelector('.cat-hero-stats div:nth-child(2) b');
+  if (statCom) statCom.textContent = caPresentes.length;
+
   lista.innerHTML = '';
 
   convs.forEach((c) => {
@@ -328,6 +500,7 @@ async function cargarCategoria(categoria) {
 
     const row = document.createElement('article');
     row.className = 'list-row';
+    row.dataset.ca = c._ca || 'Otras';
     row.innerHTML = `
       <div class="list-date">
         <div class="d">${dia}</div>
@@ -338,15 +511,77 @@ async function cargarCategoria(categoria) {
         ${puesto ? `<p style="margin:3px 0 6px;font-weight:600;font-size:0.92rem;color:var(--primary);text-transform:uppercase;letter-spacing:0.02em;">${puesto}</p>` : ''}
         <div class="list-tags">
           ${plazas ? `<span>${plazas}</span>` : ''}
-          ${!lugarRedundante ? `<span>📍 ${truncar(lugar, 35)}</span>` : ''}
+          ${c._ca ? `<span>🗺️ ${c._ca}</span>` : (!lugarRedundante ? `<span>📍 ${truncar(lugar, 35)}</span>` : '')}
         </div>
       </a>
       <span class="list-cta">Ver en BOE →</span>`;
     lista.appendChild(row);
   });
 
+  // Ahora que las filas existen, montar el desplegable y conectar el filtrado
+  montarFiltroCA(categoria, caPresentes);
+
   const pag = document.querySelector('.pagination');
   if (pag) pag.style.display = 'none';
+}
+
+/* Inserta el desplegable de Comunidad Autónoma en la toolbar y lo conecta. */
+function montarFiltroCA(categoria, caPresentes) {
+  const toolbar = document.querySelector('.cat-toolbar');
+  if (!toolbar) return;
+
+  // Sustituir las pills estáticas por una etiqueta + desplegable funcional
+  const pills = toolbar.querySelector('.filter-pills');
+  const wrap = document.createElement('div');
+  wrap.className = 'filter-pills ca-filter';
+
+  const total = document.querySelectorAll('.cat-list .list-row').length;
+  let opciones = `<option value="__all__">Todas las comunidades</option>`;
+  caPresentes.forEach(ca => { opciones += `<option value="${ca}">${ca}</option>`; });
+
+  wrap.innerHTML = `
+    <label class="ca-label" for="caSelect">Comunidad autónoma</label>
+    <select class="sort-select ca-select" id="caSelect" aria-label="Filtrar por comunidad autónoma">
+      ${opciones}
+    </select>
+    <span class="ca-count" id="caCount"></span>`;
+
+  if (pills) pills.replaceWith(wrap);
+  else toolbar.insertBefore(wrap, toolbar.firstChild);
+
+  const select = wrap.querySelector('#caSelect');
+  const count  = wrap.querySelector('#caCount');
+
+  function aplicar() {
+    const val = select.value;
+    let visibles = 0;
+    document.querySelectorAll('.cat-list .list-row').forEach(row => {
+      const ok = (val === '__all__') || (row.dataset.ca === val);
+      row.style.display = ok ? '' : 'none';
+      if (ok) visibles++;
+    });
+    count.textContent = (val === '__all__')
+      ? `${visibles} convocatorias`
+      : `${visibles} en ${val}`;
+
+    // Mensaje si una comunidad concreta se queda sin resultados visibles
+    let vacio = document.querySelector('.cat-list .ca-empty');
+    if (visibles === 0) {
+      if (!vacio) {
+        vacio = document.createElement('p');
+        vacio.className = 'ca-empty';
+        vacio.style.cssText = 'color:var(--gray);padding:30px 0;text-align:center;';
+        document.querySelector('.cat-list').appendChild(vacio);
+      }
+      vacio.textContent = `No hay convocatorias de esta categoría en ${val} por ahora.`;
+      vacio.style.display = '';
+    } else if (vacio) {
+      vacio.style.display = 'none';
+    }
+  }
+
+  select.addEventListener('change', aplicar);
+  aplicar();
 }
 
 /* ── ARRANQUE ───────────────────────────────────────────────────────────── */
@@ -358,6 +593,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await cargarCategoria(catMeta.getAttribute('content'));
     } else if (document.querySelector('.conv-grid')) {
       await cargarPortada();
+      await cargarNoticias();
     }
   } catch (err) {
     console.error('[OpoNoticias loader]', err);

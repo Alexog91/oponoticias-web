@@ -182,6 +182,124 @@ img, svg { max-width: 100%; display: block; }
 @keyframes scroll-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
 /* ============================================================
+   DIARIO DEL OPOSITOR — Layout 3 columnas (estilo periódico)
+   ============================================================ */
+.diario-section { padding: 64px 0; }
+
+/* Cabecera tipo masthead */
+.diario-masthead {
+  text-align: center;
+  border-top: 3px solid var(--ink);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 0 22px;
+  margin-bottom: 32px;
+}
+.diario-date {
+  display: block; font-family: var(--sans); font-size: 0.76rem; font-weight: 600;
+  letter-spacing: 1.5px; text-transform: uppercase; color: var(--gray); margin-bottom: 8px;
+}
+.diario-name {
+  font-size: clamp(2rem, 5vw, 3.4rem); letter-spacing: -1px; line-height: 1; margin-bottom: 10px;
+}
+.diario-tagline { font-size: 0.92rem; color: var(--gray); font-style: italic; }
+
+/* Rejilla 3 columnas: noticias / convocatorias / blog */
+.diario-grid {
+  display: grid;
+  grid-template-columns: 1.1fr 2.3fr 1.2fr;
+  gap: 0;
+}
+.diario-col { padding: 0 34px; min-width: 0; }
+.col-news  { padding-left: 0; }
+.col-main  { border-left: 1px solid var(--line); border-right: 1px solid var(--line); }
+.col-aside { padding-right: 0; }
+
+/* Cabecera de cada columna */
+.col-head {
+  display: flex; align-items: baseline; gap: 10px;
+  border-bottom: 2px solid var(--ink); padding-bottom: 8px; margin-bottom: 18px;
+}
+.col-kicker {
+  font-family: var(--sans); font-size: 0.66rem; font-weight: 800; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--accent);
+}
+.col-title { font-size: 1.35rem; line-height: 1; }
+
+.col-more {
+  display: inline-block; margin-top: 18px; font-family: var(--sans);
+  font-size: 0.84rem; font-weight: 700; color: var(--primary);
+}
+.col-more:hover { color: var(--ink); }
+
+/* ── Columna izquierda · Noticias ── */
+.news-item { border-bottom: 1px solid var(--line); padding: 14px 0; }
+.news-item:first-of-type { padding-top: 0; }
+.news-link h4 {
+  font-size: 1rem; line-height: 1.32; font-weight: 700; transition: color var(--ease);
+}
+.news-link:hover h4 { color: var(--primary); }
+/* Apertura: primera noticia más grande */
+.news-item:first-of-type { padding-bottom: 16px; }
+.news-item:first-of-type .news-link h4 { font-size: 1.22rem; line-height: 1.28; }
+.news-meta {
+  display: flex; gap: 10px; align-items: center; margin-top: 7px;
+  font-family: var(--sans); font-size: 0.74rem; color: var(--gray);
+}
+.news-src { font-weight: 700; color: var(--accent); }
+
+/* ── Columna central · Convocatorias ── */
+.col-main .conv-grid { grid-template-columns: 1fr; gap: 16px; }
+/* Aspecto más editorial: tarjetas planas que combinan con las columnas */
+.col-main .conv-card { border-radius: 10px; }
+.col-main .conv-card:hover { transform: none; box-shadow: var(--shadow-sm); }
+/* Apertura: primera convocatoria destacada como artículo principal */
+.col-main .conv-card:first-child { border-color: var(--secondary); }
+.col-main .conv-card:first-child .conv-card-body { padding: 26px; }
+.col-main .conv-card:first-child h3 { font-size: 1.35rem; line-height: 1.3; }
+.col-main .conv-card:first-child .conv-card-strip { height: 6px; }
+
+/* ── Columna derecha · Blog ── */
+.blog-item { border-bottom: 1px solid var(--line); padding: 14px 0; }
+.blog-item:first-of-type { padding-top: 0; }
+.blog-tag {
+  display: inline-block; font-family: var(--sans); font-size: 0.64rem; font-weight: 800;
+  letter-spacing: 0.8px; text-transform: uppercase; color: var(--secondary); margin-bottom: 6px;
+}
+.blog-link h4 { font-size: 0.98rem; line-height: 1.34; font-weight: 700; transition: color var(--ease); }
+.blog-link:hover h4 { color: var(--primary); }
+.blog-read { display: block; margin-top: 6px; font-family: var(--sans); font-size: 0.74rem; color: var(--gray); }
+
+/* Creadores recomendados */
+.creators { margin-top: 36px; }
+.creator-item {
+  display: flex; align-items: center; gap: 12px; padding: 11px 0;
+  border-bottom: 1px solid var(--line); transition: var(--ease);
+}
+.creator-item:last-child { border-bottom: none; }
+.creator-avatar {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%;
+  background: var(--grad); color: #fff; display: grid; place-items: center;
+  font-family: var(--serif); font-weight: 700; font-size: 1.05rem;
+}
+.creator-info { display: flex; flex-direction: column; min-width: 0; }
+.creator-name { font-family: var(--serif); font-weight: 700; font-size: 0.92rem; color: var(--ink); transition: color var(--ease); }
+.creator-item:hover .creator-name { color: var(--primary); }
+.creator-handle { font-family: var(--sans); font-size: 0.74rem; color: var(--gray); }
+
+/* Responsive del diario */
+@media (max-width: 980px) {
+  .diario-grid { grid-template-columns: 1fr; gap: 0; }
+  .diario-col { padding: 0; border: none !important; }
+  .col-main   { order: -1; margin-bottom: 36px; }      /* convocatorias primero */
+  .col-news   { margin-bottom: 36px; padding-top: 28px; border-top: 1px solid var(--line); }
+  .col-main .conv-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 540px) {
+  .col-main .conv-grid { grid-template-columns: 1fr; }
+  .diario-col { padding: 0; }
+}
+
+/* ============================================================
    FEATURED / ÚLTIMAS CONVOCATORIAS
    ============================================================ */
 .feed-head { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 16px; margin-bottom: 38px; }
@@ -346,6 +464,12 @@ img, svg { max-width: 100%; display: block; }
 .filter-pill { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; font-size: 0.85rem; font-weight: 500; color: var(--primary); cursor: pointer; transition: var(--ease); }
 .filter-pill:hover, .filter-pill.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 .sort-select { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; font-family: var(--sans); font-size: 0.85rem; color: var(--primary); cursor: pointer; }
+
+/* Filtro por Comunidad Autónoma */
+.ca-filter { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ca-label { font-size: 0.82rem; font-weight: 700; color: var(--primary); }
+.ca-select { min-width: 220px; font-weight: 600; }
+.ca-count { font-size: 0.82rem; color: var(--gray); font-weight: 600; }
 
 .cat-list { display: flex; flex-direction: column; gap: 16px; }
 .list-row {
