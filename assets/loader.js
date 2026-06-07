@@ -1,13 +1,9 @@
 /**
  * OpoNoticias — Loader de datos reales desde Supabase
- * Carga convocatorias en portada y páginas de categoría.
- *
- * ⚠️ Sustituye TU_ANON_KEY_AQUI por tu anon key de Supabase
- *    (Settings → API → anon public)
  */
 
-const SUPABASE_URL  = "https://opnbxphxfclazxduhmkp.supabase.co";
-const SUPABASE_KEY  = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wbmJ4cGh4ZmNsYXp4ZHVobWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDQwMzcsImV4cCI6MjA5NDYyMDAzN30.lcMQwdW2HTCeg2X6Qrl0uTmZA73Yr0KdGHf3y3fLMtM";
+const SUPABASE_URL = "https://opnbxphxfclazxduhmkp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wbmJ4cGh4ZmNsYXp4ZHVobWtwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzkwNDQwMzcsImV4cCI6MjA5NDYyMDAzN30.lcMQwdW2HTCeg2X6Qrl0uTmZA73Yr0KdGHf3y3fLMtM";
 
 const MESES_CORTO = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const MESES_LARGO = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto',
@@ -39,17 +35,14 @@ function truncar(texto, max) {
 }
 
 function extraerOrganismo(titulo) {
-  // "Resolución de X, de/del [Organismo], por la que / referente a..."
   const match = titulo.match(/,\s+(?:de la|del|de los|de las|de)\s+(.+?)(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)/i);
   if (match) return match[1].trim();
-  // Fallback: segunda parte tras la primera coma
   const partes = titulo.split(',');
   if (partes.length >= 2) return partes[1].trim().replace(/^de la |^del |^de los |^de las |^de /i, '');
   return truncar(titulo, 80);
 }
 
 function extraerTipo(resumen) {
-  // El resumen BOE tiene formato: "II. Sección - Subsección - ÁREA - Tipo de plaza"
   if (!resumen) return '';
   const partes = resumen.split(' - ');
   for (let i = partes.length - 1; i >= 0; i--) {
@@ -57,6 +50,35 @@ function extraerTipo(resumen) {
     if (p && !p.match(/^[IVX]+\.\s/) && p.length > 3) return p;
   }
   return '';
+}
+
+/**
+ * Parsea "3 PLAZAS - POLICÍA LOCAL - CÁDIZ" en { plazas, puesto, lugar }
+ */
+function parsearResumen(resumen_claude) {
+  if (!resumen_claude) return null;
+  // Limpiar markdown residual
+  const limpio = resumen_claude.replace(/\*\*/g, '').replace(/#+\s/g, '').trim();
+  const partes = limpio.split(' - ');
+  if (partes.length < 2) return null;
+  return {
+    plazas: partes[0].trim(),
+    puesto: partes[1].trim(),
+    lugar:  partes.slice(2).join(' · ').trim()
+  };
+}
+
+/**
+ * Elige la mejor convocatoria para destacar:
+ * descarta modificaciones de tribunal y sin puesto concreto
+ */
+function seleccionarDestacada(convs) {
+  const malas = ['MODIFICACIÓN', 'NO ESPECIFICADO', 'NO ESPECIFICADA', 'SIN ESPECIFICAR'];
+  const buenas = convs.filter(c => {
+    const r = (c.resumen_claude || '').toUpperCase();
+    return !malas.some(m => r.includes(m)) && r.length > 5;
+  });
+  return buenas[0] || convs[0];
 }
 
 async function supaFetch(path) {
@@ -73,13 +95,10 @@ async function supaFetch(path) {
 /* ── PORTADA (index.html) ───────────────────────────────────────────────── */
 
 async function cargarPortada() {
-  // Últimas 9 convocatorias para el feed
-  const convs = await supaFetch(
-    'convocatorias?select=*&order=created_at.desc&limit=9'
-  );
+  const convs = await supaFetch('convocatorias?select=*&order=created_at.desc&limit=20');
   if (!convs.length) return;
 
-  /* 1 · Hero badge — fecha de última actualización */
+  /* 1 · Hero badge */
   const badge = document.querySelector('.hero-badge');
   if (badge) {
     const d = parseFecha(convs[0].created_at);
@@ -87,39 +106,51 @@ async function cargarPortada() {
     badge.innerHTML = `<span class="dot"></span>Actualizado · ${fecha}`;
   }
 
-  /* 2 · Hero trust — total de convocatorias */
-  const trustTotal = document.querySelector('.hero-trust span:last-child strong');
-  if (trustTotal) {
-    const total = await supaFetch('convocatorias?select=id');
-    trustTotal.closest('span').innerHTML = `<strong>${total.length}+</strong> convocatorias publicadas`;
-  }
-
-  /* 3 · Artículo destacado */
-  const featured = convs[0];
+  /* 2 · Artículo destacado — elige la mejor convocatoria */
+  const featured   = seleccionarDestacada(convs);
+  const restantes  = convs.filter(c => c.id !== featured.id);
   const featuredEl = document.querySelector('.feature-lead');
+
   if (featuredEl) {
+    const parsed   = parsearResumen(featured.resumen_claude);
+    const organismo = extraerOrganismo(featured.titulo);
+
     const eyebrow = featuredEl.querySelector('.eyebrow');
     const h2      = featuredEl.querySelector('h2');
     const p       = featuredEl.querySelector('p');
     const src     = featuredEl.querySelector('.src');
     const link    = featuredEl.querySelector('.conv-readmore');
 
-    const orgFeatured  = extraerOrganismo(featured.titulo);
-    const descFeatured = featured.resumen_claude || extraerTipo(featured.resumen) || '';
     if (eyebrow) eyebrow.textContent = `Destacada · ${featured.categoria}`;
-    if (h2)      h2.textContent = orgFeatured;
-    if (p)       p.textContent  = descFeatured;
-    if (src)     src.textContent = `BOE · ${fmtLargo(featured.fecha)}`;
-    if (link)  { link.href = featured.enlace; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Ver en BOE →'; }
+    if (h2)      h2.textContent = organismo;
+
+    if (p && parsed) {
+      p.innerHTML = `
+        <span style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">
+          <b style="color:var(--primary)">${parsed.puesto}</b>
+        </span>
+        <span style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:0.9rem;color:var(--gray);">
+          <span>🔢 ${parsed.plazas}</span>
+          ${parsed.lugar ? `<span>📍 ${truncar(parsed.lugar, 50)}</span>` : ''}
+        </span>`;
+    } else if (p) {
+      p.textContent = extraerTipo(featured.resumen) || '';
+    }
+
+    if (src)  src.textContent = `BOE · ${fmtLargo(featured.fecha)}`;
+    if (link) { link.href = featured.enlace; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Ver en BOE →'; }
   }
 
-  /* 4 · Grid de tarjetas (siguientes 3) */
+  /* 3 · Grid de 3 tarjetas */
   const grid = document.querySelector('.conv-grid');
   if (grid) {
     grid.innerHTML = '';
-    convs.slice(1, 4).forEach((c) => {
-      const organismo   = extraerOrganismo(c.titulo);
-      const descripcion = c.resumen_claude || extraerTipo(c.resumen) || '';
+    restantes.slice(0, 3).forEach((c) => {
+      const organismo = extraerOrganismo(c.titulo);
+      const parsed    = parsearResumen(c.resumen_claude);
+      const desc      = parsed ? parsed.puesto : extraerTipo(c.resumen);
+      const subtxt    = parsed && parsed.lugar ? truncar(parsed.lugar, 40) : '';
+
       const art = document.createElement('article');
       art.className = 'conv-card';
       art.innerHTML = `
@@ -127,9 +158,9 @@ async function cargarPortada() {
         <div class="conv-card-body">
           <span class="conv-tag">${c.categoria}</span>
           <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
-          <p>${descripcion}</p>
+          <p>${desc}${subtxt ? `<br><small style="color:var(--gray)">${subtxt}</small>` : ''}</p>
           <div class="conv-meta">
-            <span class="src">BOE</span>
+            <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
             <span>${fmtCorto(c.fecha)}</span>
           </div>
         </div>`;
@@ -137,24 +168,25 @@ async function cargarPortada() {
     });
   }
 
-  /* 5 · Ticker con títulos reales */
+  /* 4 · Ticker con resúmenes reales */
   const track = document.querySelector('.ticker-track');
-  if (track && convs.length) {
-    const items = convs.slice(0, 8).map(c =>
-      `<span>${c.categoria} · ${truncar(c.titulo, 55)}</span>`
-    );
-    track.innerHTML = [...items, ...items].join(''); // duplicar para el loop
+  if (track) {
+    const items = convs.slice(0, 10).map(c => {
+      const parsed = parsearResumen(c.resumen_claude);
+      const texto  = parsed ? `${parsed.plazas} · ${parsed.puesto}` : truncar(c.titulo, 50);
+      return `<span>${c.categoria} — ${texto}</span>`;
+    });
+    track.innerHTML = [...items, ...items].join('');
   }
 
-  /* 6 · Conteos en las tarjetas de categoría */
+  /* 5 · Conteos por categoría */
   const todos = await supaFetch('convocatorias?select=categoria');
   const contadores = {};
   todos.forEach(r => {
     if (r.categoria) contadores[r.categoria] = (contadores[r.categoria] || 0) + 1;
   });
-
   document.querySelectorAll('.cat-card').forEach(card => {
-    const nombre = card.querySelector('h3')?.textContent.trim();
+    const nombre  = card.querySelector('h3')?.textContent.trim();
     const countEl = card.querySelector('.count');
     if (nombre && contadores[nombre] && countEl) {
       countEl.textContent = `${contadores[nombre]} convocatorias`;
@@ -169,7 +201,6 @@ async function cargarCategoria(categoria) {
     `convocatorias?select=*&categoria=eq.${encodeURIComponent(categoria)}&order=created_at.desc&limit=100`
   );
 
-  /* Actualizar contador en el hero de la categoría */
   const statB = document.querySelector('.cat-hero-stats div:first-child b');
   if (statB) statB.textContent = convs.length;
 
@@ -186,17 +217,24 @@ async function cargarCategoria(categoria) {
   }
 
   lista.innerHTML = '';
-  const delays = ['reveal-d1', 'reveal-d2', 'reveal-d3'];
 
-  convs.forEach((c, i) => {
+  convs.forEach((c) => {
     const d   = parseFecha(c.fecha) || parseFecha(c.created_at);
     const dia = d ? d.getDate() : '—';
-    const mes = d
-      ? (MESES_CORTO[d.getMonth()].charAt(0).toUpperCase() + MESES_CORTO[d.getMonth()].slice(1))
-      : '—';
+    const mes = d ? (MESES_CORTO[d.getMonth()].charAt(0).toUpperCase() + MESES_CORTO[d.getMonth()].slice(1)) : '—';
 
-    const organismo   = extraerOrganismo(c.titulo);
-    const descripcion = c.resumen_claude || extraerTipo(c.resumen) || '';
+    const organismo = extraerOrganismo(c.titulo);
+    const parsed    = parsearResumen(c.resumen_claude);
+
+    // Puesto: info más importante, se muestra en grande
+    const puesto = parsed ? parsed.puesto : extraerTipo(c.resumen);
+    // Plazas: info secundaria como badge
+    const plazas = parsed ? parsed.plazas : '';
+    // Lugar: solo mostrar si NO está ya en el organismo (evitar repetición)
+    const lugar = parsed ? parsed.lugar : '';
+    const organismoUp = organismo.toUpperCase();
+    const lugarRedundante = !lugar || organismoUp.includes(lugar.split(' ')[0]) || lugar.toUpperCase().includes(organismoUp.split(' ')[0]);
+
     const row = document.createElement('article');
     row.className = 'list-row';
     row.innerHTML = `
@@ -206,16 +244,16 @@ async function cargarCategoria(categoria) {
       </div>
       <a href="${c.enlace}" target="_blank" rel="noopener" class="list-main">
         <h3>${organismo}</h3>
+        ${puesto ? `<p style="margin:3px 0 6px;font-weight:600;font-size:0.92rem;color:var(--primary);text-transform:uppercase;letter-spacing:0.02em;">${puesto}</p>` : ''}
         <div class="list-tags">
-          ${descripcion ? `<span>${descripcion}</span>` : ''}
-          <span>${c.categoria}</span>
+          ${plazas ? `<span>${plazas}</span>` : ''}
+          ${!lugarRedundante ? `<span>📍 ${truncar(lugar, 35)}</span>` : ''}
         </div>
       </a>
       <span class="list-cta">Ver en BOE →</span>`;
     lista.appendChild(row);
   });
 
-  /* Ocultar paginación estática (ya se muestran todas) */
   const pag = document.querySelector('.pagination');
   if (pag) pag.style.display = 'none';
 }
