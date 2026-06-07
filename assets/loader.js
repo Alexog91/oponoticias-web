@@ -38,6 +38,27 @@ function truncar(texto, max) {
   return texto.length > max ? texto.slice(0, max).trimEnd() + '…' : texto;
 }
 
+function extraerOrganismo(titulo) {
+  // "Resolución de X, de/del [Organismo], por la que / referente a..."
+  const match = titulo.match(/,\s+(?:de la|del|de los|de las|de)\s+(.+?)(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)/i);
+  if (match) return match[1].trim();
+  // Fallback: segunda parte tras la primera coma
+  const partes = titulo.split(',');
+  if (partes.length >= 2) return partes[1].trim().replace(/^de la |^del |^de los |^de las |^de /i, '');
+  return truncar(titulo, 80);
+}
+
+function extraerTipo(resumen) {
+  // El resumen BOE tiene formato: "II. Sección - Subsección - ÁREA - Tipo de plaza"
+  if (!resumen) return '';
+  const partes = resumen.split(' - ');
+  for (let i = partes.length - 1; i >= 0; i--) {
+    const p = partes[i].trim();
+    if (p && !p.match(/^[IVX]+\.\s/) && p.length > 3) return p;
+  }
+  return '';
+}
+
 async function supaFetch(path) {
   const res = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, {
     headers: {
@@ -83,9 +104,11 @@ async function cargarPortada() {
     const src     = featuredEl.querySelector('.src');
     const link    = featuredEl.querySelector('.conv-readmore');
 
+    const orgFeatured  = extraerOrganismo(featured.titulo);
+    const descFeatured = featured.resumen_claude || extraerTipo(featured.resumen) || '';
     if (eyebrow) eyebrow.textContent = `Destacada · ${featured.categoria}`;
-    if (h2)      h2.textContent = truncar(featured.titulo, 90);
-    if (p)       p.textContent  = featured.resumen ? truncar(featured.resumen, 180) : '';
+    if (h2)      h2.textContent = orgFeatured;
+    if (p)       p.textContent  = descFeatured;
     if (src)     src.textContent = `BOE · ${fmtLargo(featured.fecha)}`;
     if (link)  { link.href = featured.enlace; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Ver en BOE →'; }
   }
@@ -95,14 +118,16 @@ async function cargarPortada() {
   if (grid) {
     grid.innerHTML = '';
     convs.slice(1, 4).forEach((c) => {
+      const organismo   = extraerOrganismo(c.titulo);
+      const descripcion = c.resumen_claude || extraerTipo(c.resumen) || '';
       const art = document.createElement('article');
       art.className = 'conv-card';
       art.innerHTML = `
         <div class="conv-card-strip"></div>
         <div class="conv-card-body">
           <span class="conv-tag">${c.categoria}</span>
-          <h3><a href="${c.enlace}" target="_blank" rel="noopener">${truncar(c.titulo, 90)}</a></h3>
-          <p>${truncar(c.resumen, 120)}</p>
+          <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
+          <p>${descripcion}</p>
           <div class="conv-meta">
             <span class="src">BOE</span>
             <span>${fmtCorto(c.fecha)}</span>
@@ -170,6 +195,8 @@ async function cargarCategoria(categoria) {
       ? (MESES_CORTO[d.getMonth()].charAt(0).toUpperCase() + MESES_CORTO[d.getMonth()].slice(1))
       : '—';
 
+    const organismo   = extraerOrganismo(c.titulo);
+    const descripcion = c.resumen_claude || extraerTipo(c.resumen) || '';
     const row = document.createElement('article');
     row.className = 'list-row';
     row.innerHTML = `
@@ -178,8 +205,11 @@ async function cargarCategoria(categoria) {
         <div class="m">${mes}</div>
       </div>
       <a href="${c.enlace}" target="_blank" rel="noopener" class="list-main">
-        <h3>${truncar(c.titulo, 110)}</h3>
-        <div class="list-tags"><span>${c.categoria}</span></div>
+        <h3>${organismo}</h3>
+        <div class="list-tags">
+          ${descripcion ? `<span>${descripcion}</span>` : ''}
+          <span>${c.categoria}</span>
+        </div>
       </a>
       <span class="list-cta">Ver en BOE →</span>`;
     lista.appendChild(row);
