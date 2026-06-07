@@ -87,17 +87,16 @@ async function cargarPortada() {
     if (h2)      h2.textContent = truncar(featured.titulo, 90);
     if (p)       p.textContent  = featured.resumen ? truncar(featured.resumen, 180) : '';
     if (src)     src.textContent = `BOE · ${fmtLargo(featured.fecha)}`;
-    if (link)  { link.href = featured.enlace; link.target = '_blank'; link.rel = 'noopener'; }
+    if (link)  { link.href = featured.enlace; link.target = '_blank'; link.rel = 'noopener'; link.textContent = 'Ver en BOE →'; }
   }
 
   /* 4 · Grid de tarjetas (siguientes 3) */
   const grid = document.querySelector('.conv-grid');
   if (grid) {
     grid.innerHTML = '';
-    const delays = ['reveal-d1', 'reveal-d2', 'reveal-d3'];
-    convs.slice(1, 4).forEach((c, i) => {
+    convs.slice(1, 4).forEach((c) => {
       const art = document.createElement('article');
-      art.className = `conv-card reveal ${delays[i]}`;
+      art.className = 'conv-card';
       art.innerHTML = `
         <div class="conv-card-strip"></div>
         <div class="conv-card-body">
@@ -172,7 +171,7 @@ async function cargarCategoria(categoria) {
       : '—';
 
     const row = document.createElement('article');
-    row.className = `list-row reveal ${delays[i % 3]}`;
+    row.className = 'list-row';
     row.innerHTML = `
       <div class="list-date">
         <div class="d">${dia}</div>
