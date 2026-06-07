@@ -78,25 +78,41 @@ function parsearResumen(resumen_claude) {
  *  -5  sin puesto concreto
  */
 function seleccionarDestacada(convs) {
-  const GENERICOS  = ['NO ESPECIFICADO','PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO','SIN ESPECIFICAR'];
-  const NEGATIVOS  = ['MODIFICACIÓN TRIBUNAL','MODIFICACION TRIBUNAL','CORRECCIÓN DE ERRORES','SE CORRIGEN ERRORES'];
+  const GENERICOS = [
+    'NO ESPECIFICADO','NO ESPECIFICADA','SIN ESPECIFICAR',
+    'PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO',
+    'PERSONAL','PLAZA','PLAZAS','PUESTO','VARIAS PLAZAS - PLAZA',
+    'TITULADO','TITULADA'
+  ];
+  const NEGATIVOS = [
+    'MODIFICACIÓN TRIBUNAL','MODIFICACION TRIBUNAL',
+    'CORRECCIÓN DE ERRORES','SE CORRIGEN ERRORES',
+    'DECLARA DESIERTO','INHÁBIL'
+  ];
 
   function puntuar(c) {
     const r = (c.resumen_claude || '').toUpperCase();
     if (!r || r.length < 5) return -20;
-    if (NEGATIVOS.some(n => r.includes(n))) return -10;
+    if (NEGATIVOS.some(n => r.includes(n))) return -20;
+
+    const partes = r.split(' - ');
+    const puesto = partes[1] ? partes[1].trim() : '';
+
+    // Puesto genérico o inútil → descartar
+    if (!puesto || GENERICOS.includes(puesto)) return -15;
+    if (GENERICOS.some(g => puesto === g)) return -15;
 
     let pts = 0;
 
-    // Plazas concretas (ej: "3 PLAZAS", "1 PLAZA")
-    if (/^\d+\s+PLAZA/.test(r)) pts += 3;
+    // Plazas concretas (ej: "3 PLAZAS", "1 PLAZA") pero el puesto debe ser real
+    if (/^\d+\s+PLAZA/.test(r) && puesto.length > 5) pts += 3;
 
-    // Puesto genérico penaliza
-    if (GENERICOS.some(g => r.includes(g))) pts -= 5;
-    else pts += 2;
+    // Puesto específico y largo = buena señal
+    if (puesto.length > 8) pts += 2;
+    if (puesto.length > 15) pts += 1;
 
-    // Variedad de categoría (priorizar las que no son siempre Administración)
-    if (c.categoria && c.categoria !== 'Administración') pts += 1;
+    // Variedad de categoría (priorizar no-Administración)
+    if (c.categoria && c.categoria !== 'Administración') pts += 2;
 
     return pts;
   }
@@ -119,7 +135,7 @@ async function supaFetch(path) {
 /* ── PORTADA (index.html) ───────────────────────────────────────────────── */
 
 async function cargarPortada() {
-  const convs = await supaFetch('convocatorias?select=*&order=created_at.desc&limit=20');
+  const convs = await supaFetch('convocatorias?select=*&order=created_at.desc&limit=250');
   if (!convs.length) return;
 
   /* 1 · Hero badge */
@@ -213,15 +229,19 @@ async function cargarPortada() {
     });
   }
 
-  /* 4 · Ticker con resúmenes reales */
+  /* 4 · Ticker — solo convocatorias con puesto real */
   const track = document.querySelector('.ticker-track');
   if (track) {
-    const items = convs.slice(0, 10).map(c => {
-      const parsed = parsearResumen(c.resumen_claude);
-      const texto  = parsed ? `${parsed.plazas} · ${parsed.puesto}` : truncar(c.titulo, 50);
-      return `<span>${c.categoria} — ${texto}</span>`;
-    });
-    track.innerHTML = [...items, ...items].join('');
+    const MALOS = ['NO ESPECIFICADO','PLAZA','PLAZAS','PERSONAL','FUNCIONARIO','SIN ESPECIFICAR'];
+    const tickerItems = convs
+      .map(c => ({ c, parsed: parsearResumen(c.resumen_claude) }))
+      .filter(({ parsed }) => parsed && parsed.puesto && !MALOS.includes(parsed.puesto.toUpperCase()))
+      .slice(0, 10)
+      .map(({ c, parsed }) => `<span>${c.categoria} — ${parsed.plazas} · ${parsed.puesto}</span>`);
+
+    if (tickerItems.length) {
+      track.innerHTML = [...tickerItems, ...tickerItems].join('');
+    }
   }
 
   /* 5 · Conteos por categoría */
