@@ -68,66 +68,79 @@ function parsearResumen(resumen_claude) {
   };
 }
 
+/* ── Validación de puestos (listas compartidas) ─────────────────────────── */
+
+// Si el puesto CONTIENE alguno de estos fragmentos → no sirve
+const PUESTO_SUBSTRINGS_MALOS = [
+  'ESPECIFICAD', 'NO DISPONIBLE', 'NO DETERMINAD', 'NO INDICAD',
+  'SIN ESPECIF', 'PUESTO DE TRABAJO', 'PUESTO NO', 'PLAZA NO',
+  'PERSONAL FUNCIONARIO', 'PERSONAL LABORAL', 'FUNCIONARIO Y LABORAL',
+  'DENOMINACION', 'DENOMINACIÓN', 'NO CONSTA', 'A DETERMINAR'
+];
+// Si el puesto ES EXACTAMENTE uno de estos → no sirve
+const PUESTO_EXACTOS_MALOS = [
+  'PLAZA', 'PLAZAS', 'VARIAS PLAZAS', '1 PLAZA', 'PERSONAL',
+  'FUNCIONARIO', 'TITULADO', 'TITULADA', 'PUESTO', 'PUESTOS',
+  'TRABAJO', 'EMPLEO', 'VACANTE', 'VACANTES'
+];
+// Si el resumen completo contiene esto → no es una convocatoria útil
+const RESUMEN_NEGATIVOS = [
+  'MODIFICACIÓN TRIBUNAL', 'MODIFICACION TRIBUNAL', 'MODIFICACIÓN DEL TRIBUNAL',
+  'CORRECCIÓN DE ERRORES', 'CORRECCION DE ERRORES', 'SE CORRIGEN ERRORES',
+  'DECLARA DESIERTO', 'INHÁBIL', 'INHABIL', 'LISTA DE ESPERA', 'BOLSA DE'
+];
+
+/** ¿El puesto es específico y útil para mostrar/destacar? */
+function puestoValido(puesto) {
+  if (!puesto) return false;
+  const p = puesto.toUpperCase().trim();
+  if (p.length < 4) return false;
+  if (PUESTO_EXACTOS_MALOS.includes(p)) return false;
+  if (PUESTO_SUBSTRINGS_MALOS.some(s => p.includes(s))) return false;
+  return true;
+}
+
+/** Extrae el número de plazas para puntuar (VARIAS = 6 estimado) */
+function numPlazas(plazasStr) {
+  if (!plazasStr) return 0;
+  const up = plazasStr.toUpperCase();
+  const m = up.match(/(\d+)/);
+  if (m) return parseInt(m[1], 10);
+  if (up.includes('VARIAS')) return 6; // plural sin número concreto
+  return 1;
+}
+
+/** ¿Convocatoria apta para destacar / ticker? */
+function convocatoriaValida(c) {
+  const r = (c.resumen_claude || '').toUpperCase();
+  if (RESUMEN_NEGATIVOS.some(n => r.includes(n))) return false;
+  const parsed = parsearResumen(c.resumen_claude);
+  return parsed && puestoValido(parsed.puesto);
+}
+
 /**
- * Elige la mejor convocatoria para destacar.
- * Sistema de puntuación:
- *  +3  número concreto de plazas (1 PLAZA, 5 PLAZAS...)
- *  +2  puesto específico (no genérico)
- *  +1  categoría distinta de Administración (más variedad)
- *  -10 modificación de tribunal (descartada)
- *  -5  sin puesto concreto
+ * Puntúa una convocatoria. La prioridad principal es el NÚMERO DE PLAZAS,
+ * seguido de la especificidad del puesto y la variedad de categoría.
  */
+function puntuarConvocatoria(c) {
+  if (!convocatoriaValida(c)) return -1000;
+  const parsed = parsearResumen(c.resumen_claude);
+
+  let pts = 10;                            // base por ser válida
+  pts += Math.min(numPlazas(parsed.plazas), 60);  // más plazas = más relevante
+  if (parsed.puesto.length > 12) pts += 4; // puesto descriptivo
+  if (parsed.puesto.length > 22) pts += 3;
+  if (c.categoria && c.categoria !== 'Administración') pts += 3; // variedad
+  return pts;
+}
+
+/** Elige la mejor convocatoria para destacar. */
 function seleccionarDestacada(convs) {
-  // Si el puesto contiene alguna de estas palabras → descartar
-  const PALABRAS_MALAS = [
-    'ESPECIFICAD','SIN ESPECIFICAR',
-    'PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO Y LABORAL',
-    'TITULADO/A SUPERIOR','NO DETERMINADO','NO INDICADO'
-  ];
-  // Puestos exactos que no aportan info
-  const PUESTOS_EXACTOS_MALOS = [
-    'PLAZA','PLAZAS','VARIAS PLAZAS','1 PLAZA','PERSONAL',
-    'FUNCIONARIO','TITULADO','TITULADA','PUESTO','PUESTOS',
-    'NO ESPECIFICADO','NO ESPECIFICADA','SIN ESPECIFICAR'
-  ];
-
-  const NEGATIVOS = [
-    'MODIFICACIÓN TRIBUNAL','MODIFICACION TRIBUNAL',
-    'CORRECCIÓN DE ERRORES','SE CORRIGEN ERRORES',
-    'DECLARA DESIERTO','INHÁBIL','LISTA DE ESPERA'
-  ];
-
-  function puntuar(c) {
-    const r = (c.resumen_claude || '').toUpperCase();
-    if (!r || r.length < 5) return -20;
-    if (NEGATIVOS.some(n => r.includes(n))) return -20;
-
-    const partes = r.split(' - ');
-    const puesto = partes[1] ? partes[1].trim() : '';
-
-    // Puesto inexistente o exactamente una palabra mala
-    if (!puesto) return -20;
-    if (PUESTOS_EXACTOS_MALOS.includes(puesto)) return -15;
-    // Puesto que contiene palabras malas
-    if (PALABRAS_MALAS.some(p => puesto.includes(p))) return -15;
-
-    let pts = 0;
-
-    // Plazas concretas con puesto real
-    if (/^\d+\s+PLAZA/.test(r) && puesto.length > 6) pts += 3;
-
-    // Puesto específico y descriptivo
-    if (puesto.length > 8)  pts += 2;
-    if (puesto.length > 18) pts += 1;
-
-    // Categoría variada (priorizar no-Administración)
-    if (c.categoria && c.categoria !== 'Administración') pts += 2;
-
-    return pts;
-  }
-
-  const ordenadas = [...convs].sort((a, b) => puntuar(b) - puntuar(a));
-  return ordenadas[0] || convs[0];
+  const ordenadas = [...convs]
+    .map(c => ({ c, score: puntuarConvocatoria(c) }))
+    .sort((a, b) => b.score - a.score);
+  const mejor = ordenadas[0];
+  return (mejor && mejor.score > -1000) ? mejor.c : convs[0];
 }
 
 async function supaFetch(path) {
@@ -157,7 +170,8 @@ async function cargarPortada() {
 
   /* 2 · Artículo destacado — elige la mejor convocatoria */
   const featured   = seleccionarDestacada(convs);
-  const restantes  = convs.filter(c => c.id !== featured.id);
+  // Para el grid: solo convocatorias válidas, más recientes primero
+  const restantes  = convs.filter(c => c.id !== featured.id && convocatoriaValida(c));
 
   /* 2a · Hero card (parte superior derecha) */
   const heroCard = document.querySelector('.hero-card');
@@ -195,13 +209,15 @@ async function cargarPortada() {
     if (h2)      h2.textContent = organismo;
 
     if (p && parsed) {
+      const orgUp = organismo.toUpperCase();
+      const lugarRedundante = !parsed.lugar
+        || orgUp.includes(parsed.lugar.split(' ')[0])
+        || parsed.lugar.toUpperCase().includes(orgUp.split(' ')[0]);
       p.innerHTML = `
-        <span style="display:flex;flex-wrap:wrap;gap:10px;margin-top:4px;">
-          <b style="color:var(--primary)">${parsed.puesto}</b>
-        </span>
-        <span style="display:flex;flex-wrap:wrap;gap:16px;margin-top:10px;font-size:0.9rem;color:var(--gray);">
+        <span style="display:block;font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:12px;">${parsed.puesto}</span>
+        <span style="display:flex;flex-wrap:wrap;gap:18px;font-size:0.92rem;color:var(--gray);">
           <span>🔢 ${parsed.plazas}</span>
-          ${parsed.lugar ? `<span>📍 ${truncar(parsed.lugar, 50)}</span>` : ''}
+          ${!lugarRedundante ? `<span>📍 ${truncar(parsed.lugar, 50)}</span>` : ''}
         </span>`;
     } else if (p) {
       p.textContent = extraerTipo(featured.resumen) || '';
@@ -219,7 +235,6 @@ async function cargarPortada() {
       const organismo = extraerOrganismo(c.titulo);
       const parsed    = parsearResumen(c.resumen_claude);
       const desc      = parsed ? parsed.puesto : extraerTipo(c.resumen);
-      const subtxt    = parsed && parsed.lugar ? truncar(parsed.lugar, 40) : '';
 
       const art = document.createElement('article');
       art.className = 'conv-card';
@@ -228,7 +243,7 @@ async function cargarPortada() {
         <div class="conv-card-body">
           <span class="conv-tag">${c.categoria}</span>
           <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
-          <p>${desc}${subtxt ? `<br><small style="color:var(--gray)">${subtxt}</small>` : ''}</p>
+          <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.9rem;letter-spacing:0.02em;">${desc}</p>
           <div class="conv-meta">
             <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
             <span>${fmtCorto(c.fecha)}</span>
@@ -238,28 +253,17 @@ async function cargarPortada() {
     });
   }
 
-  /* 4 · Ticker — solo convocatorias con puesto real */
+  /* 4 · Ticker — solo convocatorias con puesto real, mejores primero */
   const track = document.querySelector('.ticker-track');
   if (track) {
-    const MALOS_TICKER = [
-      'ESPECIFICAD','SIN ESPECIF','NO DETERMINAD','NO INDICAD',
-      'PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO Y LABORAL'
-    ];
-    const PUESTOS_TICKER_EXACTOS = [
-      'PLAZA','PLAZAS','VARIAS PLAZAS','1 PLAZA','PERSONAL',
-      'FUNCIONARIO','TITULADO','TITULADA','PUESTO','PUESTOS'
-    ];
     const tickerItems = convs
-      .map(c => ({ c, parsed: parsearResumen(c.resumen_claude) }))
-      .filter(({ parsed }) => {
-        if (!parsed || !parsed.puesto) return false;
-        const p = parsed.puesto.toUpperCase().trim();
-        if (PUESTOS_TICKER_EXACTOS.includes(p)) return false;
-        if (MALOS_TICKER.some(m => p.includes(m))) return false;
-        return true;
-      })
-      .slice(0, 10)
-      .map(({ c, parsed }) => `<span>${c.categoria} — ${parsed.plazas} · ${parsed.puesto}</span>`);
+      .filter(convocatoriaValida)
+      .sort((a, b) => puntuarConvocatoria(b) - puntuarConvocatoria(a))
+      .slice(0, 12)
+      .map(c => {
+        const p = parsearResumen(c.resumen_claude);
+        return `<span>${c.categoria} — ${p.plazas} · ${p.puesto}</span>`;
+      });
 
     if (tickerItems.length) {
       track.innerHTML = [...tickerItems, ...tickerItems].join('');
