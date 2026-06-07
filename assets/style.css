@@ -161,8 +161,8 @@ img, svg { max-width: 100%; display: block; }
   animation: float 5s ease-in-out infinite;
 }
 .hero-float .ic { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 0.9rem; }
-.hero-float.f1 { top: -22px; right: -16px; }
-.hero-float.f2 { bottom: -20px; left: -22px; animation-delay: 1.2s; }
+.hero-float.f1 { top: -22px; right: 50px; }
+.hero-float.f2 { bottom: 55px; left: -22px; animation-delay: 1.2s; }
 @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
 /* ============================================================

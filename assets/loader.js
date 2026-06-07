@@ -78,16 +78,23 @@ function parsearResumen(resumen_claude) {
  *  -5  sin puesto concreto
  */
 function seleccionarDestacada(convs) {
-  const GENERICOS = [
-    'NO ESPECIFICADO','NO ESPECIFICADA','SIN ESPECIFICAR',
-    'PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO',
-    'PERSONAL','PLAZA','PLAZAS','PUESTO','VARIAS PLAZAS - PLAZA',
-    'TITULADO','TITULADA'
+  // Si el puesto contiene alguna de estas palabras → descartar
+  const PALABRAS_MALAS = [
+    'ESPECIFICAD','SIN ESPECIFICAR',
+    'PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO Y LABORAL',
+    'TITULADO/A SUPERIOR','NO DETERMINADO','NO INDICADO'
   ];
+  // Puestos exactos que no aportan info
+  const PUESTOS_EXACTOS_MALOS = [
+    'PLAZA','PLAZAS','VARIAS PLAZAS','1 PLAZA','PERSONAL',
+    'FUNCIONARIO','TITULADO','TITULADA','PUESTO','PUESTOS',
+    'NO ESPECIFICADO','NO ESPECIFICADA','SIN ESPECIFICAR'
+  ];
+
   const NEGATIVOS = [
     'MODIFICACIÓN TRIBUNAL','MODIFICACION TRIBUNAL',
     'CORRECCIÓN DE ERRORES','SE CORRIGEN ERRORES',
-    'DECLARA DESIERTO','INHÁBIL'
+    'DECLARA DESIERTO','INHÁBIL','LISTA DE ESPERA'
   ];
 
   function puntuar(c) {
@@ -98,20 +105,22 @@ function seleccionarDestacada(convs) {
     const partes = r.split(' - ');
     const puesto = partes[1] ? partes[1].trim() : '';
 
-    // Puesto genérico o inútil → descartar
-    if (!puesto || GENERICOS.includes(puesto)) return -15;
-    if (GENERICOS.some(g => puesto === g)) return -15;
+    // Puesto inexistente o exactamente una palabra mala
+    if (!puesto) return -20;
+    if (PUESTOS_EXACTOS_MALOS.includes(puesto)) return -15;
+    // Puesto que contiene palabras malas
+    if (PALABRAS_MALAS.some(p => puesto.includes(p))) return -15;
 
     let pts = 0;
 
-    // Plazas concretas (ej: "3 PLAZAS", "1 PLAZA") pero el puesto debe ser real
-    if (/^\d+\s+PLAZA/.test(r) && puesto.length > 5) pts += 3;
+    // Plazas concretas con puesto real
+    if (/^\d+\s+PLAZA/.test(r) && puesto.length > 6) pts += 3;
 
-    // Puesto específico y largo = buena señal
-    if (puesto.length > 8) pts += 2;
-    if (puesto.length > 15) pts += 1;
+    // Puesto específico y descriptivo
+    if (puesto.length > 8)  pts += 2;
+    if (puesto.length > 18) pts += 1;
 
-    // Variedad de categoría (priorizar no-Administración)
+    // Categoría variada (priorizar no-Administración)
     if (c.categoria && c.categoria !== 'Administración') pts += 2;
 
     return pts;
@@ -232,10 +241,23 @@ async function cargarPortada() {
   /* 4 · Ticker — solo convocatorias con puesto real */
   const track = document.querySelector('.ticker-track');
   if (track) {
-    const MALOS = ['NO ESPECIFICADO','PLAZA','PLAZAS','PERSONAL','FUNCIONARIO','SIN ESPECIFICAR'];
+    const MALOS_TICKER = [
+      'ESPECIFICAD','SIN ESPECIF','NO DETERMINAD','NO INDICAD',
+      'PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO Y LABORAL'
+    ];
+    const PUESTOS_TICKER_EXACTOS = [
+      'PLAZA','PLAZAS','VARIAS PLAZAS','1 PLAZA','PERSONAL',
+      'FUNCIONARIO','TITULADO','TITULADA','PUESTO','PUESTOS'
+    ];
     const tickerItems = convs
       .map(c => ({ c, parsed: parsearResumen(c.resumen_claude) }))
-      .filter(({ parsed }) => parsed && parsed.puesto && !MALOS.includes(parsed.puesto.toUpperCase()))
+      .filter(({ parsed }) => {
+        if (!parsed || !parsed.puesto) return false;
+        const p = parsed.puesto.toUpperCase().trim();
+        if (PUESTOS_TICKER_EXACTOS.includes(p)) return false;
+        if (MALOS_TICKER.some(m => p.includes(m))) return false;
+        return true;
+      })
       .slice(0, 10)
       .map(({ c, parsed }) => `<span>${c.categoria} — ${parsed.plazas} · ${parsed.puesto}</span>`);
 
