@@ -133,6 +133,27 @@ async function cargarPortada() {
   /* 2 · Artículo destacado — elige la mejor convocatoria */
   const featured   = seleccionarDestacada(convs);
   const restantes  = convs.filter(c => c.id !== featured.id);
+
+  /* 2a · Hero card (parte superior derecha) */
+  const heroCard = document.querySelector('.hero-card');
+  if (heroCard) {
+    const parsedHero   = parsearResumen(featured.resumen_claude);
+    const organismoH   = extraerOrganismo(featured.titulo);
+    const dateEl       = heroCard.querySelector('.date');
+    const tagEl        = heroCard.querySelector('.tag');
+    const h3El         = heroCard.querySelector('h3');
+    const metaEl       = heroCard.querySelector('.hero-card-meta');
+
+    if (dateEl) dateEl.textContent = fmtCorto(featured.fecha);
+    if (tagEl)  tagEl.textContent  = featured.categoria;
+    if (h3El)   h3El.textContent   = parsedHero ? parsedHero.puesto : extraerTipo(featured.resumen);
+    if (metaEl && parsedHero) {
+      metaEl.innerHTML = `
+        <span>Plazas: <b>${parsedHero.plazas}</b></span>
+        <span>Organismo: <b>${truncar(organismoH, 30)}</b></span>`;
+    }
+  }
+
   const featuredEl = document.querySelector('.feature-lead');
 
   if (featuredEl) {
