@@ -69,16 +69,40 @@ function parsearResumen(resumen_claude) {
 }
 
 /**
- * Elige la mejor convocatoria para destacar:
- * descarta modificaciones de tribunal y sin puesto concreto
+ * Elige la mejor convocatoria para destacar.
+ * Sistema de puntuación:
+ *  +3  número concreto de plazas (1 PLAZA, 5 PLAZAS...)
+ *  +2  puesto específico (no genérico)
+ *  +1  categoría distinta de Administración (más variedad)
+ *  -10 modificación de tribunal (descartada)
+ *  -5  sin puesto concreto
  */
 function seleccionarDestacada(convs) {
-  const malas = ['MODIFICACIÓN', 'NO ESPECIFICADO', 'NO ESPECIFICADA', 'SIN ESPECIFICAR'];
-  const buenas = convs.filter(c => {
+  const GENERICOS  = ['NO ESPECIFICADO','PERSONAL FUNCIONARIO','PERSONAL LABORAL','FUNCIONARIO','SIN ESPECIFICAR'];
+  const NEGATIVOS  = ['MODIFICACIÓN TRIBUNAL','MODIFICACION TRIBUNAL','CORRECCIÓN DE ERRORES','SE CORRIGEN ERRORES'];
+
+  function puntuar(c) {
     const r = (c.resumen_claude || '').toUpperCase();
-    return !malas.some(m => r.includes(m)) && r.length > 5;
-  });
-  return buenas[0] || convs[0];
+    if (!r || r.length < 5) return -20;
+    if (NEGATIVOS.some(n => r.includes(n))) return -10;
+
+    let pts = 0;
+
+    // Plazas concretas (ej: "3 PLAZAS", "1 PLAZA")
+    if (/^\d+\s+PLAZA/.test(r)) pts += 3;
+
+    // Puesto genérico penaliza
+    if (GENERICOS.some(g => r.includes(g))) pts -= 5;
+    else pts += 2;
+
+    // Variedad de categoría (priorizar las que no son siempre Administración)
+    if (c.categoria && c.categoria !== 'Administración') pts += 1;
+
+    return pts;
+  }
+
+  const ordenadas = [...convs].sort((a, b) => puntuar(b) - puntuar(a));
+  return ordenadas[0] || convs[0];
 }
 
 async function supaFetch(path) {
