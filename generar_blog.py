@@ -197,10 +197,12 @@ def claude(prompt, max_tokens=3000):
 # ── Generación de artículo ───────────────────────────────────────────────────
 
 def obtener_convocatorias(categoria, limite=5):
+    # La BD guarda la categoría con mayúscula y acento ("Sanidad", "Administración"…)
+    nombre = NOMBRE_CATEGORIA.get(categoria, categoria)
     params = urllib.parse.urlencode({
-        "select": "titulo,resumen,comunidad_autonoma,fecha_pub,plazas",
-        "categoria": f"eq.{categoria}",
-        "order": "fecha_pub.desc",
+        "select": "titulo,resumen,resumen_claude,cuerpo,comunidad_autonoma,plazas",
+        "categoria": f"eq.{nombre}",
+        "order": "created_at.desc",
         "limit": limite,
     })
     return supabase_get("convocatorias", params)
@@ -228,11 +230,16 @@ def generar_articulo(categoria, convocatorias):
     contexto = ""
     for i, c in enumerate(convocatorias, 1):
         contexto += f"{i}. {c.get('titulo','')}"
+        # resumen_claude = línea compacta IA: "3 PLAZAS - POLICÍA LOCAL - MADRID"
+        linea_ia = c.get("resumen_claude") or c.get("cuerpo") or ""
+        if linea_ia:
+            contexto += f"\n   ↳ {linea_ia}"
         if c.get("plazas"):
             contexto += f" ({c['plazas']} plazas)"
         if c.get("comunidad_autonoma"):
             contexto += f" — {c['comunidad_autonoma']}"
-        contexto += f"\n   {(c.get('resumen') or '')[:220]}\n\n"
+        resumen_txt = c.get('resumen') or ''
+        contexto += f"\n   {resumen_txt[:200]}\n\n"
 
     fuente = random.choice(FUENTES_REFERENCIA)
 
@@ -574,6 +581,7 @@ def main():
     if not (SUPABASE_URL and SUPABASE_API_KEY and ANTHROPIC_API_KEY):
         print("❌ Faltan variables de entorno: SUPABASE_URL, SUPABASE_API_KEY, ANTHROPIC_API_KEY")
         return
+    print(f"🔗 Supabase: {SUPABASE_URL}")  # debug — ayuda a detectar URL incorrecta
 
     cats = CATEGORIAS.copy()
     random.shuffle(cats)
