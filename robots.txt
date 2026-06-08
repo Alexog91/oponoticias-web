@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://oponoticias.com/sitemap.xml
+Sitemap: https://oponoticias.com/sitemap-blog.xml
