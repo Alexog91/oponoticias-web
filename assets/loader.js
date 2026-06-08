@@ -337,6 +337,50 @@ async function cargarNoticias() {
   });
 }
 
+/* ── BLOG: artículos reales en la columna derecha de la portada ─────────── */
+const CAT_NOMBRE = {
+  educacion:'Educación', sanidad:'Sanidad', administracion:'Administración',
+  justicia:'Justicia', seguridad:'Seguridad', hacienda:'Hacienda',
+  correos:'Correos', tecnica:'Técnica'
+};
+
+async function cargarBlog() {
+  const col = document.querySelector('.col-aside');
+  if (!col) return;
+
+  let articulos;
+  try {
+    articulos = await supaFetch('articulos_blog?select=titulo,slug,categoria,resumen&publicado=eq.true&order=fecha_pub.desc&limit=4');
+  } catch (err) {
+    // La tabla aún no existe → se mantienen los ejemplos
+    console.warn('[OpoNoticias] articulos_blog no disponible todavía:', err.message);
+    return;
+  }
+
+  if (!articulos || !articulos.length) return;
+
+  // Quitar los artículos de ejemplo del bloque blog
+  col.querySelectorAll('.blog-item').forEach(n => n.remove());
+  const more = col.querySelector('.col-more');
+
+  articulos.forEach(a => {
+    const art = document.createElement('article');
+    art.className = 'blog-item';
+    const cat = CAT_NOMBRE[a.categoria] || 'Blog';
+    art.innerHTML = `
+      <a href="blog/${a.slug}.html" class="blog-link">
+        <span class="blog-tag">${cat}</span>
+        <h4>${a.titulo}</h4>
+        <span class="blog-read">Leer artículo →</span>
+      </a>`;
+    if (more) col.insertBefore(art, more);
+    else col.appendChild(art);
+  });
+
+  // El enlace "Ver todo el blog" apunta al índice
+  if (more) more.setAttribute('href', 'blog.html');
+}
+
 /* ── COMUNIDAD AUTÓNOMA: inferencia desde el texto ──────────────────────── */
 /* Si en el futuro existe la columna `comunidad_autonoma`, se usa directamente.
    Mientras tanto se infiere de la provincia (entre paréntesis o en el texto),
@@ -594,6 +638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } else if (document.querySelector('.conv-grid')) {
       await cargarPortada();
       await cargarNoticias();
+      await cargarBlog();
     }
   } catch (err) {
     console.error('[OpoNoticias loader]', err);
