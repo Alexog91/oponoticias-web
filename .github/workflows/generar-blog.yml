@@ -1,0 +1,38 @@
+name: Generar Blog IA
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'   # Lunes 10:00 CEST (UTC+2) = 8:00 UTC - Una vez por semana
+  workflow_dispatch:       # Permite ejecución manual desde GitHub UI
+
+permissions:
+  contents: write          # Necesario para subir los artículos generados
+
+jobs:
+  generar-articulos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generar artículos de blog
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python3 generar_blog.py
+
+      - name: Subir artículos generados
+        run: |
+          git config user.name  "OpoNoticias Bot"
+          git config user.email "bot@oponoticias.com"
+          git add blog/ blog.html sitemap-blog.xml 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "Sin cambios nuevos que subir."
+          else
+            git commit -m "Blog IA: nuevos artículos generados [skip ci]"
+            git push
+          fi
