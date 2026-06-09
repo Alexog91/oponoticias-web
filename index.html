@@ -32,7 +32,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/style.css?v=2">
+  <link rel="stylesheet" href="assets/style.css?v=3">
 
   <!-- Datos estructurados: WebSite -->
   <script type="application/ld+json">
@@ -230,7 +230,7 @@
               </article>
             </div>
 
-            <a href="#categorias" class="col-more">Ver todas por categoría →</a>
+            <a href="#boe-hoy" class="col-more">Ver todas las de hoy →</a>
           </div>
 
           <!-- ── COLUMNA DERECHA · BLOG + CREADORES ── -->
@@ -264,38 +264,22 @@
             </article>
 
             <a href="blog.html" class="col-more">Ver todo el blog →</a>
-
-            <!-- Creadores recomendados (solo enlaces editoriales) -->
-            <div class="creators">
-              <div class="col-head">
-                <span class="col-kicker">Recomendados</span>
-                <h3 class="col-title">Creadores</h3>
-              </div>
-              <a href="#" class="creator-item" rel="noopener" target="_blank">
-                <span class="creator-avatar">O</span>
-                <span class="creator-info">
-                  <span class="creator-name">Opositoras al Día</span>
-                  <span class="creator-handle">Consejos y rutinas · Instagram</span>
-                </span>
-              </a>
-              <a href="#" class="creator-item" rel="noopener" target="_blank">
-                <span class="creator-avatar">E</span>
-                <span class="creator-info">
-                  <span class="creator-name">Estudia con Marta</span>
-                  <span class="creator-handle">Técnicas de estudio · YouTube</span>
-                </span>
-              </a>
-              <a href="#" class="creator-item" rel="noopener" target="_blank">
-                <span class="creator-avatar">F</span>
-                <span class="creator-info">
-                  <span class="creator-name">Funcionario en Ruta</span>
-                  <span class="creator-handle">Experiencias reales · TikTok</span>
-                </span>
-              </a>
-            </div>
           </aside>
 
         </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ EL BOE DE HOY ═══════════ -->
+    <section class="section boe-hoy-section" id="boe-hoy">
+      <div class="container">
+        <div class="reveal" style="text-align:center; max-width:680px; margin:0 auto 40px;">
+          <span class="eyebrow">Boletín Oficial del Estado</span>
+          <h2 class="section-title">El BOE de hoy</h2>
+          <p class="section-lead" id="boeHoyFecha" style="margin:14px auto 0;">Todas las convocatorias de oposiciones de la última edición del BOE.</p>
+        </div>
+        <div class="boe-hoy-grid" id="boeHoyGrid"><!-- loader.js rellena --></div>
+        <p class="boe-hoy-empty" id="boeHoyEmpty" hidden>No hay convocatorias nuevas en la última edición del BOE.</p>
       </div>
     </section>
 
@@ -448,8 +432,8 @@
     </div>
   </footer>
 
-  <script src="assets/script.js?v=2" defer></script>
-  <script src="assets/loader.js?v=2" defer></script>
+  <script src="assets/script.js?v=3" defer></script>
+  <script src="assets/loader.js?v=3" defer></script>
   <script>
     // Fecha de la cabecera del diario
     (function () {
