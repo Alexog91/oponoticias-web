@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>El BOE de hoy — Todas las convocatorias de oposiciones | OpoNoticias</title>
+  <meta name="description" content="Todas las convocatorias de oposiciones publicadas hoy en el Boletín Oficial del Estado, organizadas por categoría. Actualización diaria automática.">
+  <link rel="canonical" href="https://oponoticias.com/boe-hoy.html">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5A5047">
+  <meta name="opo-page" content="boe-hoy">
+  <script>document.documentElement.className += ' js';</script>
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpoNoticias">
+  <meta property="og:title" content="El BOE de hoy — Todas las convocatorias de oposiciones">
+  <meta property="og:description" content="Todas las convocatorias de oposiciones publicadas hoy en el BOE, organizadas por categoría.">
+  <meta property="og:url" content="https://oponoticias.com/boe-hoy.html">
+
+  <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=3">
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Principal">
+        <a href="index.html" aria-label="OpoNoticias - Inicio"><img src="assets/logo.svg" alt="OpoNoticias" class="nav-logo"></a>
+        <div class="nav-links">
+          <a href="index.html#categorias">Categorías</a>
+          <a href="boe-hoy.html">El BOE de hoy</a>
+          <a href="blog.html">Blog</a>
+          <a href="index.html#como-funciona">Cómo funciona</a>
+        </div>
+        <div class="nav-cta">
+          <a href="index.html#categorias" class="btn btn-ghost">Explorar</a>
+          <a href="https://t.me/OPONOTICIAS" class="btn btn-primary" rel="noopener" target="_blank">Telegram</a>
+        </div>
+        <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Migas de pan">
+        <a href="index.html">Inicio</a>
+        <span class="sep">/</span>
+        <span aria-current="page">El BOE de hoy</span>
+      </nav>
+
+      <div class="blog-hero">
+        <span class="eyebrow">Boletín Oficial del Estado</span>
+        <h1 class="section-title">El BOE de hoy</h1>
+        <p class="section-lead" id="boeHoyFecha">Cargando las convocatorias de la última edición del BOE…</p>
+      </div>
+
+      <div class="boe-hoy-grid" id="boeHoyGrid"><!-- loader.js rellena --></div>
+      <p class="boe-hoy-empty" id="boeHoyEmpty" hidden>No hay convocatorias nuevas en la última edición del BOE.</p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2026 OpoNoticias · oponoticias.com</span>
+        <span>Fuente oficial: api.boe.es · Actualización diaria a las 7:00 h</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="assets/script.js?v=3" defer></script>
+  <script src="assets/loader.js?v=3" defer></script>
+</body>
+</html>
