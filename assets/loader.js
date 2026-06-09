@@ -125,12 +125,21 @@ function numPlazas(plazasStr) {
   return 1;
 }
 
-/** ¿Convocatoria apta para destacar / ticker? */
+/** ¿Convocatoria apta para destacar / ticker? (filtro estricto: puesto específico) */
 function convocatoriaValida(c) {
   const r = (c.resumen_claude || '').toUpperCase();
   if (RESUMEN_NEGATIVOS.some(n => r.includes(n))) return false;
   const parsed = parsearResumen(c.resumen_claude);
   return parsed && puestoValido(parsed.puesto);
+}
+
+/** ¿Es una convocatoria REAL? (filtro laxo: solo descarta modificaciones,
+ *  correcciones, bolsas y listas de espera; acepta puestos genéricos).
+ *  Se usa en la sección "El BOE de hoy" para mostrar todo lo publicado. */
+function convocatoriaReal(c) {
+  const r = (c.resumen_claude || '').toUpperCase();
+  if (!r) return false;
+  return !RESUMEN_NEGATIVOS.some(n => r.includes(n));
 }
 
 /**
@@ -299,13 +308,13 @@ async function cargarPortada() {
     }
   });
 
-  /* 6 · "El BOE de hoy" — TODAS las convocatorias de la última edición */
+  /* 6 · "El BOE de hoy" — TODAS las convocatorias reales de la última edición */
   const boeGrid = document.getElementById('boeHoyGrid');
   if (boeGrid) {
-    const validas = convs.filter(convocatoriaValida);
-    if (validas.length) {
+    const reales = convs.filter(convocatoriaReal);
+    if (reales.length) {
       // Fecha de la edición más reciente del BOE
-      const tiempos = validas
+      const tiempos = reales
         .map(c => parseFecha(c.fecha))
         .filter(Boolean)
         .map(d => d.getTime());
@@ -316,9 +325,17 @@ async function cargarPortada() {
             && d.getMonth() === maxDate.getMonth()
             && d.getDate() === maxDate.getDate();
       };
-      const deHoy = validas
+      // Ordenar por nº de plazas (desc); las de puesto concreto pesan algo más
+      const plazasDe = (c) => {
+        const p = parsearResumen(c.resumen_claude);
+        if (!p) return 0;
+        let n = numPlazas(p.plazas);
+        if (puestoValido(p.puesto)) n += 0.5; // desempate a favor de las específicas
+        return n;
+      };
+      const deHoy = reales
         .filter(mismaFecha)
-        .sort((a, b) => puntuarConvocatoria(b) - puntuarConvocatoria(a));
+        .sort((a, b) => plazasDe(b) - plazasDe(a));
 
       const fechaEl = document.getElementById('boeHoyFecha');
       if (fechaEl) {
