@@ -85,11 +85,11 @@ function parsearResumen(resumen_claude) {
 
 /* ── Validación de puestos (listas compartidas) ─────────────────────────── */
 
-// Si el puesto CONTIENE alguno de estos fragmentos → no sirve
+// Si el puesto CONTIENE alguno de estos fragmentos → no sirve para destacar
+// (no se excluyen "PERSONAL FUNCIONARIO/LABORAL": son convocatorias reales)
 const PUESTO_SUBSTRINGS_MALOS = [
   'ESPECIFICAD', 'NO DISPONIBLE', 'NO DETERMINAD', 'NO INDICAD',
   'SIN ESPECIF', 'PUESTO DE TRABAJO', 'PUESTO NO', 'PLAZA NO',
-  'PERSONAL FUNCIONARIO', 'PERSONAL LABORAL', 'FUNCIONARIO Y LABORAL',
   'DENOMINACION', 'DENOMINACIÓN', 'NO CONSTA', 'A DETERMINAR'
 ];
 // Si el puesto ES EXACTAMENTE uno de estos → no sirve
@@ -578,13 +578,16 @@ async function cargarCategoria(categoria) {
     `convocatorias?select=*&categoria=eq.${encodeURIComponent(categoria)}&order=created_at.desc&limit=100`
   );
 
+  // Excluir modificaciones de tribunal, correcciones de errores y bolsas
+  const convsFiltradas = convs.filter(convocatoriaReal);
+
   const statB = document.querySelector('.cat-hero-stats div:first-child b');
-  if (statB) statB.textContent = convs.length;
+  if (statB) statB.textContent = convsFiltradas.length;
 
   const lista = document.querySelector('.cat-list');
   if (!lista) return;
 
-  if (!convs.length) {
+  if (!convsFiltradas.length) {
     lista.innerHTML = `
       <p style="color:var(--gray);padding:40px 0;text-align:center;">
         No hay convocatorias disponibles para esta categoría todavía.<br>
@@ -594,16 +597,16 @@ async function cargarCategoria(categoria) {
   }
 
   // Inferir comunidad de cada convocatoria
-  convs.forEach(c => { c._ca = inferirCA(c); });
+  convsFiltradas.forEach(c => { c._ca = inferirCA(c); });
 
   // Comunidades presentes (para poblar el desplegable y el contador)
-  const caPresentes = ORDEN_CA.filter(ca => convs.some(c => c._ca === ca));
+  const caPresentes = ORDEN_CA.filter(ca => convsFiltradas.some(c => c._ca === ca));
   const statCom = document.querySelector('.cat-hero-stats div:nth-child(2) b');
   if (statCom) statCom.textContent = caPresentes.length;
 
   lista.innerHTML = '';
 
-  convs.forEach((c) => {
+  convsFiltradas.forEach((c) => {
     const d   = parseFecha(c.fecha) || parseFecha(c.created_at);
     const dia = d ? d.getDate() : '—';
     const mes = d ? (MESES_CORTO[d.getMonth()].charAt(0).toUpperCase() + MESES_CORTO[d.getMonth()].slice(1)) : '—';
