@@ -326,9 +326,9 @@ img, svg { max-width: 100%; display: block; }
 .conv-meta .src { font-weight: 600; color: var(--primary); }
 .conv-readmore { color: var(--primary); font-weight: 600; font-size: 0.85rem; }
 
-/* ── El BOE de hoy (sección completa) ── */
-.boe-hoy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; }
-.boe-hoy-empty { text-align: center; color: var(--gray); font-size: 1.02rem; padding: 36px 0; }
+/* ── El BOE de hoy (página boe-hoy.html) ── */
+.boe-hoy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 22px; margin: 8px 0 90px; }
+.boe-hoy-empty { text-align: center; color: var(--gray); font-size: 1.02rem; padding: 36px 0 90px; }
 @media (max-width: 640px) { .boe-hoy-grid { grid-template-columns: 1fr; } }
 
 /* Featured grande */

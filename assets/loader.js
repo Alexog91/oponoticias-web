@@ -307,69 +307,75 @@ async function cargarPortada() {
       countEl.textContent = `${contadores[nombre]} convocatorias`;
     }
   });
+}
 
-  /* 6 · "El BOE de hoy" — TODAS las convocatorias reales de la última edición */
+/* ── PÁGINA "EL BOE DE HOY" (boe-hoy.html) ──────────────────────────────────
+   Lista TODAS las convocatorias reales de la última edición del BOE.        */
+async function cargarBoeHoy() {
   const boeGrid = document.getElementById('boeHoyGrid');
-  if (boeGrid) {
-    const reales = convs.filter(convocatoriaReal);
-    if (reales.length) {
-      // Fecha de la edición más reciente del BOE
-      const tiempos = reales
-        .map(c => parseFecha(c.fecha))
-        .filter(Boolean)
-        .map(d => d.getTime());
-      const maxDate = new Date(Math.max(...tiempos));
-      const mismaFecha = (c) => {
-        const d = parseFecha(c.fecha);
-        return d && d.getFullYear() === maxDate.getFullYear()
-            && d.getMonth() === maxDate.getMonth()
-            && d.getDate() === maxDate.getDate();
-      };
-      // Ordenar por nº de plazas (desc); las de puesto concreto pesan algo más
-      const plazasDe = (c) => {
-        const p = parsearResumen(c.resumen_claude);
-        if (!p) return 0;
-        let n = numPlazas(p.plazas);
-        if (puestoValido(p.puesto)) n += 0.5; // desempate a favor de las específicas
-        return n;
-      };
-      const deHoy = reales
-        .filter(mismaFecha)
-        .sort((a, b) => plazasDe(b) - plazasDe(a));
+  if (!boeGrid) return;
 
-      const fechaEl = document.getElementById('boeHoyFecha');
-      if (fechaEl) {
-        const n = deHoy.length;
-        fechaEl.textContent =
-          `${n} convocatoria${n === 1 ? '' : 's'} de oposición publicada${n === 1 ? '' : 's'} el `
-          + `${maxDate.getDate()} de ${MESES_LARGO[maxDate.getMonth()]} de ${maxDate.getFullYear()}.`;
-      }
+  const convs  = await supaFetch('convocatorias?select=*&order=created_at.desc&limit=150');
+  const reales = convs.filter(convocatoriaReal);
 
-      boeGrid.innerHTML = '';
-      deHoy.forEach(c => {
-        const organismo = extraerOrganismo(c.titulo);
-        const parsed    = parsearResumen(c.resumen_claude);
-        const desc      = parsed ? parsed.puesto : extraerTipo(c.resumen);
-        const art = document.createElement('article');
-        art.className = 'conv-card';
-        art.innerHTML = `
-          <div class="conv-card-strip"></div>
-          <div class="conv-card-body">
-            <span class="conv-tag">${c.categoria}</span>
-            <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
-            <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.86rem;letter-spacing:0.02em;">${desc}</p>
-            <div class="conv-meta">
-              <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
-              <span>${fmtCorto(c.fecha)}</span>
-            </div>
-          </div>`;
-        boeGrid.appendChild(art);
-      });
-    } else {
-      const empty = document.getElementById('boeHoyEmpty');
-      if (empty) empty.hidden = false;
-    }
+  if (!reales.length) {
+    const empty = document.getElementById('boeHoyEmpty');
+    if (empty) empty.hidden = false;
+    return;
   }
+
+  // Fecha de la edición más reciente del BOE
+  const tiempos = reales
+    .map(c => parseFecha(c.fecha))
+    .filter(Boolean)
+    .map(d => d.getTime());
+  const maxDate = new Date(Math.max(...tiempos));
+  const mismaFecha = (c) => {
+    const d = parseFecha(c.fecha);
+    return d && d.getFullYear() === maxDate.getFullYear()
+        && d.getMonth() === maxDate.getMonth()
+        && d.getDate() === maxDate.getDate();
+  };
+  // Ordenar por nº de plazas (desc); las de puesto concreto pesan algo más
+  const plazasDe = (c) => {
+    const p = parsearResumen(c.resumen_claude);
+    if (!p) return 0;
+    let n = numPlazas(p.plazas);
+    if (puestoValido(p.puesto)) n += 0.5;
+    return n;
+  };
+  const deHoy = reales
+    .filter(mismaFecha)
+    .sort((a, b) => plazasDe(b) - plazasDe(a));
+
+  const fechaEl = document.getElementById('boeHoyFecha');
+  if (fechaEl) {
+    const n = deHoy.length;
+    fechaEl.textContent =
+      `${n} convocatoria${n === 1 ? '' : 's'} de oposición publicada${n === 1 ? '' : 's'} el `
+      + `${maxDate.getDate()} de ${MESES_LARGO[maxDate.getMonth()]} de ${maxDate.getFullYear()}.`;
+  }
+
+  boeGrid.innerHTML = '';
+  deHoy.forEach(c => {
+    const organismo = extraerOrganismo(c.titulo);
+    const parsed    = parsearResumen(c.resumen_claude);
+    const desc      = parsed ? parsed.puesto : extraerTipo(c.resumen);
+    const art = document.createElement('article');
+    art.className = 'conv-card';
+    art.innerHTML = `
+      <div class="conv-card-strip"></div>
+      <div class="conv-card-body">
+        <span class="conv-tag">${c.categoria}</span>
+        <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
+        <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.86rem;letter-spacing:0.02em;">${desc}</p>
+        <div class="conv-meta">
+          <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
+          <span>${fmtCorto(c.fecha)}</span>
+        </div>
+      </div>`;
+    boeGrid.appendChild(art);
+  });
 }
 
 /* ── COLUMNA DE NOTICIAS (RSS · index.html) ─────────────────────────────── */
@@ -705,8 +711,11 @@ function montarFiltroCA(categoria, caPresentes) {
 document.addEventListener('DOMContentLoaded', async () => {
   try {
     const catMeta = document.querySelector('meta[name="opo-categoria"]');
+    const pageMeta = document.querySelector('meta[name="opo-page"]');
     if (catMeta) {
       await cargarCategoria(catMeta.getAttribute('content'));
+    } else if (pageMeta && pageMeta.getAttribute('content') === 'boe-hoy') {
+      await cargarBoeHoy();
     } else if (document.querySelector('.conv-grid')) {
       await cargarPortada();
       await cargarNoticias();
