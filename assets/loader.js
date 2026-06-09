@@ -298,6 +298,61 @@ async function cargarPortada() {
       countEl.textContent = `${contadores[nombre]} convocatorias`;
     }
   });
+
+  /* 6 · "El BOE de hoy" — TODAS las convocatorias de la última edición */
+  const boeGrid = document.getElementById('boeHoyGrid');
+  if (boeGrid) {
+    const validas = convs.filter(convocatoriaValida);
+    if (validas.length) {
+      // Fecha de la edición más reciente del BOE
+      const tiempos = validas
+        .map(c => parseFecha(c.fecha))
+        .filter(Boolean)
+        .map(d => d.getTime());
+      const maxDate = new Date(Math.max(...tiempos));
+      const mismaFecha = (c) => {
+        const d = parseFecha(c.fecha);
+        return d && d.getFullYear() === maxDate.getFullYear()
+            && d.getMonth() === maxDate.getMonth()
+            && d.getDate() === maxDate.getDate();
+      };
+      const deHoy = validas
+        .filter(mismaFecha)
+        .sort((a, b) => puntuarConvocatoria(b) - puntuarConvocatoria(a));
+
+      const fechaEl = document.getElementById('boeHoyFecha');
+      if (fechaEl) {
+        const n = deHoy.length;
+        fechaEl.textContent =
+          `${n} convocatoria${n === 1 ? '' : 's'} de oposición publicada${n === 1 ? '' : 's'} el `
+          + `${maxDate.getDate()} de ${MESES_LARGO[maxDate.getMonth()]} de ${maxDate.getFullYear()}.`;
+      }
+
+      boeGrid.innerHTML = '';
+      deHoy.forEach(c => {
+        const organismo = extraerOrganismo(c.titulo);
+        const parsed    = parsearResumen(c.resumen_claude);
+        const desc      = parsed ? parsed.puesto : extraerTipo(c.resumen);
+        const art = document.createElement('article');
+        art.className = 'conv-card';
+        art.innerHTML = `
+          <div class="conv-card-strip"></div>
+          <div class="conv-card-body">
+            <span class="conv-tag">${c.categoria}</span>
+            <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
+            <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.86rem;letter-spacing:0.02em;">${desc}</p>
+            <div class="conv-meta">
+              <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
+              <span>${fmtCorto(c.fecha)}</span>
+            </div>
+          </div>`;
+        boeGrid.appendChild(art);
+      });
+    } else {
+      const empty = document.getElementById('boeHoyEmpty');
+      if (empty) empty.hidden = false;
+    }
+  }
 }
 
 /* ── COLUMNA DE NOTICIAS (RSS · index.html) ─────────────────────────────── */
