@@ -21,6 +21,7 @@ import json
 import os
 import re
 import html
+import unicodedata
 from email.utils import parsedate_to_datetime
 
 # ── Configuración ───────────────────────────────────────────────────────────
@@ -64,10 +65,14 @@ def limpiar_html(texto):
     return texto.strip()
 
 
+def _sin_tildes(texto):
+    return unicodedata.normalize('NFKD', texto.casefold()).encode('ascii', 'ignore').decode('ascii')
+
+
 def es_relevante(titulo, descripcion):
     """True si el item trata de oposiciones/empleo público."""
-    blob = (titulo + ' ' + descripcion).lower()
-    return any(p in blob for p in PALABRAS_RELEVANTES)
+    blob = _sin_tildes(titulo + ' ' + descripcion)
+    return any(_sin_tildes(p) in blob for p in PALABRAS_RELEVANTES)
 
 
 def leer_feed(nombre, url):
