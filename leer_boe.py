@@ -90,8 +90,88 @@ def leer_boe_rss():
         return []
 
 
+def _sanitizar_resumen(texto):
+    """De la respuesta de Claude extrae UNA sola línea con formato
+    'PLAZAS - PUESTO - LUGAR'. Descarta razonamiento, markdown, viñetas y
+    saltos de línea. Devuelve la línea limpia (MAYÚSCULAS) o None si no hay
+    ninguna línea válida (entonces se usará el fallback determinista)."""
+    if not texto:
+        return None
+
+    # Quitar markdown y viñetas
+    limpio = texto.replace('*', '').replace('#', '').replace('`', '')
+
+    INICIOS_RAZONAMIENTO = (
+        'analiz', 'el título', 'el titulo', 'dado que', 'organismo:', 'tipo:',
+        'puesto:', 'lugar:', 'ayuntamiento:', 'la descripción', 'la descripcion',
+        'no se', 'según', 'segun', 'este ', 'esta ', 'aqui', 'aquí',
+    )
+
+    for linea in limpio.splitlines():
+        l = linea.strip().lstrip('-•·*').strip()
+        if not l:
+            continue
+        low = l.lower()
+        if low.startswith(INICIOS_RAZONAMIENTO):
+            continue
+        # Debe tener el patrón "<N PLAZAS|VARIAS PLAZAS> - <puesto> - <lugar>"
+        if ' - ' in l and re.match(r'^\s*(\d+\s*plazas?|varias\s*plazas?)\b',
+                                   l, re.IGNORECASE):
+            partes = [p.strip() for p in l.split(' - ') if p.strip()]
+            if len(partes) >= 2:
+                return ' - '.join(partes[:3]).upper()[:120]
+    return None
+
+
+def _resumen_fallback(titulo, resumen):
+    """Construye un resumen válido 'PLAZAS - PUESTO - LUGAR' SOLO con reglas
+    locales (sin IA). Se usa cuando Claude no devuelve un formato utilizable,
+    para que nunca se publique texto en bruto."""
+    texto = f"{titulo} {resumen}"
+    low = texto.lower()
+
+    # 1 · Nº de plazas
+    m = re.search(r'(\d+)\s*plaza', low)
+    if m:
+        n = int(m.group(1))
+        plazas = "1 PLAZA" if n == 1 else f"{n} PLAZAS"
+    elif 'varias plaza' in low or 'plazas' in low:
+        plazas = "VARIAS PLAZAS"
+    else:
+        plazas = "1 PLAZA"
+
+    # 2 · Puesto (genérico, derivado del texto)
+    if 'funcionario y laboral' in low or ('funcionario' in low and 'laboral' in low):
+        puesto = "PERSONAL FUNCIONARIO Y LABORAL"
+    elif 'personal laboral' in low:
+        puesto = "PERSONAL LABORAL"
+    elif 'personal funcionario' in low:
+        puesto = "PERSONAL FUNCIONARIO"
+    else:
+        cuerpo, _ = extraer_cuerpo(titulo)            # "📋 Administrativo" …
+        puesto = re.sub(r'^[^\wÁÉÍÓÚÑ]+', '', cuerpo).strip().upper()
+
+    # 3 · Lugar: paréntesis del título o el organismo convocante
+    lugar = "ESPAÑA"
+    par = re.search(r'\(([^)]+)\)', titulo)
+    if par:
+        lugar = par.group(1).strip().upper()
+    else:
+        loc = re.search(
+            r'(?:Ayuntamiento|Diputaci[óo]n|Cabildo|Consejo|Mancomunidad|'
+            r'Universidad|Consorcio)\s+(?:Provincial\s+)?de\s+'
+            r'([A-ZÁÉÍÓÚÑ][\w\sÁÉÍÓÚÑáéíóúñ/-]+?)(?:,|$)',
+            titulo)
+        if loc:
+            lugar = loc.group(1).strip().upper()[:40]
+
+    return f"{plazas} - {puesto} - {lugar}"
+
+
 def generar_resumen_con_claude(titulo, resumen):
-    """Usa Claude API para generar un resumen inteligente"""
+    """Usa Claude API para generar un resumen inteligente.
+    Garantiza SIEMPRE el formato 'PLAZAS - PUESTO - LUGAR' (valida la salida
+    y, si Claude se desvía, cae a un fallback determinista local)."""
 
     try:
         prompt = f"""Analiza esta convocatoria del BOE y extrae la información clave.
@@ -151,7 +231,15 @@ Si realmente no hay nada, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
 
         data = {
             "model": "claude-sonnet-4-6",
-            "max_tokens": 100,
+            "max_tokens": 60,
+            "system": (
+                "Eres un extractor de datos del BOE. Respondes EXCLUSIVAMENTE "
+                "con UNA sola línea en MAYÚSCULAS con el formato "
+                "'NÚMERO PLAZAS - PUESTO - LUGAR'. PROHIBIDO escribir "
+                "explicaciones, análisis, razonamientos, viñetas, markdown, "
+                "comillas o saltos de línea. Tu respuesta es solo esa línea."
+            ),
+            "temperature": 0,
             "messages": [
                 {"role": "user", "content": prompt}
             ]
@@ -166,12 +254,22 @@ Si realmente no hay nada, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
 
         # Extraer el texto de la respuesta
         resumen_generado = response_data['content'][0]['text'].strip()
-        print(f"✨ Claude generó: {resumen_generado}")
-        return resumen_generado
+
+        # Validar/sanear: nunca devolver razonamiento ni texto sin formato
+        limpio = _sanitizar_resumen(resumen_generado)
+        if limpio:
+            print(f"✨ Claude generó: {limpio}")
+            return limpio
+
+        fallback = _resumen_fallback(titulo, resumen)
+        print(f"⚠️  Respuesta sin formato válido ({resumen_generado[:50]!r}). "
+              f"Fallback: {fallback}")
+        return fallback
 
     except Exception as e:
-        print(f"⚠️  Error con Claude: {e}. Usando resumen por defecto.")
-        return "Convocatoria disponible"
+        fallback = _resumen_fallback(titulo, resumen)
+        print(f"⚠️  Error con Claude: {e}. Fallback: {fallback}")
+        return fallback
 
 
 # Comunidades válidas (debe coincidir con migrar_comunidad.py y el frontend)
@@ -209,7 +307,7 @@ Reglas:
             "content-type": "application/json",
         }
         data = {
-            "model": "claude-3-haiku-20240307",
+            "model": "claude-haiku-4-5-20251001",
             "max_tokens": 20,
             "messages": [{"role": "user", "content": prompt}],
         }
@@ -302,13 +400,15 @@ def limpiar_titulo(titulo):
 
 def guardar_en_supabase(conv):
     """Guarda UNA convocatoria en Supabase. Retorna True si se guardó, False si ya existía."""
-    cuerpo, _ = extraer_cuerpo(conv['titulo'])
+    cuerpo, categoria = extraer_cuerpo(conv['titulo'])
     data = {
         'fecha': conv['fecha'],
         'titulo': conv['titulo'],
         'enlace': conv['enlace'],
         'resumen': conv['resumen'],
-        'cuerpo': cuerpo
+        'cuerpo': cuerpo,
+        'categoria': categoria,                       # ← el frontend filtra/agrupa por aquí
+        'resumen_claude': conv.get('resumen_ia'),     # ← el frontend lee el puesto/plazas de aquí
     }
     # Comunidad autónoma (puede ser None → se infiere en el frontend)
     if conv.get('comunidad_autonoma'):
@@ -420,22 +520,26 @@ def enviar_a_telegram(conv):
         print(f"❌ Error Telegram: {e}")
 
 
-def generar_slug(titulo):
-    """Genera un slug seguro a partir del título"""
+def generar_slug(titulo, ref_boe=""):
+    """Genera un slug único usando el título + referencia BOE como sufijo."""
     slug = titulo.lower()
     slug = unicodedata.normalize('NFKD', slug)
     slug = ''.join([c for c in slug if not unicodedata.combining(c)])
     slug = re.sub(r'[^a-z0-9]+', '-', slug)
     slug = slug.strip('-')
     slug = re.sub(r'-+', '-', slug)
-    slug = slug[:80]
+    slug = slug[:60]
+    # El ref_boe (ej: BOE-A-2026-12461) garantiza unicidad aunque los títulos coincidan
+    if ref_boe and ref_boe != "BOE":
+        sufijo = re.sub(r'[^a-z0-9]+', '-', ref_boe.lower()).strip('-')
+        return f"{slug}-{sufijo}.html"
     return f"{slug}.html"
 
 
 def generar_html_convocatoria(conv, categoria):
     """Genera un archivo HTML por convocatoria"""
 
-    slug = generar_slug(conv['titulo'])
+    slug = generar_slug(conv['titulo'], conv.get('ref_boe', ''))
     html_path = WEB_CONVOCATORIA_DIR / slug
 
     # Si ya existe, no regenerar
@@ -509,7 +613,8 @@ def generar_html_convocatoria(conv, categoria):
         <a href="../index.html" aria-label="OpoNoticias - Inicio"><img src="../assets/logo.svg" alt="OpoNoticias" class="nav-logo"></a>
         <div class="nav-links">
           <a href="../index.html#categorias">Categorías</a>
-          <a href="../index.html#ultimas">Últimas</a>
+          <a href="../boe-hoy.html">El BOE de hoy</a>
+          <a href="../blog.html">Blog</a>
           <a href="../index.html#como-funciona">Cómo funciona</a>
         </div>
         <div class="nav-cta">
@@ -611,17 +716,38 @@ def generar_html_convocatoria(conv, categoria):
 
 
 def regenerar_sitemap(slugs_nuevos):
-    """Regenera el sitemap.xml"""
+    """Regenera el sitemap.xml incluyendo TODAS las páginas de convocatoria existentes."""
     try:
+        hoy = datetime.now().strftime("%Y-%m-%d")
         urls = [
-            ("https://oponoticias.com/", "2026-05-23", "daily", "1.0"),
-            ("https://oponoticias.com/categoria/educacion.html", "2026-05-23", "daily", "0.8"),
+            ("https://oponoticias.com/", hoy, "daily", "1.0"),
+            ("https://oponoticias.com/boe-hoy.html", hoy, "daily", "0.9"),
+            ("https://oponoticias.com/blog.html", hoy, "weekly", "0.8"),
+            ("https://oponoticias.com/categoria/educacion.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/sanidad.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/justicia.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/seguridad.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/administracion.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/hacienda.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/correos.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/tecnica.html", hoy, "daily", "0.8"),
         ]
 
+        # Recoger todos los slugs históricos ya generados en el repo web
+        slugs_existentes = set()
+        if WEB_CONVOCATORIA_DIR.exists():
+            for f in sorted(WEB_CONVOCATORIA_DIR.glob("*.html")):
+                slugs_existentes.add(f.name)
+
+        # Añadir también los del día (por si aún no están en disco)
         for slug in slugs_nuevos:
+            slugs_existentes.add(slug)
+
+        # Eliminar duplicados manteniendo orden determinista
+        for slug in sorted(slugs_existentes):
             urls.append((
                 f"https://oponoticias.com/convocatoria/{slug}",
-                datetime.now().strftime("%Y-%m-%d"),
+                hoy,
                 "weekly",
                 "0.7"
             ))
@@ -692,7 +818,10 @@ def commit_a_github(mensaje, archivos):
         return True
 
     except subprocess.CalledProcessError as e:
-        print(f"❌ Error en git: {e}")
+        msg = str(e)
+        if GITHUB_TOKEN:
+            msg = msg.replace(GITHUB_TOKEN, "***")
+        print(f"❌ Error en git: {msg}")
         return False
     except Exception as e:
         print(f"❌ Error en commit a GitHub: {e}")

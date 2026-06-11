@@ -178,7 +178,7 @@ def supabase_post(table, data):
 
 # ── Claude ─────────────────────────────────────────────────────────────────
 
-def claude(prompt, max_tokens=3000):
+def claude(prompt, max_tokens=4000):
     body = json.dumps({
         "model": "claude-sonnet-4-6",
         "max_tokens": max_tokens,
@@ -272,7 +272,7 @@ DEVUELVE SOLO ESTE JSON (sin ```, sin texto antes ni después):
   "contenido": "Artículo completo en markdown"
 }}"""
 
-    respuesta = claude(prompt, max_tokens=3000)
+    respuesta = claude(prompt, max_tokens=4000)
     if not respuesta:
         return None
     respuesta = re.sub(r'^```json\s*', '', respuesta.strip())
