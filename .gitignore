@@ -157,3 +157,7 @@ __pycache__/
 
 # macOS
 .DS_Store
+# Scripts locales (no subir)
+anuncio_web.py
+rellenar_convocatorias.py
+host.odt
