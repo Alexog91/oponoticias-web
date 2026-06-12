@@ -2,7 +2,8 @@ name: Generar Blog IA
 
 on:
   schedule:
-    - cron: '0 8 * * 1'   # Lunes 10:00 CEST (UTC+2) = 8:00 UTC - Una vez por semana
+    - cron: '0 8 * * 1'   # Lunes 10:00 CEST (UTC+2) = 8:00 UTC
+    - cron: '0 8 * * 4'   # Jueves 10:00 CEST - segunda tanda (se auto-limita por categoría)
   workflow_dispatch:       # Permite ejecución manual desde GitHub UI
 
 permissions:

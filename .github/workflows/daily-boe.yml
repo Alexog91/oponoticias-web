@@ -1,0 +1,35 @@
+name: Daily BOE Check
+
+# Lee el BOE → guarda en Supabase → envía a Telegram → genera las páginas HTML
+# → hace commit/push al PROPIO repo (oponoticias-web). Vercel despliega solo.
+# Todo en un único repo: scripts + workflows + web juntos.
+on:
+  schedule:
+    - cron: '0 5 * * 1-6'  # 7:00 CEST (UTC+2) = 5:00 UTC · lunes-sábado (el BOE no publica domingos)
+  workflow_dispatch:        # Permite ejecución manual desde GitHub UI
+
+permissions:
+  contents: write           # Necesario para que leer_boe.py pueda hacer push
+
+jobs:
+  check-boe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run leer_boe.py
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEB_REPO_PATH: '.'
+        run: python3 leer_boe.py
