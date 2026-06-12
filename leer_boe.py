@@ -715,7 +715,8 @@ def generar_html_convocatoria(conv, categoria):
           <a href="../aviso-legal.html">Aviso legal</a>
           <a href="../privacidad.html">Privacidad (RGPD)</a>
           <a href="../cookies.html">Cookies</a>
-          <a href="https://t.me/OPONOTICIAS" rel="noopener" target="_blank">Contacto</a>
+          <a href="https://t.me/OPONOTICIAS" rel="noopener" target="_blank">Contacto (Telegram)</a>
+          <a href="mailto:info@oponoticias.com">info@oponoticias.com</a>
         </div>
         <div class="footer-col">
           <h4>Comunidades</h4>
