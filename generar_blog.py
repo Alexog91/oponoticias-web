@@ -64,7 +64,7 @@ FUENTES_REFERENCIA = [
     {"nombre": "el SEPE", "url": "https://www.sepe.es"},
 ]
 
-MAX_ARTICULOS_POR_EJECUCION = 2
+MAX_ARTICULOS_POR_EJECUCION = 3
 DIAS_ENTRE_ARTICULOS = 25  # no regenerar una categoría hasta pasados ~3-4 semanas
 
 # ── Helpers de texto ─────────────────────────────────────────────────────────

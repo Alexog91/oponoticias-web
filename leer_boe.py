@@ -810,7 +810,7 @@ def commit_a_github(mensaje, archivos):
 
         url_repo = f"https://x-access-token:{GITHUB_TOKEN}@github.com/{GITHUB_REPO}.git"
         subprocess.run(
-            ["git", "-C", WEB_REPO_PATH, "push", url_repo, "main"],
+            ["git", "-C", WEB_REPO_PATH, "push", url_repo, "HEAD:main"],
             check=True,
             capture_output=True,
             env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}
