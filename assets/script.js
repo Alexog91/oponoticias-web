@@ -55,4 +55,63 @@
       });
     });
   }
+
+  /* ── Newsletter subscription form ── */
+  var nForm = document.getElementById('newsletterForm');
+  if (nForm) {
+    var BREVO_API_KEY  = 'TU_BREVO_API_KEY';   /* ← reemplazar */
+    var BREVO_LIST_ID  = 0;                     /* ← reemplazar con el ID numérico de tu lista */
+
+    nForm.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var emailInput = document.getElementById('newsletterEmail');
+      var msgEl      = document.getElementById('newsletterMsg');
+      var btn        = nForm.querySelector('button[type="submit"]');
+      var email      = emailInput.value.trim();
+
+      if (!email) return;
+
+      btn.disabled    = true;
+      btn.textContent = 'Enviando…';
+      msgEl.textContent = '';
+      msgEl.className   = 'newsletter-msg';
+
+      var body = JSON.stringify({
+        email: email,
+        listIds: [BREVO_LIST_ID],
+        updateEnabled: true
+      });
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', 'https://api.brevo.com/v3/contacts');
+      xhr.setRequestHeader('api-key', BREVO_API_KEY);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.onload = function () {
+        btn.disabled    = false;
+        btn.textContent = 'Suscribirme →';
+        if (xhr.status === 201 || xhr.status === 204 || xhr.status === 200) {
+          nForm.innerHTML = '<p class="newsletter-msg ok" style="font-size:1.05rem;">✓ ¡Suscrito! Recibirás el primer boletín mañana.</p>';
+        } else {
+          var resp = {};
+          try { resp = JSON.parse(xhr.responseText); } catch (_) {}
+          if (resp.code === 'duplicate_parameter') {
+            msgEl.textContent = '¡Ya estabas suscrito! Te tenemos en la lista.';
+            msgEl.className   = 'newsletter-msg ok';
+          } else {
+            msgEl.textContent = 'Algo ha ido mal. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
+            msgEl.className   = 'newsletter-msg err';
+          }
+        }
+      };
+      xhr.onerror = function () {
+        btn.disabled    = false;
+        btn.textContent = 'Suscribirme →';
+        msgEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+        msgEl.className   = 'newsletter-msg err';
+      };
+      xhr.send(body);
+    });
+  }
+
 })();

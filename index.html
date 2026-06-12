@@ -43,11 +43,7 @@
     "url": "https://oponoticias.com/",
     "description": "Convocatorias de oposiciones del BOE resumidas en lenguaje claro.",
     "publisher": { "@type": "Organization", "name": "OpoNoticias", "logo": { "@type": "ImageObject", "url": "https://oponoticias.com/assets/icon-512.svg" } },
-    "potentialAction": {
-      "@type": "SearchAction",
-      "target": "https://oponoticias.com/buscar?q={search_term_string}",
-      "query-input": "required name=search_term_string"
-    }
+    "sameAs": ["https://t.me/OPONOTICIAS"]
   }
   </script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
@@ -89,7 +85,7 @@
               <a href="#ultimas" class="btn btn-ghost">Ver últimas convocatorias</a>
             </div>
             <div class="hero-trust">
-              <span><strong>256+</strong> opositores suscritos</span>
+              <span><strong>2.700+</strong> opositores suscritos</span>
               <span><strong>Diario</strong> a las 9:30 h</span>
               <span><strong>100 %</strong> fuente oficial BOE</span>
             </div>
@@ -392,6 +388,34 @@
           <a href="ccaa/navarra.html" class="ccaa-pill">Navarra</a>
           <a href="ccaa/pais-vasco.html" class="ccaa-pill">País Vasco</a>
           <a href="ccaa/nacional.html" class="ccaa-pill">Nacional / Estatal</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════ NEWSLETTER ═══════════ -->
+    <section class="section newsletter-section" id="newsletter">
+      <div class="container">
+        <div class="newsletter-box reveal">
+          <div class="newsletter-copy">
+            <span class="eyebrow">Boletín gratuito</span>
+            <h2>Las oposiciones del día, en tu bandeja</h2>
+            <p>Recibe cada mañana un resumen de las nuevas convocatorias del BOE. Sin spam, solo lo que importa. Cancela cuando quieras.</p>
+            <ul class="newsletter-perks">
+              <li>✓ Resumen diario de convocatorias nuevas</li>
+              <li>✓ Enlace directo a cada convocatoria</li>
+              <li>✓ Gratis para siempre</li>
+            </ul>
+          </div>
+          <div class="newsletter-form-wrap">
+            <form class="newsletter-form" id="newsletterForm" novalidate>
+              <div class="newsletter-input-row">
+                <input type="email" id="newsletterEmail" name="email" placeholder="tu@email.com" required autocomplete="email">
+                <button type="submit" class="btn btn-primary">Suscribirme →</button>
+              </div>
+              <p class="newsletter-legal">Al suscribirte aceptas nuestra <a href="privacidad.html">política de privacidad</a>. Sin spam.</p>
+              <div class="newsletter-msg" id="newsletterMsg" aria-live="polite"></div>
+            </form>
+          </div>
         </div>
       </div>
     </section>

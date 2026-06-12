@@ -613,3 +613,55 @@ img, svg { max-width: 100%; display: block; }
 .ccaa-pills { display: flex; flex-wrap: wrap; gap: 8px; }
 .ccaa-pill { background: var(--bg); border: 1px solid var(--line); border-radius: 20px; padding: 5px 14px; font-size: 0.85rem; color: var(--text); text-decoration: none; transition: background var(--ease), border-color var(--ease); }
 .ccaa-pill:hover { background: var(--surface); border-color: var(--secondary); color: var(--primary); }
+
+/* ── Newsletter section ───────────────────────────────────────────────────── */
+.newsletter-section { background: var(--accent-light); }
+.newsletter-box {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  padding: 48px 56px;
+  box-shadow: var(--shadow);
+}
+.newsletter-copy h2 { font-size: 1.6rem; margin-bottom: 12px; }
+.newsletter-copy p  { color: var(--gray); margin-bottom: 20px; font-size: 0.95rem; }
+.newsletter-perks   { list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; color: var(--ink); }
+.newsletter-perks li { display: flex; align-items: center; gap: 8px; }
+.newsletter-form-wrap { display: flex; flex-direction: column; justify-content: center; }
+.newsletter-input-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.newsletter-input-row input[type="email"] {
+  flex: 1;
+  min-width: 200px;
+  padding: 13px 16px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius);
+  font-family: var(--sans);
+  font-size: 0.95rem;
+  background: var(--bg);
+  color: var(--ink);
+  outline: none;
+  transition: border-color var(--ease);
+}
+.newsletter-input-row input[type="email"]:focus { border-color: var(--secondary); }
+.newsletter-input-row .btn { white-space: nowrap; }
+.newsletter-legal { font-size: 0.76rem; color: var(--gray); margin-top: 10px; }
+.newsletter-legal a { color: var(--gray); text-decoration: underline; }
+.newsletter-msg { font-size: 0.9rem; margin-top: 12px; min-height: 20px; font-weight: 600; }
+.newsletter-msg.ok  { color: var(--accent); }
+.newsletter-msg.err { color: #c0392b; }
+
+@media (max-width: 860px) {
+  .newsletter-box { grid-template-columns: 1fr; gap: 28px; padding: 36px 28px; }
+}
+@media (max-width: 540px) {
+  .newsletter-input-row { flex-direction: column; }
+  .newsletter-input-row .btn { width: 100%; }
+}

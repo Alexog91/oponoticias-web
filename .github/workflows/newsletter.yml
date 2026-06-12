@@ -1,0 +1,33 @@
+name: Enviar newsletter diario
+
+on:
+  schedule:
+    # 10:00 hora española (UTC+2 verano → 08:00 UTC; UTC+1 invierno → 09:00 UTC)
+    # Usamos 08:30 UTC como compromiso — llega entre las 10:00 y las 10:30 en España
+    - cron: '30 8 * * 1-5'   # Lunes a viernes
+  workflow_dispatch:           # Permite lanzarlo manualmente desde GitHub
+
+permissions:
+  contents: read
+
+jobs:
+  newsletter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Enviar newsletter
+        env:
+          SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY:    ${{ secrets.SUPABASE_API_KEY }}
+          BREVO_API_KEY:       ${{ secrets.BREVO_API_KEY }}
+          BREVO_LIST_ID:       ${{ secrets.BREVO_LIST_ID }}
+          BREVO_SENDER_EMAIL:  info@oponoticias.com
+          BREVO_SENDER_NAME:   OpoNoticias
+        run: python3 enviar_newsletter.py
