@@ -146,6 +146,13 @@ function convocatoriaReal(c) {
  * Puntúa una convocatoria. La prioridad principal es el NÚMERO DE PLAZAS,
  * seguido de la especificidad del puesto y la variedad de categoría.
  */
+/** Días transcurridos desde que se registró la convocatoria. */
+function diasDesde(c) {
+  const d = parseFecha(c.created_at || c.fecha);
+  if (!d) return 999;
+  return Math.max(0, Math.floor((Date.now() - d.getTime()) / 86400000));
+}
+
 function puntuarConvocatoria(c) {
   if (!convocatoriaValida(c)) return -1000;
   const parsed = parsearResumen(c.resumen_claude);
@@ -155,6 +162,9 @@ function puntuarConvocatoria(c) {
   if (parsed.puesto.length > 12) pts += 4; // puesto descriptivo
   if (parsed.puesto.length > 22) pts += 3;
   if (c.categoria && c.categoria !== 'Administración') pts += 3; // variedad
+  // Frescura: las recientes pesan más para que la destacada se renueve a diario.
+  // Hoy +30, y baja 6 puntos por día hasta agotarse a los 5 días.
+  pts += Math.max(0, 30 - diasDesde(c) * 6);
   return pts;
 }
 
