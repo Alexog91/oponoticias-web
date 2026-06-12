@@ -391,7 +391,7 @@ img, svg { max-width: 100%; display: block; }
    FOOTER
    ============================================================ */
 .site-footer { background: var(--ink); color: rgba(255,255,255,0.7); padding: 60px 0 30px; }
-.footer-grid { display: grid; grid-template-columns: 1.6fr 1fr 1fr 1fr; gap: 40px; margin-bottom: 44px; }
+.footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 44px; }
 .footer-brand img { height: 36px; margin-bottom: 16px; opacity: 0.95; }
 .footer-brand p { font-size: 0.9rem; max-width: 280px; line-height: 1.6; }
 .footer-col h4 { color: #fff; font-family: var(--sans); font-size: 0.78rem; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 16px; }

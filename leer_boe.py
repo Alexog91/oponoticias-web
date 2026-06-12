@@ -693,12 +693,42 @@ def generar_html_convocatoria(conv, categoria):
     <div class="container">
       <div class="footer-grid">
         <div class="footer-brand">
-          <img src="../assets/logo.svg" alt="OpoNoticias">
-          <p>Las convocatorias de oposiciones del BOE, resumidas en lenguaje claro.</p>
+          <img src="../assets/logo-white.svg" alt="OpoNoticias">
+          <p>Las convocatorias de oposiciones del BOE, resumidas en lenguaje claro y organizadas por categoría.</p>
+        </div>
+        <div class="footer-col">
+          <h4>Categorías</h4>
+          <a href="../categoria/educacion.html">Educación</a>
+          <a href="../categoria/sanidad.html">Sanidad</a>
+          <a href="../categoria/justicia.html">Justicia</a>
+          <a href="../categoria/administracion.html">Administración</a>
+        </div>
+        <div class="footer-col">
+          <h4>Recursos</h4>
+          <a href="../index.html#ultimas">Últimas convocatorias</a>
+          <a href="../index.html#como-funciona">Cómo funciona</a>
+          <a href="https://www.boe.es" rel="noopener" target="_blank">BOE oficial</a>
+          <a href="https://t.me/OPONOTICIAS" rel="noopener" target="_blank">Canal de Telegram</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="../aviso-legal.html">Aviso legal</a>
+          <a href="../privacidad.html">Privacidad (RGPD)</a>
+          <a href="../cookies.html">Cookies</a>
+          <a href="https://t.me/OPONOTICIAS" rel="noopener" target="_blank">Contacto</a>
+        </div>
+        <div class="footer-col">
+          <h4>Comunidades</h4>
+          <a href="../ccaa/madrid.html">Madrid</a>
+          <a href="../ccaa/andalucia.html">Andalucía</a>
+          <a href="../ccaa/cataluna.html">Cataluña</a>
+          <a href="../ccaa/comunidad-valenciana.html">C. Valenciana</a>
+          <a href="../index.html#comunidades">Ver todas →</a>
         </div>
       </div>
       <div class="footer-bottom">
         <span>© 2026 OpoNoticias · oponoticias.com</span>
+        <span>Fuente oficial: api.boe.es · Actualización diaria a las 9:30 h</span>
       </div>
     </div>
   </footer>
