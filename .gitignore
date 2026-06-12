@@ -150,3 +150,10 @@ TOKEN BOT TELEGRAM.rtf
 proton-recovery-phrase.pdf
 recovery*.docx
 api*key*
+
+# Python
+__pycache__/
+*.pyc
+
+# macOS
+.DS_Store
