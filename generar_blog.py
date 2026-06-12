@@ -349,6 +349,7 @@ def plantilla_articulo(art):
   <script type="application/ld+json">
   {json.dumps(schema, ensure_ascii=False, indent=2)}
   </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
 </head>
 <body>
 
@@ -450,6 +451,7 @@ def plantilla_indice(articulos):
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/style.css?v=2">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
 </head>
 <body>
 

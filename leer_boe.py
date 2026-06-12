@@ -606,6 +606,7 @@ def generar_html_convocatoria(conv, categoria):
     "url": "{canonical}"
   }}
   </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
 </head>
 <body>
 
