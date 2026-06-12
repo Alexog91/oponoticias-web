@@ -594,3 +594,22 @@ img, svg { max-width: 100%; display: block; }
   .cat-hero-stats { gap: 24px; }
   .article-meta { gap: 12px; }
 }
+
+/* ── Páginas CCAA ─────────────────────────────────────────────────────────── */
+.ccaa-convocatorias { display: flex; flex-direction: column; gap: 16px; margin: 32px 0; }
+.ccaa-convocatorias .conv-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px 24px; transition: box-shadow var(--ease), border-color var(--ease); }
+.ccaa-convocatorias .conv-card:hover { border-color: var(--secondary); box-shadow: var(--shadow-sm); }
+.ccaa-convocatorias .conv-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; font-size: 0.8rem; color: var(--gray); }
+.ccaa-convocatorias .conv-fecha { font-weight: 600; }
+.ccaa-convocatorias .conv-categoria { background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; }
+.ccaa-convocatorias .conv-plazas { background: var(--primary-light, #f0ece8); color: var(--primary); border-radius: 4px; padding: 2px 8px; font-weight: 600; }
+.ccaa-convocatorias .conv-titulo { font-size: 1rem; line-height: 1.4; margin: 0 0 6px; }
+.ccaa-convocatorias .conv-titulo a { color: var(--text); text-decoration: none; }
+.ccaa-convocatorias .conv-titulo a:hover { color: var(--primary); }
+.ccaa-convocatorias .conv-puesto { font-size: 0.88rem; color: var(--gray); margin: 0; }
+.sin-resultados { color: var(--gray); font-style: italic; padding: 24px 0; }
+.ccaa-otras { margin-top: 48px; padding-top: 32px; border-top: 1px solid var(--line); }
+.ccaa-otras h3 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; }
+.ccaa-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+.ccaa-pill { background: var(--bg); border: 1px solid var(--line); border-radius: 20px; padding: 5px 14px; font-size: 0.85rem; color: var(--text); text-decoration: none; transition: background var(--ease), border-color var(--ease); }
+.ccaa-pill:hover { background: var(--surface); border-color: var(--secondary); color: var(--primary); }
