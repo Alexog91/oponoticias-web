@@ -24,11 +24,16 @@
   <rect width="512" height="512" fill="url(#sh)" clip-path="url(#icon-clip)"/>
   <rect width="512" height="512" fill="url(#dp)" clip-path="url(#icon-clip)"/>
 
-  <circle cx="256" cy="272" r="92" fill="none" stroke="white" stroke-width="48"/>
+  <!-- Monograma ON (O = Oposiciones, N = Noticias) -->
+  <text x="256" y="271" text-anchor="middle"
+        font-family="'Merriweather', Georgia, 'Times New Roman', serif"
+        font-size="205" letter-spacing="-8">
+    <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+  </text>
 
-  <circle cx="374" cy="142" r="50" fill="white"/>
-  <circle cx="374" cy="142" r="42" fill="#7A8B6E"/>
-  <circle cx="374" cy="142" r="16" fill="white"/>
+  <!-- Filete de cabecera -->
+  <rect x="138" y="323" width="236" height="20" rx="10" fill="#C4A574"/>
+  <rect x="184" y="364" width="148" height="18" rx="9"  fill="#ffffff" fill-opacity="0.55"/>
 
   <rect x="2" y="2" width="508" height="508" rx="114"
         fill="none" stroke="white" stroke-opacity="0.10" stroke-width="3"/>
