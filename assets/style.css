@@ -394,10 +394,10 @@ img, svg { max-width: 100%; display: block; }
 .footer-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr 1fr; gap: 32px; margin-bottom: 44px; }
 .footer-brand img { height: 36px; margin-bottom: 16px; opacity: 0.95; }
 .footer-brand p { font-size: 0.9rem; max-width: 280px; line-height: 1.6; }
-.footer-social { display: flex; gap: 12px; margin-top: 18px; }
-.footer-social a { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 10px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75); transition: background var(--ease), color var(--ease), transform var(--ease); }
-.footer-social a:hover { background: var(--secondary); color: #fff; transform: translateY(-2px); }
-.footer-social svg { width: 19px; height: 19px; fill: currentColor; }
+.footer-social { display: flex; gap: 16px; margin-top: 18px; }
+.footer-social a { display: inline-flex; color: #fff; opacity: 0.8; transition: opacity var(--ease), transform var(--ease); }
+.footer-social a:hover { opacity: 1; transform: translateY(-2px); }
+.footer-social svg { width: 24px; height: 24px; fill: #fff; }
 .footer-col h4 { color: #fff; font-family: var(--sans); font-size: 0.78rem; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 16px; }
 .footer-col a { display: block; font-size: 0.9rem; padding: 5px 0; transition: color var(--ease); }
 .footer-col a:hover { color: var(--secondary); }
