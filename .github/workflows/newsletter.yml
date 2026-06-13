@@ -1,11 +1,10 @@
 name: Enviar newsletter diario
 
 on:
-  schedule:
-    # 10:00 hora española (UTC+2 verano → 08:00 UTC; UTC+1 invierno → 09:00 UTC)
-    # Usamos 08:30 UTC como compromiso — llega entre las 10:00 y las 10:30 en España
-    - cron: '30 8 * * 1-5'   # Lunes a viernes
-  workflow_dispatch:           # Permite lanzarlo manualmente desde GitHub
+  workflow_run:
+    workflows: ["Daily BOE Check"]  # Se dispara justo cuando termina el BOE
+    types: [completed]
+  workflow_dispatch:                # Permite lanzarlo manualmente desde GitHub
 
 permissions:
   contents: read
