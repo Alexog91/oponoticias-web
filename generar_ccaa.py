@@ -18,6 +18,7 @@ import urllib.request
 import urllib.parse
 from pathlib import Path
 from datetime import datetime
+from email.utils import parsedate_to_datetime
 
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
@@ -33,6 +34,8 @@ AÑO = datetime.now().year
 
 MESES = ['enero','febrero','marzo','abril','mayo','junio',
          'julio','agosto','septiembre','octubre','noviembre','diciembre']
+MESES_CORTO = ['ene','feb','mar','abr','may','jun',
+               'jul','ago','sep','oct','nov','dic']
 
 CCAA = [
     ("Andalucía",            "andalucia"),
@@ -86,14 +89,56 @@ def consultar_convocatorias(ccaa_nombre, limite=40):
 
 # ── Utilidades ────────────────────────────────────────────────────────────────
 
-def formatear_fecha(fecha_iso):
-    if not fecha_iso:
-        return ''
+def _parse_fecha(fecha):
+    """Parsea fecha RFC ('Sat, 13 Jun 2026 …') o ISO. Devuelve datetime o None."""
+    if not fecha:
+        return None
     try:
-        d = datetime.fromisoformat(fecha_iso[:10])
-        return f"{d.day} de {MESES[d.month-1]} de {d.year}"
+        return parsedate_to_datetime(fecha)
     except Exception:
-        return fecha_iso[:10]
+        try:
+            return datetime.fromisoformat(fecha[:10])
+        except Exception:
+            return None
+
+
+def formatear_fecha(fecha):
+    """Fecha corta en español: '13 jun'. Igual que el render de 'BOE de hoy'."""
+    d = _parse_fecha(fecha)
+    if not d:
+        return ''
+    return f"{d.day} {MESES_CORTO[d.month-1]}"
+
+
+def parsear_resumen(resumen_claude):
+    """Parsea '3 PLAZAS - POLICÍA LOCAL - CÁDIZ' → {plazas, puesto, lugar}."""
+    if not resumen_claude:
+        return None
+    limpio = re.sub(r'\*\*', '', resumen_claude)
+    limpio = re.sub(r'#+\s', '', limpio).strip()
+    partes = limpio.split(' - ')
+    if len(partes) < 2:
+        return None
+    return {
+        'plazas': partes[0].strip(),
+        'puesto': partes[1].strip(),
+        'lugar':  ' · '.join(p.strip() for p in partes[2:]),
+    }
+
+
+def extraer_organismo(titulo):
+    """Extrae el organismo del título largo del BOE (título corto y legible)."""
+    m = re.search(
+        r',\s+(?:de la|del|de los|de las|de)\s+(.+?)'
+        r'(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)',
+        titulo, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    partes = titulo.split(',')
+    if len(partes) >= 2:
+        return re.sub(r'^(de la |del |de los |de las |de )', '',
+                      partes[1].strip(), flags=re.IGNORECASE)
+    return titulo[:80]
 
 
 def ref_boe_desde_enlace(enlace):
@@ -152,26 +197,21 @@ def generar_html(ccaa_nombre, slug, convocatorias):
     for c in convocatorias:
         titulo  = c.get('titulo', '')
         fecha   = formatear_fecha(c.get('fecha', ''))
-        cuerpo  = c.get('cuerpo', '') or ''
         cat     = c.get('categoria', '') or ''
         enlace_boe = c.get('enlace', '')
 
-        rc = c.get('resumen_claude') or {}
-        if isinstance(rc, str):
-            try:
-                rc = json.loads(rc)
-            except Exception:
-                rc = {}
-        plazas = rc.get('plazas', '')
-        puesto = rc.get('puesto', cuerpo) or cuerpo
+        parsed    = parsear_resumen(c.get('resumen_claude'))
+        plazas    = parsed['plazas'] if parsed else ''
+        puesto    = parsed['puesto'] if parsed else ''
+        organismo = extraer_organismo(titulo)
 
         url, es_interna = url_convocatoria(titulo, enlace_boe)
         rel   = '' if es_interna else ' rel="noopener" target="_blank"'
         label = '' if es_interna else ' ↗'
 
-        plazas_html = f'<span class="conv-plazas">{html_lib.escape(str(plazas))} plazas</span>' if plazas else ''
+        plazas_html = f'<span class="conv-plazas">{html_lib.escape(plazas)}</span>' if plazas else ''
         cat_html    = f'<span class="conv-categoria">{html_lib.escape(cat)}</span>' if cat else ''
-        puesto_html = f'<p class="conv-puesto">{html_lib.escape(str(puesto))}</p>' if puesto else ''
+        puesto_html = f'<p class="conv-puesto">{html_lib.escape(puesto)}</p>' if puesto else ''
 
         tarjetas.append(f"""\
     <article class="conv-card">
@@ -180,7 +220,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
         {cat_html}
         {plazas_html}
       </div>
-      <h2 class="conv-titulo"><a href="{url}"{rel}>{html_lib.escape(titulo)}{label}</a></h2>
+      <h2 class="conv-titulo"><a href="{url}"{rel}>{html_lib.escape(organismo)}{label}</a></h2>
       {puesto_html}
     </article>""")
 
