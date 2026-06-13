@@ -19,6 +19,7 @@ import html as html_lib
 import urllib.request
 import urllib.parse
 from datetime import datetime, date
+from email.utils import parsedate_to_datetime
 
 SUPABASE_URL       = os.environ["SUPABASE_URL"]
 SUPABASE_API_KEY   = os.environ["SUPABASE_API_KEY"]
@@ -70,13 +71,24 @@ def brevo_post(path, body):
 
 
 def obtener_convocatorias_hoy():
+    # `fecha` se guarda como string RFC ("Sat, 13 Jun 2026 00:00:00 +0200"),
+    # no como ISO, así que no se puede filtrar con eq.{HOY}. Traemos las filas
+    # recientes y filtramos en Python comparando la fecha parseada con hoy.
     rows = supabase_get("convocatorias", {
-        "fecha": f"eq.{HOY}",
-        "order": "categoria.asc,titulo.asc",
+        "order": "id.desc",
+        "limit": "150",
         "select": "titulo,fecha,enlace,resumen_claude,categoria,comunidad_autonoma",
     })
-    print(f"  {len(rows)} convocatorias encontradas para {HOY}")
-    return rows
+    hoy = date.today()
+    de_hoy = []
+    for r in rows:
+        try:
+            if parsedate_to_datetime(r["fecha"]).date() == hoy:
+                de_hoy.append(r)
+        except Exception:
+            continue
+    print(f"  {len(de_hoy)} convocatorias de hoy ({hoy}) — de {len(rows)} recientes")
+    return de_hoy
 
 
 def tarjeta_html(c):
@@ -220,7 +232,8 @@ if __name__ == "__main__":
     convocatorias = obtener_convocatorias_hoy()
 
     if not convocatorias:
-        print("  ℹ️  Sin convocatorias hoy — se envía igualmente con mensaje vacío.")
+        print("  ℹ️  Sin convocatorias hoy — no se envía newsletter (evita email vacío).")
+        raise SystemExit(0)
 
     enviar_campana(convocatorias)
     print("✅ Newsletter enviada correctamente.")

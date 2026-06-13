@@ -7,6 +7,7 @@ import os
 import time
 import re
 import subprocess
+import html as html_lib
 from email.utils import parsedate_to_datetime
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -460,8 +461,51 @@ def guardar_en_supabase(conv):
         return False
 
 
+def telegram_ya_enviado(enlace):
+    """Comprueba en Supabase si la convocatoria ya se envió a Telegram.
+    Devuelve True si la fila existe y telegram_enviado=true."""
+    try:
+        qs = urllib.parse.urlencode({
+            'enlace': f'eq.{enlace}',
+            'select': 'telegram_enviado',
+        })
+        url = f"{SUPABASE_URL}/rest/v1/convocatorias?{qs}"
+        headers = {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': f'Bearer {SUPABASE_API_KEY}',
+        }
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=10) as r:
+            rows = json.loads(r.read())
+        return bool(rows and rows[0].get('telegram_enviado'))
+    except Exception as e:
+        print(f"⚠️  No se pudo comprobar flag Telegram: {e}")
+        return False
+
+
+def marcar_telegram_enviado(enlace):
+    """Marca la convocatoria como ya enviada a Telegram (flag en Supabase)."""
+    try:
+        qs = urllib.parse.urlencode({'enlace': f'eq.{enlace}'})
+        url = f"{SUPABASE_URL}/rest/v1/convocatorias?{qs}"
+        headers = {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': f'Bearer {SUPABASE_API_KEY}',
+            'Content-Type': 'application/json',
+            'Prefer': 'return=minimal',
+        }
+        data = json.dumps({'telegram_enviado': True}).encode('utf-8')
+        req = urllib.request.Request(url, data=data, headers=headers, method='PATCH')
+        with urllib.request.urlopen(req, timeout=10) as r:
+            r.read()
+        return True
+    except Exception as e:
+        print(f"⚠️  No se pudo marcar flag Telegram: {e}")
+        return False
+
+
 def enviar_a_telegram(conv):
-    """Envía mensaje limpio y estético a Telegram"""
+    """Envía mensaje limpio y estético a Telegram. Devuelve True si se envió."""
 
     try:
         fecha_obj = parsedate_to_datetime(conv['fecha'])
@@ -484,10 +528,14 @@ def enviar_a_telegram(conv):
     # Icono según puesto
     icono = obtener_icono_puesto(detalles_ia)
 
-    # Título limpio
-    titulo_limpio = limpiar_titulo(conv['titulo'])
+    # Escapar todo el texto derivado de datos para HTML válido en Telegram
+    titulo_limpio = html_lib.escape(limpiar_titulo(conv['titulo']))
+    plazas        = html_lib.escape(plazas)
+    puesto        = html_lib.escape(puesto)
+    ubicacion     = html_lib.escape(ubicacion)
+    fecha_spanish = html_lib.escape(fecha_spanish)
+    enlace_esc    = html_lib.escape(conv['enlace'], quote=True)
 
-    enlace_escapado = conv['enlace'].replace('&', '&amp;')
     mensaje = (
         f"🎯 <b>NUEVA CONVOCATORIA</b>\n\n"
         f"📰 <b>{titulo_limpio}</b>\n\n"
@@ -495,7 +543,7 @@ def enviar_a_telegram(conv):
         f"🔢 Plazas: {plazas}\n"
         f"📍 Ubicación: {ubicacion}\n"
         f"📅 Publicado: {fecha_spanish}\n\n"
-        f"<a href=\"{enlace_escapado}\">📄 Ver en BOE</a>\n\n"
+        f"<a href=\"{enlace_esc}\">📄 Ver en BOE</a>\n\n"
         f"——————————————\n"
         f"📲 <b><a href=\"https://oponoticias.com\">OpoNoticias.com</a></b> — busca y filtra todas las convocatorias\n\n"
         f"#oposiciones #empleo #BOE"
@@ -517,12 +565,15 @@ def enviar_a_telegram(conv):
         response = urllib.request.urlopen(req, timeout=10)
         response.read()
         response.close()
-        print(f"✅ Enviada: {titulo_limpio[:60]}...")
+        print(f"✅ Enviada a Telegram: {titulo_limpio[:60]}...")
+        return True
     except urllib.error.HTTPError as e:
         body = e.read().decode('utf-8', errors='replace')
         print(f"❌ Error Telegram: HTTP {e.code} — {body[:300]}")
+        return False
     except Exception as e:
         print(f"❌ Error Telegram: {e}")
+        return False
 
 
 def generar_slug(titulo, ref_boe=""):
@@ -868,39 +919,52 @@ def commit_a_github(mensaje, archivos):
 if __name__ == "__main__":
     convocatorias = leer_boe_rss()
 
-    if convocatorias:
-        nuevas = 0
-        slugs_generados = []
-
-        for conv in convocatorias:
-            cuerpo, categoria = extraer_cuerpo(conv['titulo'])
-
-            print(f"\n🤖 Analizando: {conv['titulo'][:60]}...")
-            conv['resumen_ia'] = generar_resumen_con_claude(conv['titulo'], conv['resumen'])
-            conv['comunidad_autonoma'] = clasificar_comunidad(conv['titulo'], conv['resumen'])
-
-            if guardar_en_supabase(conv):
-                enviar_a_telegram(conv)
-
-                # Generar HTML
-                slug = generar_html_convocatoria(conv, categoria)
-                if slug:
-                    slugs_generados.append(slug)
-
-                nuevas += 1
-                time.sleep(2)
-
-        # Regenerar sitemap y hacer push
-        if slugs_generados:
-            regenerar_sitemap(slugs_generados)
-
-            archivos_commit = [
-                f"convocatoria/{slug}" for slug in slugs_generados
-            ] + ["sitemap.xml"]
-
-            fecha_hoy = datetime.now().strftime("%d/%m/%Y")
-            commit_a_github(f"Auto: {nuevas} nuevas convocatorias ({fecha_hoy})", archivos_commit)
-
-        print(f"\n✅ Procesadas {len(convocatorias)} convocatorias. Nuevas: {nuevas}")
-    else:
+    if not convocatorias:
         print("\n❌ No se encontraron convocatorias")
+        raise SystemExit(0)
+
+    nuevas = 0
+    slugs_generados = []
+
+    # ── 1) Procesar: resumen IA + comunidad + guardar en Supabase + HTML ──────
+    for conv in convocatorias:
+        cuerpo, categoria = extraer_cuerpo(conv['titulo'])
+
+        print(f"\n🤖 Analizando: {conv['titulo'][:60]}...")
+        conv['resumen_ia'] = generar_resumen_con_claude(conv['titulo'], conv['resumen'])
+        conv['comunidad_autonoma'] = clasificar_comunidad(conv['titulo'], conv['resumen'])
+
+        es_nueva = guardar_en_supabase(conv)        # inserta con telegram_enviado=false (default)
+        slug = generar_html_convocatoria(conv, categoria)
+        if es_nueva:
+            nuevas += 1
+            if slug:
+                slugs_generados.append(slug)
+
+    # ── 2) Telegram: enviar SOLO las que aún no se hayan enviado (retry-safe) ──
+    # Desacoplado del guardado: si un envío falla, el flag queda en false y se
+    # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
+    print("\n📤 Telegram — enviando convocatorias pendientes…")
+    enviadas_tg = 0
+    for conv in convocatorias:
+        if telegram_ya_enviado(conv['enlace']):
+            print(f"⏭️  Ya estaba en Telegram: {conv['titulo'][:50]}...")
+            continue
+        if enviar_a_telegram(conv):
+            marcar_telegram_enviado(conv['enlace'])
+            enviadas_tg += 1
+            time.sleep(2)
+
+    # ── 3) Sitemap + push a GitHub si hay HTML nuevos ─────────────────────────
+    if slugs_generados:
+        regenerar_sitemap(slugs_generados)
+
+        archivos_commit = [
+            f"convocatoria/{slug}" for slug in slugs_generados
+        ] + ["sitemap.xml"]
+
+        fecha_hoy = datetime.now().strftime("%d/%m/%Y")
+        commit_a_github(f"Auto: {nuevas} nuevas convocatorias ({fecha_hoy})", archivos_commit)
+
+    print(f"\n✅ Procesadas {len(convocatorias)} convocatorias. "
+          f"Nuevas: {nuevas} · Enviadas a Telegram: {enviadas_tg}")
