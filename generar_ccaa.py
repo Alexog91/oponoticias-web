@@ -145,7 +145,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
     n = len(convocatorias)
     meta_desc = (f"Convocatorias de oposiciones en {ccaa_nombre} {AÑO} publicadas en el BOE. "
                  f"{n} plazas de empleo público actualizadas diariamente por OpoNoticias.")
-    canonical = f"https://oponoticias.com/ccaa/{slug}.html"
+    canonical = f"https://oponoticias.com/ccaa/{slug}"
 
     # Tarjetas de convocatorias
     tarjetas = []
@@ -335,7 +335,7 @@ def actualizar_sitemap(slugs_ccaa):
     contenido = SITEMAP_PATH.read_text(encoding='utf-8')
     nuevas = []
     for slug in slugs_ccaa:
-        url = f"https://oponoticias.com/ccaa/{slug}.html"
+        url = f"https://oponoticias.com/ccaa/{slug}"
         if url not in contenido:
             nuevas.append(f"""  <url>
     <loc>{url}</loc>
