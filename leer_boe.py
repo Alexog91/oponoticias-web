@@ -20,6 +20,7 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
+MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")  # webhook Make.com → Facebook
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "Alexog91/oponoticias-web"
 WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
@@ -576,6 +577,62 @@ def enviar_a_telegram(conv):
         return False
 
 
+def enlace_web_convocatoria(conv):
+    """URL de la página en oponoticias.com si ya existe el HTML, si no la home."""
+    slug = generar_slug(conv['titulo'], conv.get('ref_boe', ''))
+    if (WEB_CONVOCATORIA_DIR / slug).exists():
+        return f"https://oponoticias.com/convocatoria/{slug}"
+    return "https://oponoticias.com"
+
+
+def enviar_a_facebook(conv):
+    """Publica en Facebook vía webhook de Make.com (texto plano, sin HTML).
+
+    Best-effort: si falla no bloquea ni revierte el envío de Telegram. El
+    bot de Telegram no recibe sus propios posts de canal, así que Make no
+    puede escuchar el canal — por eso el script empuja los datos al webhook.
+    """
+    if not MAKE_WEBHOOK_URL:
+        return False
+    try:
+        partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas = (partes[0] if partes and partes[0] else "").capitalize()
+        puesto = partes[1].capitalize() if len(partes) > 1 else "Convocatoria"
+        categoria = conv.get('categoria', '') or ''
+        comunidad = conv.get('comunidad_autonoma', '') or ''
+        titulo = limpiar_titulo(conv['titulo'])
+
+        lineas = [
+            f"🎯 Nueva convocatoria · {categoria}" if categoria else "🎯 Nueva convocatoria",
+            "",
+            f"📰 {titulo}",
+            "",
+            f"🔢 {plazas} · {puesto}",
+        ]
+        if comunidad:
+            lineas.append(f"📍 {comunidad}")
+        lineas += [
+            "",
+            "👉 Todas las oposiciones del BOE, resumidas, en oponoticias.com",
+            "",
+            "#oposiciones #empleopublico #BOE",
+        ]
+        payload = json.dumps({
+            "mensaje": "\n".join(lineas),
+            "enlace": enlace_web_convocatoria(conv),
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            MAKE_WEBHOOK_URL, data=payload,
+            headers={'Content-Type': 'application/json'}, method='POST'
+        )
+        urllib.request.urlopen(req, timeout=10).read()
+        print(f"📘 Enviada a Facebook: {titulo[:50]}…")
+        return True
+    except Exception as e:
+        print(f"⚠️  Error Facebook (no bloquea): {e}")
+        return False
+
+
 def generar_slug(titulo, ref_boe=""):
     """Genera un slug único usando el título + referencia BOE como sufijo."""
     slug = titulo.lower()
@@ -931,6 +988,7 @@ if __name__ == "__main__":
         cuerpo, categoria = extraer_cuerpo(conv['titulo'])
 
         print(f"\n🤖 Analizando: {conv['titulo'][:60]}...")
+        conv['categoria'] = categoria               # se usa luego en Facebook
         conv['resumen_ia'] = generar_resumen_con_claude(conv['titulo'], conv['resumen'])
         conv['comunidad_autonoma'] = clasificar_comunidad(conv['titulo'], conv['resumen'])
 
@@ -944,7 +1002,7 @@ if __name__ == "__main__":
     # ── 2) Telegram: enviar SOLO las que aún no se hayan enviado (retry-safe) ──
     # Desacoplado del guardado: si un envío falla, el flag queda en false y se
     # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
-    print("\n📤 Telegram — enviando convocatorias pendientes…")
+    print("\n📤 Telegram + Facebook — enviando convocatorias pendientes…")
     enviadas_tg = 0
     for conv in convocatorias:
         if telegram_ya_enviado(conv['enlace']):
@@ -952,6 +1010,7 @@ if __name__ == "__main__":
             continue
         if enviar_a_telegram(conv):
             marcar_telegram_enviado(conv['enlace'])
+            enviar_a_facebook(conv)     # best-effort, no bloquea si falla
             enviadas_tg += 1
             time.sleep(2)
 
