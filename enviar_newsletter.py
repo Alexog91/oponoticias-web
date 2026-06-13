@@ -197,7 +197,6 @@ def enviar_campana(convocatorias):
         "type": "classic",
         "htmlContent": html_content,
         "recipients": {"listIds": [BREVO_LIST_ID]},
-        "scheduledAt": None,
     }
     status, resp = brevo_post("emailCampaigns", payload)
     if status not in (201, 200):

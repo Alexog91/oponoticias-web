@@ -487,7 +487,7 @@ def enviar_a_telegram(conv):
     # Título limpio
     titulo_limpio = limpiar_titulo(conv['titulo'])
 
-    # Mensaje final
+    enlace_escapado = conv['enlace'].replace('&', '&amp;')
     mensaje = (
         f"🎯 <b>NUEVA CONVOCATORIA</b>\n\n"
         f"📰 <b>{titulo_limpio}</b>\n\n"
@@ -495,7 +495,7 @@ def enviar_a_telegram(conv):
         f"🔢 Plazas: {plazas}\n"
         f"📍 Ubicación: {ubicacion}\n"
         f"📅 Publicado: {fecha_spanish}\n\n"
-        f"<a href=\"{conv['enlace']}\">📄 Ver en BOE</a>\n\n"
+        f"<a href=\"{enlace_escapado}\">📄 Ver en BOE</a>\n\n"
         f"——————————————\n"
         f"📲 <b><a href=\"https://oponoticias.com\">OpoNoticias.com</a></b> — busca y filtra todas las convocatorias\n\n"
         f"#oposiciones #empleo #BOE"
@@ -518,6 +518,9 @@ def enviar_a_telegram(conv):
         response.read()
         response.close()
         print(f"✅ Enviada: {titulo_limpio[:60]}...")
+    except urllib.error.HTTPError as e:
+        body = e.read().decode('utf-8', errors='replace')
+        print(f"❌ Error Telegram: HTTP {e.code} — {body[:300]}")
     except Exception as e:
         print(f"❌ Error Telegram: {e}")
 
