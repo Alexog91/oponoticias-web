@@ -547,7 +547,8 @@ def enviar_a_telegram(conv):
         f"📅 Publicado: {fecha_spanish}\n\n"
         f"<a href=\"{enlace_esc}\">📄 Ver en BOE</a>\n\n"
         f"——————————————\n"
-        f"📲 <b><a href=\"https://oponoticias.com\">OpoNoticias.com</a></b> — busca y filtra todas las convocatorias\n\n"
+        f"📲 <b><a href=\"https://oponoticias.com\">OpoNoticias.com</a></b> — busca y filtra todas las convocatorias\n"
+        f"📘 <a href=\"https://www.facebook.com/profile.php?id=61590965302457\">Facebook</a>  ·  📸 <a href=\"https://www.instagram.com/oponoticiason/\">Instagram</a>\n\n"
         f"#oposiciones #empleo #BOE"
     )
 
