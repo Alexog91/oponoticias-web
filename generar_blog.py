@@ -299,7 +299,7 @@ def plantilla_articulo(art):
     resumen = html.escape(art["resumen"])
     nombre_cat = NOMBRE_CATEGORIA.get(art["categoria"], art["categoria"].capitalize())
     cuerpo = markdown_a_html(art["contenido"])
-    url = f"{BASE_URL}/{BLOG_DIR}/{art['slug']}.html"
+    url = f"{BASE_URL}/{BLOG_DIR}/{art['slug']}"
     fecha_iso = art["fecha_pub"][:10]
     fecha_legible = fecha_es(datetime.fromisoformat(art["fecha_pub"].replace("Z", "+00:00")))
 
@@ -479,7 +479,7 @@ def plantilla_indice(articulos):
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Blog de oposiciones — OpoNoticias</title>
   <meta name="description" content="Guías, análisis y consejos sobre oposiciones y empleo público en España. Artículos actualizados sobre convocatorias del BOE por categoría.">
-  <link rel="canonical" href="{BASE_URL}/blog.html">
+  <link rel="canonical" href="{BASE_URL}/blog">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5A5047">
   <script>document.documentElement.className += ' js';</script>
@@ -488,7 +488,7 @@ def plantilla_indice(articulos):
   <meta property="og:site_name" content="OpoNoticias">
   <meta property="og:title" content="Blog de oposiciones — OpoNoticias">
   <meta property="og:description" content="Guías y análisis sobre oposiciones y empleo público en España.">
-  <meta property="og:url" content="{BASE_URL}/blog.html">
+  <meta property="og:url" content="{BASE_URL}/blog">
 
   <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -593,7 +593,7 @@ def plantilla_indice(articulos):
 def generar_sitemap_blog(articulos):
     hoy = datetime.now().strftime("%Y-%m-%d")
     urls = [f"""  <url>
-    <loc>{BASE_URL}/blog.html</loc>
+    <loc>{BASE_URL}/blog</loc>
     <lastmod>{hoy}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
@@ -601,7 +601,7 @@ def generar_sitemap_blog(articulos):
     for a in articulos:
         fecha = a["fecha_pub"][:10]
         urls.append(f"""  <url>
-    <loc>{BASE_URL}/{BLOG_DIR}/{a['slug']}.html</loc>
+    <loc>{BASE_URL}/{BLOG_DIR}/{a['slug']}</loc>
     <lastmod>{fecha}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>

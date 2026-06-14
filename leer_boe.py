@@ -874,27 +874,27 @@ def regenerar_sitemap(slugs_nuevos):
         hoy = datetime.now().strftime("%Y-%m-%d")
         urls = [
             ("https://oponoticias.com/", hoy, "daily", "1.0"),
-            ("https://oponoticias.com/boe-hoy.html", hoy, "daily", "0.9"),
-            ("https://oponoticias.com/blog.html", hoy, "weekly", "0.8"),
-            ("https://oponoticias.com/categoria/educacion.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/sanidad.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/justicia.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/seguridad.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/administracion.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/hacienda.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/correos.html", hoy, "daily", "0.8"),
-            ("https://oponoticias.com/categoria/tecnica.html", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/boe-hoy", hoy, "daily", "0.9"),
+            ("https://oponoticias.com/blog", hoy, "weekly", "0.8"),
+            ("https://oponoticias.com/categoria/educacion", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/sanidad", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/justicia", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/seguridad", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/administracion", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/hacienda", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/correos", hoy, "daily", "0.8"),
+            ("https://oponoticias.com/categoria/tecnica", hoy, "daily", "0.8"),
         ]
 
         # Recoger todos los slugs históricos ya generados en el repo web
         slugs_existentes = set()
         if WEB_CONVOCATORIA_DIR.exists():
             for f in sorted(WEB_CONVOCATORIA_DIR.glob("*.html")):
-                slugs_existentes.add(f.name)
+                slugs_existentes.add(f.stem)
 
         # Añadir también los del día (por si aún no están en disco)
         for slug in slugs_nuevos:
-            slugs_existentes.add(slug)
+            slugs_existentes.add(slug.replace(".html", ""))
 
         # Eliminar duplicados manteniendo orden determinista
         for slug in sorted(slugs_existentes):
