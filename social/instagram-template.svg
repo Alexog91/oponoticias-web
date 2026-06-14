@@ -1,0 +1,158 @@
+<svg viewBox="0 0 1080 1350"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — plantilla de convocatoria para Instagram">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#2B2622"/>
+      <stop offset="50%"  stop-color="#473E33"/>
+      <stop offset="100%" stop-color="#2B2622"/>
+    </linearGradient>
+
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="ish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ic"><rect width="128" height="128" rx="28"/></clipPath>
+
+    <radialGradient id="o1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#7A8B6E" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="wg" gradientUnits="userSpaceOnUse" x1="270" y1="0" x2="470" y2="0">
+      <stop offset="0%"   stop-color="#D9C4A0"/>
+      <stop offset="100%" stop-color="#EFE9E0"/>
+    </linearGradient>
+
+    <linearGradient id="sep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4A574"/>
+      <stop offset="70%"  stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#5A5047"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1080" height="1350" fill="url(#bg)"/>
+
+  <g stroke="white" stroke-opacity="0.035" stroke-width="1">
+    <line x1="120"  y1="0" x2="120"  y2="1350"/> <line x1="240"  y1="0" x2="240"  y2="1350"/>
+    <line x1="360"  y1="0" x2="360"  y2="1350"/> <line x1="480"  y1="0" x2="480"  y2="1350"/>
+    <line x1="600"  y1="0" x2="600"  y2="1350"/> <line x1="720"  y1="0" x2="720"  y2="1350"/>
+    <line x1="840"  y1="0" x2="840"  y2="1350"/> <line x1="960"  y1="0" x2="960"  y2="1350"/>
+    <line x1="0" y1="120"  x2="1080" y2="120"/>  <line x1="0" y1="240"  x2="1080" y2="240"/>
+    <line x1="0" y1="360"  x2="1080" y2="360"/>  <line x1="0" y1="480"  x2="1080" y2="480"/>
+    <line x1="0" y1="600"  x2="1080" y2="600"/>  <line x1="0" y1="720"  x2="1080" y2="720"/>
+    <line x1="0" y1="840"  x2="1080" y2="840"/>  <line x1="0" y1="960"  x2="1080" y2="960"/>
+    <line x1="0" y1="1080" x2="1080" y2="1080"/> <line x1="0" y1="1200" x2="1080" y2="1200"/>
+  </g>
+
+  <ellipse cx="120"  cy="220"  rx="420" ry="360" fill="url(#o1)"/>
+  <ellipse cx="980"  cy="1120" rx="460" ry="380" fill="url(#o2)"/>
+
+  <g transform="translate(80, 96)">
+    <rect width="128" height="128" rx="28" fill="url(#ig)"/>
+    <rect width="128" height="128" fill="url(#ish)" clip-path="url(#ic)"/>
+    <text x="64" y="68" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="51" letter-spacing="-2">
+      <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+    </text>
+    <rect x="35" y="80" width="59" height="5" rx="2.5" fill="#C4A574"/>
+    <rect x="46" y="91" width="37" height="4" rx="2"   fill="#ffffff" fill-opacity="0.55"/>
+    <rect x="1.5" y="1.5" width="125" height="125" rx="27"
+          fill="none" stroke="white" stroke-opacity="0.12" stroke-width="2"/>
+  </g>
+
+  <text x="228" y="150"
+        font-family="'Merriweather', Georgia, serif" letter-spacing="-1.5">
+    <tspan font-size="52" font-weight="900" fill="url(#wg)">Opo</tspan><tspan
+           font-size="52" font-weight="400" fill="#ffffff" fill-opacity="0.94">Noticias</tspan>
+  </text>
+  <text x="230" y="192"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="22" font-weight="400" fill="#ffffff" fill-opacity="0.55"
+        letter-spacing="0.3">Las convocatorias del BOE, en lenguaje claro</text>
+
+  <rect x="80" y="270" width="320" height="50" rx="25"
+        fill="#C4A574" fill-opacity="0.14"
+        stroke="#C4A574" stroke-opacity="0.55" stroke-width="1.5"/>
+  <circle cx="116" cy="295" r="6" fill="#7A8B6E"/>
+  <text x="138" y="303"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="19" font-weight="700" letter-spacing="1"
+        fill="#D9C4A0">NUEVA CONVOCATORIA</text>
+
+  <text x="1000" y="303" text-anchor="end"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="22" font-weight="400" fill="#ffffff" fill-opacity="0.50">{{FECHA}}</text>
+
+  <text x="80" y="430"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="30" font-weight="700" fill="#AEBE9F"
+        letter-spacing="0.2">{{ORGANISMO}}</text>
+
+  <text x="80" y="{{PUESTO_Y}}"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="{{PUESTO_SIZE}}" font-weight="900" fill="#ffffff" letter-spacing="-2">{{PUESTO_TSPANS}}</text>
+
+  <rect x="80" y="650" width="540" height="3" fill="url(#sep)"/>
+
+  <g transform="translate(80, 740)">
+    <rect width="200" height="190" rx="24"
+          fill="#C4A574" fill-opacity="0.10"
+          stroke="#C4A574" stroke-opacity="0.30" stroke-width="1.5"/>
+    <text x="100" y="108" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="{{PLAZAS_SIZE}}" font-weight="900" fill="#E5D2B0" letter-spacing="-2">{{PLAZAS}}</text>
+    <text x="100" y="150" text-anchor="middle"
+          font-family="Inter, -apple-system, Arial, sans-serif"
+          font-size="22" font-weight="600" fill="#ffffff" fill-opacity="0.55"
+          letter-spacing="0.5">PLAZAS</text>
+  </g>
+
+  <g transform="translate(310, 740)">
+    <rect width="690" height="190" rx="24"
+          fill="#7A8B6E" fill-opacity="0.10"
+          stroke="#7A8B6E" stroke-opacity="0.30" stroke-width="1.5"/>
+    <text x="42" y="66"
+          font-family="Inter, -apple-system, Arial, sans-serif"
+          font-size="20" font-weight="600" fill="#AEBE9F"
+          letter-spacing="1">UBICACIÓN</text>
+    <text x="42" y="124"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="{{LUGAR_SIZE}}" font-weight="700" fill="#ffffff">{{LUGAR}}</text>
+  </g>
+
+  <line x1="80" y1="1090" x2="1000" y2="1090"
+        stroke="white" stroke-opacity="0.10" stroke-width="1"/>
+
+  <text x="80" y="1170"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="38" font-weight="700" fill="#ffffff" fill-opacity="0.92"
+        letter-spacing="-0.5">oponoticias.com</text>
+  <text x="80" y="1212"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="22" font-weight="400" fill="#ffffff" fill-opacity="0.42"
+        letter-spacing="0.1">Toda la información y el enlace al BOE</text>
+
+  <rect x="690" y="1130" width="310" height="76" rx="38" fill="url(#cta)"/>
+  <rect x="690" y="1130" width="310" height="38" rx="38" fill="white" fill-opacity="0.07"/>
+  <text x="845" y="1178" text-anchor="middle"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="26" font-weight="700" fill="#ffffff" letter-spacing="-0.3">Ver más →</text>
+
+</svg>

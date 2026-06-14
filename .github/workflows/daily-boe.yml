@@ -23,6 +23,25 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Chrome headless para renderizar las imágenes del carrusel de Instagram.
+      # continue-on-error: si falla, el flujo principal (BOE/Telegram) sigue.
+      - name: Instalar Chrome
+        id: setup-chrome
+        continue-on-error: true
+        uses: browser-actions/setup-chrome@v1
+
+      # Fuentes de marca (Merriweather + Inter) para que el render coincida con
+      # el diseño. Sin esto Chrome usaría fuentes genéricas del sistema.
+      - name: Instalar fuentes de marca
+        continue-on-error: true
+        run: |
+          mkdir -p ~/.fonts
+          curl -fsSL -o ~/.fonts/Merriweather.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/merriweather/Merriweather%5Bopsz,wdth,wght%5D.ttf" || true
+          curl -fsSL -o ~/.fonts/Inter.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf" || true
+          fc-cache -f ~/.fonts || true
+
       - name: Run leer_boe.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
@@ -31,6 +50,9 @@ jobs:
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+          INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
+          SUPABASE_STORAGE_BUCKET: social
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WEB_REPO_PATH: '.'
         run: python3 leer_boe.py

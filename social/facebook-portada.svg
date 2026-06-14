@@ -1,0 +1,98 @@
+<svg viewBox="0 0 1640 624"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — portada de Facebook">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#2B2622"/>
+      <stop offset="50%"  stop-color="#473E33"/>
+      <stop offset="100%" stop-color="#2B2622"/>
+    </linearGradient>
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="ish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ic"><rect width="170" height="170" rx="37"/></clipPath>
+    <radialGradient id="o1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#C4A574" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7A8B6E" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="wg" gradientUnits="userSpaceOnUse" x1="648" y1="0" x2="900" y2="0">
+      <stop offset="0%" stop-color="#D9C4A0"/>
+      <stop offset="100%" stop-color="#EFE9E0"/>
+    </linearGradient>
+    <linearGradient id="sep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#C4A574"/>
+      <stop offset="70%" stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1640" height="624" fill="url(#bg)"/>
+
+  <g stroke="white" stroke-opacity="0.03" stroke-width="1">
+    <line x1="120" y1="0" x2="120" y2="624"/><line x1="240" y1="0" x2="240" y2="624"/>
+    <line x1="360" y1="0" x2="360" y2="624"/><line x1="480" y1="0" x2="480" y2="624"/>
+    <line x1="600" y1="0" x2="600" y2="624"/><line x1="720" y1="0" x2="720" y2="624"/>
+    <line x1="840" y1="0" x2="840" y2="624"/><line x1="960" y1="0" x2="960" y2="624"/>
+    <line x1="1080" y1="0" x2="1080" y2="624"/><line x1="1200" y1="0" x2="1200" y2="624"/>
+    <line x1="1320" y1="0" x2="1320" y2="624"/><line x1="1440" y1="0" x2="1440" y2="624"/>
+    <line x1="0" y1="120" x2="1640" y2="120"/><line x1="0" y1="240" x2="1640" y2="240"/>
+    <line x1="0" y1="360" x2="1640" y2="360"/><line x1="0" y1="480" x2="1640" y2="480"/>
+  </g>
+
+  <ellipse cx="180" cy="120" rx="420" ry="320" fill="url(#o1)"/>
+  <ellipse cx="1480" cy="520" rx="460" ry="340" fill="url(#o2)"/>
+
+  <g transform="translate(452,140)">
+    <rect width="170" height="170" rx="37" fill="url(#ig)"/>
+    <rect width="170" height="170" fill="url(#ish)" clip-path="url(#ic)"/>
+    <text x="85" y="90" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="68" letter-spacing="-2.5">
+      <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+    </text>
+    <rect x="46" y="107" width="78" height="7" rx="3.5" fill="#C4A574"/>
+    <rect x="61" y="121" width="49" height="6" rx="3"   fill="#ffffff" fill-opacity="0.55"/>
+    <rect x="2" y="2" width="166" height="166" rx="36"
+          fill="none" stroke="white" stroke-opacity="0.12" stroke-width="2"/>
+  </g>
+
+  <text x="650" y="262"
+        font-family="'Merriweather', Georgia, serif" letter-spacing="-2">
+    <tspan font-size="92" font-weight="900" fill="url(#wg)">Opo</tspan><tspan
+           font-size="92" font-weight="400" fill="#ffffff" fill-opacity="0.94">Noticias</tspan>
+  </text>
+
+  <rect x="652" y="288" width="430" height="2" fill="url(#sep)"/>
+
+  <text x="652" y="330"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="27" font-weight="400" fill="#ffffff" fill-opacity="0.66"
+        letter-spacing="0.2">Las convocatorias del BOE, en lenguaje claro</text>
+
+  <g font-family="Inter, -apple-system, Arial, sans-serif" text-anchor="start">
+    <text x="556" y="476" font-size="58" font-weight="900" fill="#ffffff" letter-spacing="-2">3M+</text>
+    <text x="556" y="502" font-size="14" font-weight="400" fill="#ffffff" fill-opacity="0.48">opositores activos</text>
+    <line x1="742" y1="438" x2="742" y2="502" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <text x="770" y="476" font-size="58" font-weight="900" fill="#ffffff" letter-spacing="-2">100k+</text>
+    <text x="770" y="502" font-size="14" font-weight="400" fill="#ffffff" fill-opacity="0.48">plazas al año</text>
+    <line x1="980" y1="438" x2="980" y2="502" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <text x="1008" y="476" font-size="58" font-weight="900" fill="#ffffff" letter-spacing="-2">9:30h</text>
+    <text x="1008" y="502" font-size="14" font-weight="400" fill="#ffffff" fill-opacity="0.48">cada mañana</text>
+  </g>
+
+  <text x="1100" y="582" text-anchor="middle"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.85"
+        letter-spacing="-0.5">oponoticias.com<tspan font-family="Inter, Arial, sans-serif" font-weight="400" fill-opacity="0.45" font-size="22">  ·  t.me/OPONOTICIAS</tspan></text>
+</svg>

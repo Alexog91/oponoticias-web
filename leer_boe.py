@@ -21,6 +21,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")  # webhook Make.com → Facebook
+INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")  # webhook Make.com → Instagram (carrusel)
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "Alexog91/oponoticias-web"
 WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
@@ -633,6 +634,110 @@ def enviar_a_facebook(conv):
         return False
 
 
+_MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
+                'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+
+
+def _extraer_organismo(titulo):
+    """Organismo corto a partir del título largo del BOE."""
+    m = re.search(
+        r',\s+(?:de la|del|de los|de las|de)\s+(.+?)'
+        r'(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)',
+        titulo, re.IGNORECASE)
+    if m:
+        return m.group(1).strip()
+    partes = titulo.split(',')
+    if len(partes) >= 2:
+        return re.sub(r'^(de la |del |de los |de las |de )', '',
+                      partes[1].strip(), flags=re.IGNORECASE)
+    return titulo[:60]
+
+
+def _datos_imagen(conv):
+    """Construye el dict de datos para la plantilla de Instagram."""
+    partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+    plazas = partes[0] if partes and partes[0] else "—"
+    puesto = partes[1] if len(partes) > 1 and partes[1] else "Convocatoria"
+    lugar = conv.get('comunidad_autonoma') or (partes[2] if len(partes) > 2 else "España")
+    hoy = datetime.now()
+    return {
+        "fecha": f"{hoy.day} {_MESES_CORTO[hoy.month - 1]} {hoy.year}",
+        "organismo": _extraer_organismo(conv['titulo']),
+        "puesto": puesto,
+        "plazas": plazas,
+        "lugar": lugar or "España",
+    }
+
+
+def _plazas_num(conv):
+    """Número de plazas como entero (0 si no es numérico) para ordenar."""
+    partes = (conv.get('resumen_ia') or '').split(' - ')
+    if not partes:
+        return 0
+    m = re.search(r'\d+', partes[0])
+    return int(m.group()) if m else 0
+
+
+def publicar_carrusel_instagram(convocatorias, max_slides=3):
+    """Genera un carrusel diario (2-3 imágenes) y lo envía a Make.com → Instagram.
+
+    Best-effort: nunca bloquea ni revierte el flujo principal. Selecciona las
+    convocatorias con más plazas del día, genera un PNG por cada una, lo sube a
+    Supabase Storage y empuja las URLs + caption al webhook de Instagram.
+    """
+    if not INSTAGRAM_WEBHOOK_URL:
+        return False
+    if not convocatorias:
+        print("📷 Instagram: sin convocatorias nuevas, no se publica carrusel.")
+        return False
+    try:
+        import generar_imagen_instagram as gii
+    except Exception as e:
+        print(f"⚠️  Instagram: no se pudo importar el generador ({e})")
+        return False
+
+    # Seleccionar las de más plazas (desc), conservando orden estable
+    seleccion = sorted(convocatorias, key=_plazas_num, reverse=True)[:max_slides]
+    fecha_slug = datetime.now().strftime("%Y-%m-%d")
+
+    imagenes, lineas_caption = [], []
+    for i, conv in enumerate(seleccion, 1):
+        datos = _datos_imagen(conv)
+        nombre = f"ig/{fecha_slug}-{i}.png"
+        url = gii.generar_y_subir(datos, nombre)
+        if not url:
+            continue
+        imagenes.append(url)
+        lineas_caption.append(f"📍 {datos['puesto']} · {datos['plazas']} plazas · {datos['lugar']}")
+
+    if not imagenes:
+        print("⚠️  Instagram: no se generó ninguna imagen, se omite el carrusel.")
+        return False
+
+    caption = "\n".join([
+        f"🎯 Convocatorias del BOE · {datetime.now().day} {_MESES_CORTO[datetime.now().month - 1]}",
+        "",
+        *lineas_caption,
+        "",
+        "👉 Toda la información y el enlace al BOE en oponoticias.com (link en bio)",
+        "",
+        "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario",
+    ])
+
+    try:
+        payload = json.dumps({"imagenes": imagenes, "caption": caption}).encode('utf-8')
+        req = urllib.request.Request(
+            INSTAGRAM_WEBHOOK_URL, data=payload,
+            headers={'Content-Type': 'application/json'}, method='POST'
+        )
+        urllib.request.urlopen(req, timeout=15).read()
+        print(f"📷 Carrusel Instagram enviado: {len(imagenes)} imágenes")
+        return True
+    except Exception as e:
+        print(f"⚠️  Error Instagram webhook (no bloquea): {e}")
+        return False
+
+
 def generar_slug(titulo, ref_boe=""):
     """Genera un slug único usando el título + referencia BOE como sufijo."""
     slug = titulo.lower()
@@ -1012,6 +1117,7 @@ if __name__ == "__main__":
     # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
     print("\n📤 Telegram + Facebook — enviando convocatorias pendientes…")
     enviadas_tg = 0
+    enviadas_hoy = []
     for conv in convocatorias:
         if telegram_ya_enviado(conv['enlace']):
             print(f"⏭️  Ya estaba en Telegram: {conv['titulo'][:50]}...")
@@ -1019,8 +1125,12 @@ if __name__ == "__main__":
         if enviar_a_telegram(conv):
             marcar_telegram_enviado(conv['enlace'])
             enviar_a_facebook(conv)     # best-effort, no bloquea si falla
+            enviadas_hoy.append(conv)
             enviadas_tg += 1
             time.sleep(2)
+
+    # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
+    publicar_carrusel_instagram(enviadas_hoy)
 
     # ── 3) Sitemap + push a GitHub si hay HTML nuevos ─────────────────────────
     if slugs_generados:
