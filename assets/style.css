@@ -103,6 +103,7 @@ img, svg { max-width: 100%; display: block; }
 .nav-links a:hover::after { width: 100%; }
 .nav-cta { display: flex; align-items: center; gap: 12px; }
 .nav-social { display: flex; align-items: center; gap: 14px; margin-right: 4px; }
+.nav-social-label { font-size: 13px; font-weight: 600; color: var(--primary); letter-spacing: .01em; margin-right: 4px; white-space: nowrap; }
 .nav-social a { display: inline-flex; color: var(--primary); opacity: 0.8; transition: opacity var(--ease), transform var(--ease); }
 .nav-social a:hover { opacity: 1; color: var(--ink); transform: translateY(-1px); }
 .nav-social svg { width: 20px; height: 20px; fill: currentColor; }
