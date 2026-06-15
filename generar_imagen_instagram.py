@@ -163,38 +163,43 @@ def render_png(svg_texto, salida_png):
     if salida_png.exists():
         salida_png.unlink()
     with tempfile.TemporaryDirectory() as tmp:
-        svg_tmp = Path(tmp) / "in.svg"
+        tmp = Path(tmp)
+        svg_tmp = tmp / "in.svg"
         svg_tmp.write_text(svg_texto, encoding="utf-8")
-        user_dir = Path(tmp) / "chrome"
+        user_dir = tmp / "chrome"
+        # Chrome a veces ignora la ruta absoluta en --screenshot y guarda en CWD.
+        # Usamos nombre relativo + cwd=tmp para que siempre quede en tmp/.
+        out_png = tmp / "screenshot.png"
         proc = subprocess.Popen([
-            chrome, "--headless=new", "--disable-gpu", "--no-sandbox",
+            chrome, "--headless", "--disable-gpu", "--no-sandbox",
             "--no-first-run", "--no-default-browser-check",
             "--disable-dev-shm-usage",
             "--force-device-scale-factor=1",
-            f"--screenshot={salida_png}",
+            "--screenshot=screenshot.png",
             "--window-size=1080,1350",
             "--default-background-color=00000000",
             "--hide-scrollbars",
             f"--user-data-dir={user_dir}",
             f"file://{svg_tmp}",
-        ], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        ], cwd=str(tmp), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # No dependemos de que Chrome salga solo (con el navegador abierto a
-        # veces se cuelga tras capturar): esperamos al PNG y matamos el proceso.
         listo = False
         for _ in range(40):
-            if salida_png.exists() and salida_png.stat().st_size > 0:
+            if out_png.exists() and out_png.stat().st_size > 0:
                 listo = True
                 break
             if proc.poll() is not None:
                 break
             time.sleep(0.5)
-        time.sleep(0.3)  # margen para que termine de escribir
+        time.sleep(0.3)
         try:
             proc.terminate()
             proc.wait(timeout=3)
         except Exception:
             proc.kill()
+
+        if out_png.exists() and out_png.stat().st_size > 0:
+            shutil.copy2(str(out_png), str(salida_png))
 
     if not (salida_png.exists() and salida_png.stat().st_size > 0):
         raise RuntimeError(f"Chrome no generó {salida_png}")
