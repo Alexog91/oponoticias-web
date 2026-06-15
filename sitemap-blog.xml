@@ -2,9 +2,27 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oponoticias.com/blog</loc>
-    <lastmod>2026-06-09</lastmod>
+    <lastmod>2026-06-15</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-educacion-2026-convocatorias-abiertas-ahora-202606</loc>
+    <lastmod>2026-06-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-sanidad-2026-convocatorias-abiertas-ahora-202606</loc>
+    <lastmod>2026-06-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-tecnicas-2026-plazas-convocadas-y-como-prepararte-202606</loc>
+    <lastmod>2026-06-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://oponoticias.com/blog/oposiciones-de-justicia-2026-convocatorias-abiertas-202606</loc>
