@@ -704,15 +704,18 @@ def publicar_carrusel_instagram(convocatorias, max_slides=3):
     imagenes, lineas_caption = [], []
     for i, conv in enumerate(seleccion, 1):
         datos = _datos_imagen(conv)
-        nombre = f"ig/{fecha_slug}-{i}.png"
+        nombre = f"ig/{fecha_slug}-{i}.jpg"
         url = gii.generar_y_subir(datos, nombre)
         if not url:
             continue
         imagenes.append(url)
         lineas_caption.append(f"📍 {datos['puesto']} · {datos['plazas']} plazas · {datos['lugar']}")
 
-    if not imagenes:
-        print("⚠️  Instagram: no se generó ninguna imagen, se omite el carrusel.")
+    # El escenario de Make tiene 3 slides fijos mapeados a imagenes[1..3]:
+    # necesitamos exactamente `max_slides` imágenes o Make falla por slide vacío.
+    if len(imagenes) < max_slides:
+        print(f"⚠️  Instagram: solo {len(imagenes)}/{max_slides} imágenes, "
+              f"se omite el carrusel (Make espera {max_slides}).")
         return False
 
     caption = "\n".join([

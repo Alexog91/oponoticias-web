@@ -249,19 +249,36 @@ def render_png(svg_texto, salida_png):
     return salida_png
 
 
-def subir_a_storage(png_path, nombre_remoto):
-    """Sube el PNG al bucket público de Supabase y devuelve la URL pública."""
+def _a_jpeg(png_path, jpg_path):
+    """Convierte el PNG a JPEG (Instagram solo acepta JPEG en el carrusel).
+    Aplana cualquier transparencia sobre el fondo de marca por seguridad."""
+    from PIL import Image
+    img = Image.open(png_path)
+    if img.mode in ("RGBA", "LA", "P"):
+        img = img.convert("RGBA")
+        fondo = Image.new("RGB", img.size, (43, 38, 34))  # #2B2622, fondo de marca
+        fondo.paste(img, mask=img.split()[-1])
+        img = fondo
+    else:
+        img = img.convert("RGB")
+    img.save(jpg_path, "JPEG", quality=88, optimize=True)
+    return jpg_path
+
+
+def subir_a_storage(archivo, nombre_remoto):
+    """Sube el archivo al bucket público de Supabase y devuelve la URL pública."""
     if not (SUPABASE_URL and SUPABASE_API_KEY):
         raise RuntimeError("Faltan SUPABASE_URL / SUPABASE_API_KEY")
 
-    datos = Path(png_path).read_bytes()
+    ctype = "image/jpeg" if str(nombre_remoto).lower().endswith((".jpg", ".jpeg")) else "image/png"
+    datos = Path(archivo).read_bytes()
     destino = f"{SUPABASE_URL}/storage/v1/object/{STORAGE_BUCKET}/{nombre_remoto}"
     req = urllib.request.Request(
         destino, data=datos, method="POST",
         headers={
             "Authorization": f"Bearer {SUPABASE_API_KEY}",
             "apikey": SUPABASE_API_KEY,
-            "Content-Type": "image/png",
+            "Content-Type": ctype,
             "x-upsert": "true",
         },
     )
@@ -270,20 +287,22 @@ def subir_a_storage(png_path, nombre_remoto):
 
 
 def generar_y_subir(datos, nombre_remoto):
-    """Rellena → renderiza → sube. Devuelve la URL pública (o None si falla)."""
+    """Rellena → renderiza PNG → convierte a JPEG → sube. URL pública o None."""
     try:
         svg = rellenar_template(datos)
         with tempfile.TemporaryDirectory() as tmp:
             png = Path(tmp) / "out.png"
             render_png(svg, png)
-            return subir_a_storage(png, nombre_remoto)
+            jpg = Path(tmp) / "out.jpg"
+            _a_jpeg(png, jpg)
+            return subir_a_storage(jpg, nombre_remoto)
     except Exception as e:
         print(f"⚠️  Imagen Instagram falló ({nombre_remoto}): {e}")
         return None
 
 
 if __name__ == "__main__":
-    # Prueba local: genera 2 PNGs de ejemplo en social/ (sin subir).
+    # Prueba local: genera 2 JPEGs de ejemplo en social/ (sin subir).
     ejemplos = [
         {"fecha": "13 jun 2026", "organismo": "Ayuntamiento de Madrid",
          "puesto": "Administrativo de gestión", "plazas": "25", "lugar": "Madrid"},
@@ -293,6 +312,9 @@ if __name__ == "__main__":
     ]
     for i, d in enumerate(ejemplos, 1):
         svg = rellenar_template(d)
-        out = BASE_DIR / "social" / f"instagram-ejemplo-{i}.png"
-        render_png(svg, out)
+        png = BASE_DIR / "social" / f"instagram-ejemplo-{i}.png"
+        render_png(svg, png)
+        out = BASE_DIR / "social" / f"instagram-ejemplo-{i}.jpg"
+        _a_jpeg(png, out)
+        png.unlink(missing_ok=True)
         print(f"✅ {out}")

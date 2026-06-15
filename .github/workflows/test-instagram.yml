@@ -22,6 +22,10 @@ jobs:
       - name: Instalar librsvg (rsvg-convert)
         run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
 
+      # Pillow: convierte el PNG a JPEG (Instagram solo acepta JPEG).
+      - name: Instalar Pillow
+        run: pip install pillow
+
       - name: Instalar Chrome
         id: setup-chrome
         continue-on-error: true
@@ -62,12 +66,16 @@ jobs:
                "organismo": "Servicio Andaluz de Salud",
                "puesto": "Enfermero/a especialista en salud mental",
                "plazas": "120", "lugar": "Andalucía"},
+              {"fecha": datetime.now().strftime("%-d %b %Y"),
+               "organismo": "Generalitat Valenciana",
+               "puesto": "Maestro de educación primaria",
+               "plazas": "350", "lugar": "Comunidad Valenciana"},
           ]
 
           fecha_slug = datetime.now().strftime("%Y-%m-%d")
           imagenes, lineas = [], []
           for i, datos in enumerate(convocatorias_test, 1):
-              nombre = f"ig/test-{fecha_slug}-{i}.png"
+              nombre = f"ig/test-{fecha_slug}-{i}.jpg"
               url = gii.generar_y_subir(datos, nombre)
               if url:
                   imagenes.append(url)
