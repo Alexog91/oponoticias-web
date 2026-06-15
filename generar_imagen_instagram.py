@@ -169,6 +169,7 @@ def render_png(svg_texto, salida_png):
         proc = subprocess.Popen([
             chrome, "--headless=new", "--disable-gpu", "--no-sandbox",
             "--no-first-run", "--no-default-browser-check",
+            "--disable-dev-shm-usage",
             "--force-device-scale-factor=1",
             f"--screenshot={salida_png}",
             "--window-size=1080,1350",
