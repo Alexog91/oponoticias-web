@@ -1,0 +1,84 @@
+name: Test Instagram Carrusel
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-instagram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Chrome
+        id: setup-chrome
+        continue-on-error: true
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Instalar fuentes de marca
+        continue-on-error: true
+        run: |
+          mkdir -p ~/.fonts
+          curl -fsSL -o ~/.fonts/Merriweather.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/merriweather/Merriweather%5Bopsz,wdth,wght%5D.ttf" || true
+          curl -fsSL -o ~/.fonts/Inter.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf" || true
+          fc-cache -f ~/.fonts || true
+
+      - name: Test carrusel Instagram
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          SUPABASE_STORAGE_BUCKET: social
+          INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: |
+          python3 - <<'EOF'
+          import sys, os, json, urllib.request
+          from datetime import datetime
+
+          sys.path.insert(0, '.')
+          import generar_imagen_instagram as gii
+
+          convocatorias_test = [
+              {"fecha": datetime.now().strftime("%-d %b %Y"),
+               "organismo": "Ayuntamiento de Madrid",
+               "puesto": "Técnico de administración general",
+               "plazas": "42", "lugar": "Madrid"},
+              {"fecha": datetime.now().strftime("%-d %b %Y"),
+               "organismo": "Servicio Andaluz de Salud",
+               "puesto": "Enfermero/a especialista en salud mental",
+               "plazas": "120", "lugar": "Andalucía"},
+          ]
+
+          fecha_slug = datetime.now().strftime("%Y-%m-%d")
+          imagenes, lineas = [], []
+          for i, datos in enumerate(convocatorias_test, 1):
+              nombre = f"ig/test-{fecha_slug}-{i}.png"
+              url = gii.generar_y_subir(datos, nombre)
+              if url:
+                  imagenes.append(url)
+                  lineas.append(f"📍 {datos['puesto']} · {datos['plazas']} plazas · {datos['lugar']}")
+                  print(f"✅ Imagen {i} subida: {url}")
+              else:
+                  print(f"❌ Imagen {i} falló")
+
+          if not imagenes:
+              print("❌ No se generó ninguna imagen")
+              sys.exit(1)
+
+          webhook = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")
+          if not webhook:
+              print("⚠️  Sin INSTAGRAM_WEBHOOK_URL — imágenes subidas pero no enviadas a Make")
+              sys.exit(0)
+
+          caption = "\n".join(lineas) + "\n\n🔔 TEST — oponoticias.com\n#oposiciones #test"
+          payload = json.dumps({"imagenes": imagenes, "caption": caption}).encode()
+          req = urllib.request.Request(webhook, data=payload,
+                                       headers={"Content-Type": "application/json"})
+          urllib.request.urlopen(req, timeout=15).read()
+          print(f"📷 Webhook enviado: {len(imagenes)} imágenes")
+          EOF
