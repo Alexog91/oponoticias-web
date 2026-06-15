@@ -164,42 +164,57 @@ def render_png(svg_texto, salida_png):
         salida_png.unlink()
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        svg_tmp = tmp / "in.svg"
-        svg_tmp.write_text(svg_texto, encoding="utf-8")
+        # Chrome headless en CI captura HTML de forma mucho más fiable que un
+        # .svg suelto vía file://. Envolvemos el SVG inline en un HTML mínimo.
+        html_tmp = tmp / "in.html"
+        html_tmp.write_text(
+            "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+            "<style>html,body{margin:0;padding:0;}"
+            "svg{display:block;width:1080px;height:1350px;}</style></head>"
+            f"<body>{svg_texto}</body></html>",
+            encoding="utf-8",
+        )
         user_dir = tmp / "chrome"
         # Chrome a veces ignora la ruta absoluta en --screenshot y guarda en CWD.
         # Usamos nombre relativo + cwd=tmp para que siempre quede en tmp/.
         out_png = tmp / "screenshot.png"
-        proc = subprocess.Popen([
-            chrome, "--headless", "--disable-gpu", "--no-sandbox",
-            "--no-first-run", "--no-default-browser-check",
-            "--disable-dev-shm-usage",
-            "--force-device-scale-factor=1",
-            "--screenshot=screenshot.png",
-            "--window-size=1080,1350",
-            "--default-background-color=00000000",
-            "--hide-scrollbars",
-            f"--user-data-dir={user_dir}",
-            f"file://{svg_tmp}",
-        ], cwd=str(tmp), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        err_log = tmp / "chrome.err"
+        with open(err_log, "wb") as ferr:
+            proc = subprocess.Popen([
+                chrome, "--headless", "--disable-gpu", "--no-sandbox",
+                "--no-first-run", "--no-default-browser-check",
+                "--disable-dev-shm-usage",
+                "--force-device-scale-factor=1",
+                "--screenshot=screenshot.png",
+                "--window-size=1080,1350",
+                "--default-background-color=00000000",
+                "--hide-scrollbars",
+                f"--user-data-dir={user_dir}",
+                f"file://{html_tmp}",
+            ], cwd=str(tmp), stdout=subprocess.DEVNULL, stderr=ferr)
 
-        listo = False
-        for _ in range(40):
-            if out_png.exists() and out_png.stat().st_size > 0:
-                listo = True
-                break
-            if proc.poll() is not None:
-                break
-            time.sleep(0.5)
-        time.sleep(0.3)
-        try:
-            proc.terminate()
-            proc.wait(timeout=3)
-        except Exception:
-            proc.kill()
+            for _ in range(40):
+                if out_png.exists() and out_png.stat().st_size > 0:
+                    break
+                if proc.poll() is not None:
+                    break
+                time.sleep(0.5)
+            time.sleep(0.3)
+            try:
+                proc.terminate()
+                proc.wait(timeout=3)
+            except Exception:
+                proc.kill()
 
         if out_png.exists() and out_png.stat().st_size > 0:
             shutil.copy2(str(out_png), str(salida_png))
+        else:
+            try:
+                err = err_log.read_text(encoding="utf-8", errors="replace").strip()
+            except Exception:
+                err = ""
+            err = err[-600:] if err else "(sin stderr)"
+            raise RuntimeError(f"Chrome no generó {salida_png}. stderr: {err}")
 
     if not (salida_png.exists() and salida_png.stat().st_size > 0):
         raise RuntimeError(f"Chrome no generó {salida_png}")
