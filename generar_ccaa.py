@@ -258,6 +258,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
     "publisher": {{"@type": "Organization", "name": "OpoNoticias", "url": "https://oponoticias.com"}}
   }}
   </script>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
 </head>
 <body>
 
