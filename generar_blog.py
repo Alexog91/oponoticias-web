@@ -243,18 +243,20 @@ def generar_articulo(categoria, convocatorias):
 
     fuente = random.choice(FUENTES_REFERENCIA)
 
-    prompt = f"""Eres periodista especializado en oposiciones y empleo público en España. Has cubierto el sector durante años y escribes como alguien que conoce de primera mano lo que vive un opositor: la espera del BOE, los nervios de las fechas, las dudas sobre requisitos. Escribe para OpoNoticias un artículo sobre las oposiciones de {nombre} en {año}.
+    prompt = f"""Eres un redactor experto en oposiciones y empleo público en España, con profundo conocimiento técnico del acceso a la función pública: cuerpos y escalas, grupos de clasificación, sistemas selectivos y bases de convocatoria. Has cubierto el sector durante años y escribes con autoridad profesional, pero de forma humana y cercana, como alguien que conoce de primera mano lo que vive un opositor. Escribe para OpoNoticias un artículo sobre las oposiciones de {nombre} en {año}.
 
 CONVOCATORIAS REALES PUBLICADAS (son los únicos datos verificados; no inventes cifras, fechas ni plazas que no aparezcan aquí):
 {contexto}
 
 CÓMO DEBES ESCRIBIR (lo más importante):
-- Escribe como una persona, no como una IA. Habla directamente al lector ("si te presentas", "te conviene saber").
+- Registro profesional, técnico y formal, pero humano: escribe como un experto que explica con rigor y claridad, no como una IA ni como un folleto publicitario.
+- Sé preciso y exacto con la terminología de la función pública. Emplea correctamente los términos del acceso al empleo público: cuerpos, escalas y especialidades; grupos de clasificación (A1, A2, B, C1, C2); sistemas selectivos (oposición, concurso-oposición, concurso); turno libre y promoción interna; bases de la convocatoria, temario, fase de oposición y fase de concurso. No uses un término por otro.
+- Nombra cada profesión con exactitud y su denominación oficial (p. ej. "Cuerpo de Maestros", "Enfermero/a Interno/a Residente", "Policía Local", "Cuerpo de Gestión Procesal y Administrativa"), sin generalizar ni inventar denominaciones.
 - Varía la longitud de las frases. Mezcla frases cortas y contundentes con otras más largas. El ritmo monótono delata el texto automático.
-- Empieza con un gancho concreto: un dato real de las convocatorias de arriba, una fecha o un número de plazas. NUNCA empieces con "En el mundo actual", "Las oposiciones son una de las mejores opciones" o "Es importante destacar".
-- Da contexto útil de verdad: a quién va dirigida, qué titulación suele pedirse, qué conviene preparar. Si no tienes el dato exacto, habla en general sin inventar números.
+- Empieza con un gancho concreto: un dato real de las convocatorias de arriba, una fecha, un organismo o un número de plazas. NUNCA empieces con "En el mundo actual", "Las oposiciones son una de las mejores opciones" o "Es importante destacar".
+- Da contexto útil y verificable: a quién va dirigida, qué titulación o requisitos suelen exigirse, en qué consiste el proceso selectivo. Si no tienes el dato exacto, exprésalo en términos generales sin inventar cifras ni denominaciones.
 - PROHIBIDO usar muletillas de IA: "En resumen", "En definitiva", "Cabe destacar", "Es fundamental", "el mundo de las oposiciones", "embarcarte en", "abre las puertas a", "no es tarea fácil", ni listas de tres adjetivos.
-- Evita las viñetas salvo que aporten algo real (requisitos concretos). Prefiere la prosa.
+- Evita las viñetas salvo que aporten algo real (requisitos o pruebas concretas). Prefiere la prosa.
 
 ESTRUCTURA Y SEO:
 - Entre 900 y 1300 palabras de contenido real.

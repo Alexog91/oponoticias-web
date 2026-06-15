@@ -425,6 +425,7 @@ img, svg { max-width: 100%; display: block; }
 
 .prose { font-size: 1.06rem; line-height: 1.78; color: #3a3530; }
 .prose > * + * { margin-top: 22px; }
+.prose p { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }
 .prose h2 { font-size: 1.5rem; margin-top: 44px; margin-bottom: 4px; }
 .prose h3 { font-size: 1.2rem; margin-top: 30px; }
 .prose ul, .prose ol { padding-left: 24px; }
