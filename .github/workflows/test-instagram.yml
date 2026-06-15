@@ -2,6 +2,11 @@ name: Test Instagram Carrusel
 
 on:
   workflow_dispatch:
+    inputs:
+      publicar:
+        description: 'Publicar en Instagram (si no, solo sube a Supabase y muestra las URLs)'
+        type: boolean
+        default: false
 
 jobs:
   test-instagram:
@@ -12,6 +17,10 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+
+      # Renderizador SVG principal: determinista y sin navegador.
+      - name: Instalar librsvg (rsvg-convert)
+        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
 
       - name: Instalar Chrome
         id: setup-chrome
@@ -35,6 +44,7 @@ jobs:
           SUPABASE_STORAGE_BUCKET: social
           INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+          PUBLICAR: ${{ inputs.publicar }}
         run: |
           python3 - <<'EOF'
           import sys, os, json, urllib.request
@@ -70,10 +80,20 @@ jobs:
               print("❌ No se generó ninguna imagen")
               sys.exit(1)
 
+          print("\n👉 Abre estas URLs para revisar la calidad de las imágenes:")
+          for u in imagenes:
+              print(f"   {u}")
+
+          publicar = os.environ.get("PUBLICAR", "false").lower() == "true"
+          if not publicar:
+              print("\n🔒 Modo revisión: NO se ha publicado en Instagram.")
+              print("   Si las imágenes se ven bien, relanza el workflow con 'publicar' activado.")
+              sys.exit(0)
+
           webhook = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")
           if not webhook:
-              print("⚠️  Sin INSTAGRAM_WEBHOOK_URL — imágenes subidas pero no enviadas a Make")
-              sys.exit(0)
+              print("⚠️  Sin INSTAGRAM_WEBHOOK_URL — no se puede publicar")
+              sys.exit(1)
 
           caption = "\n".join(lineas) + "\n\n🔔 TEST — oponoticias.com\n#oposiciones #test"
           payload = json.dumps({"imagenes": imagenes, "caption": caption}).encode()

@@ -153,71 +153,99 @@ def rellenar_template(datos):
     return svg
 
 
-def render_png(svg_texto, salida_png):
-    """Renderiza un SVG (texto) a PNG 1080×1350 con Chrome headless."""
+def _render_rsvg(svg_texto, salida_png, tmp):
+    """Renderiza con rsvg-convert (librsvg). Determinista, sin navegador.
+    Devuelve True si generó el PNG."""
+    rsvg = shutil.which("rsvg-convert")
+    if not rsvg:
+        return False
+    svg_tmp = tmp / "in.svg"
+    svg_tmp.write_text(svg_texto, encoding="utf-8")
+    res = subprocess.run(
+        [rsvg, "-w", "1080", "-h", "1350", "-o", str(salida_png), str(svg_tmp)],
+        stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=60,
+    )
+    if res.returncode != 0:
+        err = (res.stderr or b"").decode("utf-8", "replace")[-600:]
+        raise RuntimeError(f"rsvg-convert falló: {err}")
+    return salida_png.exists() and salida_png.stat().st_size > 0
+
+
+def _render_chrome(svg_texto, salida_png, tmp):
+    """Renderiza con Chrome headless (fallback para Mac local)."""
     chrome = _chrome_bin()
     if not chrome:
-        raise RuntimeError("No se encontró Chrome/Chromium. Define CHROME_BIN.")
+        raise RuntimeError("No se encontró rsvg-convert ni Chrome. "
+                           "Instala librsvg2-bin o define CHROME_BIN.")
+    # Chrome headless captura HTML de forma más fiable que un .svg suelto.
+    html_tmp = tmp / "in.html"
+    html_tmp.write_text(
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<style>html,body{margin:0;padding:0;}"
+        "svg{display:block;width:1080px;height:1350px;}</style></head>"
+        f"<body>{svg_texto}</body></html>",
+        encoding="utf-8",
+    )
+    user_dir = tmp / "chrome"
+    out_png = tmp / "screenshot.png"  # ruta relativa + cwd=tmp para no perderla
+    err_log = tmp / "chrome.err"
+    with open(err_log, "wb") as ferr:
+        proc = subprocess.Popen([
+            chrome, "--headless", "--disable-gpu", "--no-sandbox",
+            "--no-first-run", "--no-default-browser-check",
+            "--disable-dev-shm-usage",
+            "--disable-background-networking",  # corta GCM que cuelga el proceso
+            "--disable-component-update",
+            "--disable-extensions", "--disable-sync", "--mute-audio",
+            "--virtual-time-budget=5000",       # renderiza y sale solo
+            "--force-device-scale-factor=1",
+            "--screenshot=screenshot.png",
+            "--window-size=1080,1350",
+            "--default-background-color=00000000",
+            "--hide-scrollbars",
+            f"--user-data-dir={user_dir}",
+            f"file://{html_tmp}",
+        ], cwd=str(tmp), stdout=subprocess.DEVNULL, stderr=ferr)
 
+        for _ in range(40):
+            if out_png.exists() and out_png.stat().st_size > 0:
+                break
+            if proc.poll() is not None:
+                break
+            time.sleep(0.5)
+        time.sleep(0.3)
+        try:
+            proc.terminate()
+            proc.wait(timeout=3)
+        except Exception:
+            proc.kill()
+
+    if out_png.exists() and out_png.stat().st_size > 0:
+        shutil.copy2(str(out_png), str(salida_png))
+        return True
+    try:
+        err = err_log.read_text(encoding="utf-8", errors="replace").strip()
+    except Exception:
+        err = ""
+    err = err[-600:] if err else "(sin stderr)"
+    raise RuntimeError(f"Chrome no generó {salida_png}. stderr: {err}")
+
+
+def render_png(svg_texto, salida_png):
+    """Renderiza un SVG (texto) a PNG 1080×1350.
+
+    Prefiere rsvg-convert (librsvg) por ser determinista y rápido; si no está
+    disponible (p.ej. Mac local sin librsvg), cae a Chrome headless."""
     salida_png = Path(salida_png)
     if salida_png.exists():
         salida_png.unlink()
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        # Chrome headless en CI captura HTML de forma mucho más fiable que un
-        # .svg suelto vía file://. Envolvemos el SVG inline en un HTML mínimo.
-        html_tmp = tmp / "in.html"
-        html_tmp.write_text(
-            "<!DOCTYPE html><html><head><meta charset='utf-8'>"
-            "<style>html,body{margin:0;padding:0;}"
-            "svg{display:block;width:1080px;height:1350px;}</style></head>"
-            f"<body>{svg_texto}</body></html>",
-            encoding="utf-8",
-        )
-        user_dir = tmp / "chrome"
-        # Chrome a veces ignora la ruta absoluta en --screenshot y guarda en CWD.
-        # Usamos nombre relativo + cwd=tmp para que siempre quede en tmp/.
-        out_png = tmp / "screenshot.png"
-        err_log = tmp / "chrome.err"
-        with open(err_log, "wb") as ferr:
-            proc = subprocess.Popen([
-                chrome, "--headless", "--disable-gpu", "--no-sandbox",
-                "--no-first-run", "--no-default-browser-check",
-                "--disable-dev-shm-usage",
-                "--force-device-scale-factor=1",
-                "--screenshot=screenshot.png",
-                "--window-size=1080,1350",
-                "--default-background-color=00000000",
-                "--hide-scrollbars",
-                f"--user-data-dir={user_dir}",
-                f"file://{html_tmp}",
-            ], cwd=str(tmp), stdout=subprocess.DEVNULL, stderr=ferr)
-
-            for _ in range(40):
-                if out_png.exists() and out_png.stat().st_size > 0:
-                    break
-                if proc.poll() is not None:
-                    break
-                time.sleep(0.5)
-            time.sleep(0.3)
-            try:
-                proc.terminate()
-                proc.wait(timeout=3)
-            except Exception:
-                proc.kill()
-
-        if out_png.exists() and out_png.stat().st_size > 0:
-            shutil.copy2(str(out_png), str(salida_png))
-        else:
-            try:
-                err = err_log.read_text(encoding="utf-8", errors="replace").strip()
-            except Exception:
-                err = ""
-            err = err[-600:] if err else "(sin stderr)"
-            raise RuntimeError(f"Chrome no generó {salida_png}. stderr: {err}")
+        if not _render_rsvg(svg_texto, salida_png, tmp):
+            _render_chrome(svg_texto, salida_png, tmp)
 
     if not (salida_png.exists() and salida_png.stat().st_size > 0):
-        raise RuntimeError(f"Chrome no generó {salida_png}")
+        raise RuntimeError(f"No se pudo generar {salida_png}")
     return salida_png
 
 

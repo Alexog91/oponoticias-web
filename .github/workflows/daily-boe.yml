@@ -23,7 +23,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      # Chrome headless para renderizar las imágenes del carrusel de Instagram.
+      # Renderizador SVG principal del carrusel de Instagram: rsvg-convert
+      # (librsvg). Determinista, sin navegador. Chrome queda como respaldo.
+      - name: Instalar librsvg (rsvg-convert)
+        continue-on-error: true
+        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
+
+      # Chrome headless como respaldo del renderizador de imágenes.
       # continue-on-error: si falla, el flujo principal (BOE/Telegram) sigue.
       - name: Instalar Chrome
         id: setup-chrome
