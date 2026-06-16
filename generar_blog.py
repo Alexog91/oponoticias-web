@@ -448,7 +448,7 @@ def plantilla_articulo(art):
       </div>
       <div class="footer-bottom">
         <span>© {datetime.now().year} OpoNoticias · oponoticias.com</span>
-        <span>Fuente oficial: api.boe.es · Actualización diaria a las 9:30 h</span>
+        <span>Fuente oficial: api.boe.es · Actualización diaria cada mañana</span>
       </div>
     </div>
   </footer>
@@ -591,7 +591,7 @@ def plantilla_indice(articulos):
       </div>
       <div class="footer-bottom">
         <span>© {datetime.now().year} OpoNoticias · oponoticias.com</span>
-        <span>Fuente oficial: api.boe.es · Actualización diaria a las 9:30 h</span>
+        <span>Fuente oficial: api.boe.es · Actualización diaria cada mañana</span>
       </div>
     </div>
   </footer>

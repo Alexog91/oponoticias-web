@@ -150,7 +150,7 @@
     <text x="290" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">100k+</text>
     <text x="290" y="356" font-size="12" font-weight="400" fill="white" fill-opacity="0.46">plazas convocadas/año</text>
     <line x1="476" y1="296" x2="476" y2="364" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
-    <text x="496" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">9:30h</text>
+    <text x="496" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">L–S</text>
     <text x="496" y="356" font-size="12" font-weight="400" fill="white" fill-opacity="0.46">publicación diaria</text>
     <line x1="672" y1="296" x2="672" y2="364" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
     <text x="692" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">18</text>

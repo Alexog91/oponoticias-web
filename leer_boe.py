@@ -1010,7 +1010,7 @@ def generar_html_convocatoria(conv, categoria):
       </div>
       <div class="footer-bottom">
         <span>© 2026 OpoNoticias · oponoticias.com</span>
-        <span>Fuente oficial: api.boe.es · Actualización diaria a las 9:30 h</span>
+        <span>Fuente oficial: api.boe.es · Actualización diaria cada mañana</span>
       </div>
     </div>
   </footer>
