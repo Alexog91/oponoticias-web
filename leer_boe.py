@@ -35,62 +35,71 @@ def leer_boe_rss():
     print("🔄 Leyendo RSS del BOE...")
 
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
-    req = urllib.request.Request(RSS_URL, headers=headers)
+    max_reintentos = 3
+    esperas = [3, 5, 10]  # segundos de espera entre reintentos
 
-    try:
-        with urllib.request.urlopen(req, timeout=10) as response:
-            xml_data = response.read()
+    for intento in range(max_reintentos):
+        try:
+            req = urllib.request.Request(RSS_URL, headers=headers)
+            with urllib.request.urlopen(req, timeout=15) as response:
+                xml_data = response.read()
 
-        root = ET.fromstring(xml_data)
-        items = root.findall('.//item')
+            root = ET.fromstring(xml_data)
+            items = root.findall('.//item')
 
-        print(f"✓ Se encontraron {len(items)} publicaciones del BOE hoy\n")
+            print(f"✓ Se encontraron {len(items)} publicaciones del BOE hoy\n")
 
-        convocatorias = []
+            convocatorias = []
 
-        for item in items:
-            title_elem = item.find('title')
-            link_elem = item.find('link')
-            pubDate_elem = item.find('pubDate')
-            description_elem = item.find('description')
+            for item in items:
+                title_elem = item.find('title')
+                link_elem = item.find('link')
+                pubDate_elem = item.find('pubDate')
+                description_elem = item.find('description')
 
-            if title_elem is not None:
-                titulo = title_elem.text or 'Sin título'
-                enlace = link_elem.text if link_elem is not None else 'Sin enlace'
-                fecha = pubDate_elem.text if pubDate_elem is not None else 'Sin fecha'
-                resumen = description_elem.text if description_elem is not None else 'Sin descripción'
+                if title_elem is not None:
+                    titulo = title_elem.text or 'Sin título'
+                    enlace = link_elem.text if link_elem is not None else 'Sin enlace'
+                    fecha = pubDate_elem.text if pubDate_elem is not None else 'Sin fecha'
+                    resumen = description_elem.text if description_elem is not None else 'Sin descripción'
 
-                # Limpiar resumen de metadata técnica
-                resumen = re.sub(r'[-–]\s*Referencia:.*', '', resumen)
-                resumen = re.sub(r'[-–]\s*KBytes:.*', '', resumen)
-                resumen = re.sub(r'KBytes:.*', '', resumen)
-                resumen = resumen.strip()
-                resumen = resumen[:200] if resumen else 'Sin descripción'
+                    # Limpiar resumen de metadata técnica
+                    resumen = re.sub(r'[-–]\s*Referencia:.*', '', resumen)
+                    resumen = re.sub(r'[-–]\s*KBytes:.*', '', resumen)
+                    resumen = re.sub(r'KBytes:.*', '', resumen)
+                    resumen = resumen.strip()
+                    resumen = resumen[:200] if resumen else 'Sin descripción'
 
-                # Extraer referencia BOE del enlace
-                ref_boe = "BOE"
-                if "id=" in enlace:
-                    ref_boe = enlace.split("id=")[-1]
+                    # Extraer referencia BOE del enlace
+                    ref_boe = "BOE"
+                    if "id=" in enlace:
+                        ref_boe = enlace.split("id=")[-1]
 
-                palabras_clave = ['oposición', 'oposiciones', 'selectivo', 'convocatoria', 'plazas']
-                es_oposicion = any(palabra in titulo.lower() for palabra in palabras_clave)
+                    palabras_clave = ['oposición', 'oposiciones', 'selectivo', 'convocatoria', 'plazas']
+                    es_oposicion = any(palabra in titulo.lower() for palabra in palabras_clave)
 
-                if es_oposicion:
-                    convocatoria = {
-                        'fecha': fecha,
-                        'titulo': titulo,
-                        'enlace': enlace,
-                        'resumen': resumen,
-                        'ref_boe': ref_boe
-                    }
-                    convocatorias.append(convocatoria)
-                    print(f"📢 {titulo[:80]}...")
+                    if es_oposicion:
+                        convocatoria = {
+                            'fecha': fecha,
+                            'titulo': titulo,
+                            'enlace': enlace,
+                            'resumen': resumen,
+                            'ref_boe': ref_boe
+                        }
+                        convocatorias.append(convocatoria)
+                        print(f"📢 {titulo[:80]}...")
 
-        return convocatorias
+            return convocatorias
 
-    except Exception as e:
-        print(f"❌ Error al leer el RSS: {e}")
-        return []
+        except Exception as e:
+            if intento < max_reintentos - 1:
+                espera = esperas[intento]
+                print(f"⚠️  Intento {intento + 1}/{max_reintentos} falló: {e}")
+                print(f"   Reintentando en {espera} segundos...")
+                time.sleep(espera)
+            else:
+                print(f"❌ Error al leer el RSS tras {max_reintentos} intentos: {e}")
+                return []
 
 
 def _sanitizar_resumen(texto):
