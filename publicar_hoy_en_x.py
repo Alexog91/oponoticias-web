@@ -84,7 +84,7 @@ def obtener_convocatorias_hoy():
         'limit': '100',
         'select': 'titulo,enlace,resumen_claude,comunidad_autonoma,fecha',
     })
-    url = f"{SUPABASE_URL}/rest/v1/convocatorias?{qs}"
+    url = f"{SUPABASE_URL.rstrip('/')}/convocatorias?{qs}"
     headers = {
         'apikey': SUPABASE_API_KEY,
         'Authorization': f'Bearer {SUPABASE_API_KEY}',
