@@ -682,17 +682,24 @@ def publicar_en_x(conv):
         tag_ccaa  = ccaa_tags.get(comunidad, "")
         hashtags  = f"#oposiciones #BOE {tag_ccaa}".strip()
 
-        lineas = [f"📋 {titulo[:80]}{'…' if len(titulo) > 80 else ''}"]
+        # X cuenta cada URL como 23 chars (t.co). Usamos límite holgado de 50
+        # para el título ya que las 3 URLs sociales ocupan 3×23=69 chars en X.
+        lineas = [f"📋 {titulo[:50]}{'…' if len(titulo) > 50 else ''}"]
         if puesto:
-            lineas.append(f"🔢 {plazas} · {puesto[:50]}")
+            lineas.append(f"🔢 {plazas} · {puesto[:40]}")
         if comunidad:
             lineas.append(f"📍 {comunidad}")
         lineas.append(f"\n🔗 {url}")
+        lineas.append(
+            "\n📘 https://www.facebook.com/profile.php?id=61590965302457"
+            "  ·  📸 https://www.instagram.com/oponoticiason/"
+            "  ·  ✈️ https://t.me/OPONOTICIAS"
+        )
         lineas.append(f"\n{hashtags}")
 
         texto = "\n".join(lineas)
-        if len(texto) > 280:
-            texto = texto[:277] + "…"
+        if len(texto) > 500:  # límite real en chars Python (las URLs se acortan en X)
+            texto = texto[:497] + "…"
 
         client = tweepy.Client(
             consumer_key=X_API_KEY,
