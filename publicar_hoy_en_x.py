@@ -101,6 +101,7 @@ def enviar_tweet(conv, n, total):
     payload = json.dumps({
         "tweet": tweet,
         "imagen_tweet": IMAGEN_TWEET,
+        "imagen_facebook": "https://oponoticias.com/social/fb-card.png",
         "skip_facebook": True,
     }).encode('utf-8')
     req = urllib.request.Request(
