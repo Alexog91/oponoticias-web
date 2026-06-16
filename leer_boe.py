@@ -613,20 +613,15 @@ def enviar_a_facebook(conv):
         comunidad = conv.get('comunidad_autonoma', '') or ''
         titulo = limpiar_titulo(conv['titulo'])
 
-        lineas = [
-            f"🎯 Nueva convocatoria · {categoria}" if categoria else "🎯 Nueva convocatoria",
-            "",
-            f"📰 {titulo}",
-            "",
-            f"🔢 {plazas} · {puesto}",
-        ]
+        # Formato conciso: cabe visible sin "Ver más" (~4 líneas)
+        lineas = [f"🎯 {titulo[:70]}{'…' if len(titulo) > 70 else ''}"]
+        if plazas or puesto:
+            lineas.append(f"🔢 {plazas} · {puesto[:45]}" if plazas and puesto else f"🔢 {plazas or puesto}")
         if comunidad:
             lineas.append(f"📍 {comunidad}")
         lineas += [
-            "",
-            "👉 Todas las oposiciones del BOE, resumidas, en oponoticias.com",
-            "",
-            "#oposiciones #empleopublico #BOE",
+            f"🔗 {enlace_web_convocatoria(conv)}",
+            "#oposiciones #BOE #empleopublico",
         ]
         # Tweet para X (Buffer vía Make): mismo webhook, campo separado
         partes_x  = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
