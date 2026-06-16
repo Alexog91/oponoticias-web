@@ -30,10 +30,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
 
       # Pillow: convierte el PNG a JPEG (Instagram solo acepta JPEG).
-      # tweepy: cliente oficial para X API v2 (OAuth 1.0a).
-      - name: Instalar dependencias Python
+      - name: Instalar Pillow
         continue-on-error: true
-        run: pip install pillow tweepy
+        run: pip install pillow
 
       # Chrome headless como respaldo del renderizador de imágenes.
       # continue-on-error: si falla, el flujo principal (BOE/Telegram) sigue.
@@ -63,10 +62,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
           INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
-          X_API_KEY: ${{ secrets.X_API_KEY }}
-          X_API_SECRET: ${{ secrets.X_API_SECRET }}
-          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
-          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          X_WEBHOOK_URL: ${{ secrets.X_WEBHOOK_URL }}
           SUPABASE_STORAGE_BUCKET: social
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

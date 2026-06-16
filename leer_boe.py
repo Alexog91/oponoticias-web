@@ -22,10 +22,7 @@ SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")  # webhook Make.com → Facebook
 INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")  # webhook Make.com → Instagram (carrusel)
-X_API_KEY       = os.environ.get("X_API_KEY", "")
-X_API_SECRET    = os.environ.get("X_API_SECRET", "")
-X_ACCESS_TOKEN  = os.environ.get("X_ACCESS_TOKEN", "")
-X_ACCESS_SECRET = os.environ.get("X_ACCESS_SECRET", "")
+X_WEBHOOK_URL = os.environ.get("X_WEBHOOK_URL", "")  # webhook Make.com → X
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "Alexog91/oponoticias-web"
 WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
@@ -649,23 +646,17 @@ def enviar_a_facebook(conv):
 
 
 def publicar_en_x(conv):
-    """Publica un tweet por convocatoria usando OAuth 1.0a. Best-effort."""
-    if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET]):
-        print("⚠️  Sin credenciales X — omitiendo tweet")
+    """Publica en X vía webhook Make.com. Best-effort."""
+    if not X_WEBHOOK_URL:
+        print("⚠️  Sin X_WEBHOOK_URL — omitiendo tweet")
         return False
     try:
-        import tweepy
-    except ImportError:
-        print("⚠️  tweepy no instalado — omitiendo tweet")
-        return False
-
-    try:
-        partes   = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
-        plazas   = partes[0] if partes else ""
-        puesto   = partes[1] if len(partes) > 1 else ""
+        partes    = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas    = partes[0] if partes else ""
+        puesto    = partes[1] if len(partes) > 1 else ""
         comunidad = conv.get('comunidad_autonoma') or ""
-        titulo   = limpiar_titulo(conv['titulo'])
-        url      = enlace_web_convocatoria(conv)
+        titulo    = limpiar_titulo(conv['titulo'])
+        url       = enlace_web_convocatoria(conv)
 
         ccaa_tags = {
             "Andalucía": "#Andalucia", "Aragón": "#Aragon",
@@ -679,11 +670,9 @@ def publicar_en_x(conv):
             "Navarra": "#Navarra", "País Vasco": "#PaisVasco",
             "Comunitat Valenciana": "#ComunidadValenciana",
         }
-        tag_ccaa  = ccaa_tags.get(comunidad, "")
-        hashtags  = f"#oposiciones #BOE {tag_ccaa}".strip()
+        tag_ccaa = ccaa_tags.get(comunidad, "")
+        hashtags = f"#oposiciones #BOE {tag_ccaa}".strip()
 
-        # X cuenta cada URL como 23 chars (t.co). Usamos límite holgado de 50
-        # para el título ya que las 3 URLs sociales ocupan 3×23=69 chars en X.
         lineas = [f"📋 {titulo[:50]}{'…' if len(titulo) > 50 else ''}"]
         if puesto:
             lineas.append(f"🔢 {plazas} · {puesto[:40]}")
@@ -696,22 +685,18 @@ def publicar_en_x(conv):
             "  ·  ✈️ https://t.me/OPONOTICIAS"
         )
         lineas.append(f"\n{hashtags}")
-
         texto = "\n".join(lineas)
-        if len(texto) > 500:  # límite real en chars Python (las URLs se acortan en X)
-            texto = texto[:497] + "…"
 
-        client = tweepy.Client(
-            consumer_key=X_API_KEY,
-            consumer_secret=X_API_SECRET,
-            access_token=X_ACCESS_TOKEN,
-            access_token_secret=X_ACCESS_SECRET,
+        payload = json.dumps({"tweet": texto}).encode('utf-8')
+        req = urllib.request.Request(
+            X_WEBHOOK_URL, data=payload,
+            headers={'Content-Type': 'application/json'}, method='POST'
         )
-        resp = client.create_tweet(text=texto)
-        print(f"✅ Tweet publicado (id={resp.data['id']}): {titulo[:50]}…")
+        urllib.request.urlopen(req, timeout=10).read()
+        print(f"🐦 Tweet enviado a Make: {titulo[:50]}…")
         return True
     except Exception as e:
-        print(f"⚠️  Error al publicar en X: {e}")
+        print(f"⚠️  Error X (no bloquea): {e}")
         return False
 
 
