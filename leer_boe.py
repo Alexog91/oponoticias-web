@@ -22,6 +22,10 @@ SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")  # webhook Make.com → Facebook
 INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")  # webhook Make.com → Instagram (carrusel)
+X_API_KEY       = os.environ.get("X_API_KEY", "")
+X_API_SECRET    = os.environ.get("X_API_SECRET", "")
+X_ACCESS_TOKEN  = os.environ.get("X_ACCESS_TOKEN", "")
+X_ACCESS_SECRET = os.environ.get("X_ACCESS_SECRET", "")
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "Alexog91/oponoticias-web"
 WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
@@ -644,6 +648,66 @@ def enviar_a_facebook(conv):
         return False
 
 
+def publicar_en_x(conv):
+    """Publica un tweet por convocatoria usando OAuth 1.0a. Best-effort."""
+    if not all([X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET]):
+        print("⚠️  Sin credenciales X — omitiendo tweet")
+        return False
+    try:
+        import tweepy
+    except ImportError:
+        print("⚠️  tweepy no instalado — omitiendo tweet")
+        return False
+
+    try:
+        partes   = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas   = partes[0] if partes else ""
+        puesto   = partes[1] if len(partes) > 1 else ""
+        comunidad = conv.get('comunidad_autonoma') or ""
+        titulo   = limpiar_titulo(conv['titulo'])
+        url      = enlace_web_convocatoria(conv)
+
+        ccaa_tags = {
+            "Andalucía": "#Andalucia", "Aragón": "#Aragon",
+            "Asturias": "#Asturias", "Canarias": "#Canarias",
+            "Cantabria": "#Cantabria", "Castilla-La Mancha": "#CastillaLaMancha",
+            "Castilla y León": "#CastillaYLeon", "Cataluña": "#Cataluna",
+            "Ceuta": "#Ceuta", "Extremadura": "#Extremadura",
+            "Galicia": "#Galicia", "Islas Baleares": "#IslasBaleares",
+            "La Rioja": "#LaRioja", "Madrid": "#Madrid",
+            "Melilla": "#Melilla", "Murcia": "#Murcia",
+            "Navarra": "#Navarra", "País Vasco": "#PaisVasco",
+            "Comunitat Valenciana": "#ComunidadValenciana",
+        }
+        tag_ccaa  = ccaa_tags.get(comunidad, "")
+        hashtags  = f"#oposiciones #BOE {tag_ccaa}".strip()
+
+        lineas = [f"📋 {titulo[:80]}{'…' if len(titulo) > 80 else ''}"]
+        if puesto:
+            lineas.append(f"🔢 {plazas} · {puesto[:50]}")
+        if comunidad:
+            lineas.append(f"📍 {comunidad}")
+        lineas.append(f"\n🔗 {url}")
+        lineas.append(f"\n{hashtags}")
+
+        texto = "\n".join(lineas)
+        if len(texto) > 280:
+            texto = texto[:277] + "…"
+
+        client = tweepy.Client(
+            consumer_key=X_API_KEY,
+            consumer_secret=X_API_SECRET,
+            access_token=X_ACCESS_TOKEN,
+            access_token_secret=X_ACCESS_SECRET,
+        )
+        resp = client.create_tweet(text=texto)
+        print(f"✅ Tweet publicado (id={resp.data['id']}): {titulo[:50]}…")
+        return True
+    except Exception as e:
+        print(f"⚠️  Error al publicar en X: {e}")
+        return False
+
+
 _MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
                 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
@@ -1151,6 +1215,7 @@ if __name__ == "__main__":
         if enviar_a_telegram(conv):
             marcar_telegram_enviado(conv['enlace'])
             enviar_a_facebook(conv)     # best-effort, no bloquea si falla
+            publicar_en_x(conv)         # best-effort, no bloquea si falla
             enviadas_hoy.append(conv)
             enviadas_tg += 1
             time.sleep(2)

@@ -1,0 +1,231 @@
+<svg viewBox="0 0 1500 500"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — banner X/Twitter 1500×500">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#2B2622"/>
+      <stop offset="50%"  stop-color="#473E33"/>
+      <stop offset="100%" stop-color="#2B2622"/>
+    </linearGradient>
+
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="ish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ic"><rect width="180" height="180" rx="40"/></clipPath>
+
+    <radialGradient id="o1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#7A8B6E" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="wg"
+                    gradientUnits="userSpaceOnUse"
+                    x1="310" y1="0" x2="500" y2="0">
+      <stop offset="0%"   stop-color="#D9C4A0"/>
+      <stop offset="100%" stop-color="#EFE9E0"/>
+    </linearGradient>
+
+    <linearGradient id="sep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4A574"/>
+      <stop offset="60%"  stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#5A5047"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1500" height="500" fill="url(#bg)"/>
+
+  <!-- Grid sutil -->
+  <g stroke="white" stroke-opacity="0.03" stroke-width="1">
+    <line x1="100"  y1="0" x2="100"  y2="500"/> <line x1="200"  y1="0" x2="200"  y2="500"/>
+    <line x1="300"  y1="0" x2="300"  y2="500"/> <line x1="400"  y1="0" x2="400"  y2="500"/>
+    <line x1="500"  y1="0" x2="500"  y2="500"/> <line x1="600"  y1="0" x2="600"  y2="500"/>
+    <line x1="700"  y1="0" x2="700"  y2="500"/> <line x1="800"  y1="0" x2="800"  y2="500"/>
+    <line x1="900"  y1="0" x2="900"  y2="500"/> <line x1="1000" y1="0" x2="1000" y2="500"/>
+    <line x1="1100" y1="0" x2="1100" y2="500"/> <line x1="1200" y1="0" x2="1200" y2="500"/>
+    <line x1="1300" y1="0" x2="1300" y2="500"/> <line x1="1400" y1="0" x2="1400" y2="500"/>
+    <line x1="0" y1="100" x2="1500" y2="100"/> <line x1="0" y1="200" x2="1500" y2="200"/>
+    <line x1="0" y1="300" x2="1500" y2="300"/> <line x1="0" y1="400" x2="1500" y2="400"/>
+  </g>
+
+  <!-- Glows decorativos -->
+  <ellipse cx="80"   cy="120"  rx="320" ry="260" fill="url(#o1)"/>
+  <ellipse cx="1420" cy="400"  rx="340" ry="260" fill="url(#o2)"/>
+  <ellipse cx="750"  cy="260"  rx="260" ry="200" fill="url(#o3)"/>
+
+  <!-- Badge "Cuenta oficial en X" -->
+  <rect x="60" y="38" width="226" height="32" rx="16"
+        fill="#C4A574" fill-opacity="0.14"
+        stroke="#C4A574" stroke-opacity="0.55" stroke-width="1"/>
+  <circle cx="85" cy="54" r="5" fill="#7A8B6E"/>
+  <circle cx="85" cy="54" r="5" fill="#7A8B6E" opacity="0.5">
+    <animate attributeName="r"       values="5;10;5"   dur="2.4s" repeatCount="indefinite"/>
+    <animate attributeName="opacity" values="0.5;0;0.5" dur="2.4s" repeatCount="indefinite"/>
+  </circle>
+  <text x="100" y="59"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="11" font-weight="700" letter-spacing="0.9"
+        fill="#D9C4A0">CUENTA OFICIAL EN X</text>
+
+  <!-- Logotipo ON -->
+  <g transform="translate(60, 86)">
+    <rect width="180" height="180" rx="40" fill="url(#ig)"/>
+    <rect width="180" height="180" fill="url(#ish)" clip-path="url(#ic)"/>
+    <text x="90" y="113" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="72" letter-spacing="-3">
+      <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+    </text>
+    <rect x="48" y="132" width="84" height="7" rx="3.5"  fill="#C4A574"/>
+    <rect x="64" y="148" width="54" height="6" rx="3"    fill="#ffffff" fill-opacity="0.55"/>
+    <rect x="2" y="2" width="176" height="176" rx="39"
+          fill="none" stroke="white" stroke-opacity="0.12" stroke-width="2"/>
+  </g>
+
+  <!-- Nombre + tagline -->
+  <text y="168"
+        font-family="'Merriweather', Georgia, serif"
+        letter-spacing="-1.5">
+    <tspan x="290" font-size="72" font-weight="900" fill="url(#wg)">Opo</tspan><tspan
+           font-size="72" font-weight="400" fill="white" fill-opacity="0.92">Noticias</tspan>
+  </text>
+
+  <rect x="290" y="186" width="420" height="1.5" fill="url(#sep)"/>
+
+  <text x="290" y="218"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="20" font-weight="400"
+        fill="white" fill-opacity="0.62"
+        letter-spacing="0.2">
+    Las convocatorias del BOE, en lenguaje claro
+  </text>
+
+  <!-- Pills de propuesta de valor -->
+  <rect x="290" y="244" width="152" height="32" rx="16"
+        fill="#C4A574" fill-opacity="0.20"
+        stroke="#C4A574" stroke-opacity="0.55" stroke-width="1"/>
+  <text x="366" y="264"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="12" font-weight="600"
+        fill="#E5D2B0" text-anchor="middle">Alertas diarias</text>
+
+  <rect x="452" y="244" width="172" height="32" rx="16"
+        fill="#7A8B6E" fill-opacity="0.18"
+        stroke="#7A8B6E" stroke-opacity="0.55" stroke-width="1"/>
+  <text x="538" y="264"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="12" font-weight="600"
+        fill="#AEBE9F" text-anchor="middle">Por CCAA y cuerpo</text>
+
+  <rect x="634" y="244" width="160" height="32" rx="16"
+        fill="#7A8B6E" fill-opacity="0.18"
+        stroke="#7A8B6E" stroke-opacity="0.50" stroke-width="1"/>
+  <text x="714" y="264"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="12" font-weight="600"
+        fill="#AEBE9F" text-anchor="middle">Gratis para empezar</text>
+
+  <!-- Stats -->
+  <g font-family="Inter, -apple-system, Arial, sans-serif">
+    <text x="290" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">100k+</text>
+    <text x="290" y="356" font-size="12" font-weight="400" fill="white" fill-opacity="0.46">plazas convocadas/año</text>
+    <line x1="476" y1="296" x2="476" y2="364" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <text x="496" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">9:30h</text>
+    <text x="496" y="356" font-size="12" font-weight="400" fill="white" fill-opacity="0.46">publicación diaria</text>
+    <line x1="672" y1="296" x2="672" y2="364" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <text x="692" y="336" font-size="46" font-weight="900" fill="white" letter-spacing="-2">18</text>
+    <text x="692" y="356" font-size="12" font-weight="400" fill="white" fill-opacity="0.46">comunidades autónomas</text>
+  </g>
+
+  <!-- Tarjeta decorativa (mockup tweet) -->
+  <g opacity="0.68" transform="translate(1080, 72) rotate(-2, 170, 130)">
+    <rect x="6" y="6" width="340" height="220" rx="20" fill="black" fill-opacity="0.30"/>
+    <rect x="0" y="0" width="340" height="220" rx="20"
+          fill="white" fill-opacity="0.06"
+          stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <rect x="0" y="0" width="340" height="5" rx="3" fill="url(#ig)"/>
+
+    <!-- Avatar pequeño -->
+    <rect x="18" y="20" width="40" height="40" rx="20" fill="url(#ig)"/>
+    <text x="38" y="46" text-anchor="middle"
+          font-family="Merriweather, Georgia, serif"
+          font-size="14" font-weight="900" fill="white">ON</text>
+
+    <!-- Nombre + handle -->
+    <rect x="68" y="22" width="120" height="8" rx="4" fill="white" fill-opacity="0.55"/>
+    <rect x="68" y="36" width="80"  height="7" rx="3" fill="white" fill-opacity="0.28"/>
+
+    <!-- Contenido tweet -->
+    <rect x="18" y="76" width="304" height="8" rx="4" fill="white" fill-opacity="0.50"/>
+    <rect x="18" y="92" width="248" height="8" rx="4" fill="white" fill-opacity="0.32"/>
+    <rect x="18" y="108" width="278" height="8" rx="4" fill="white" fill-opacity="0.38"/>
+
+    <!-- Tags -->
+    <rect x="18" y="134" width="100" height="20" rx="10" fill="#7A8B6E" fill-opacity="0.40"/>
+    <text x="68" y="148" text-anchor="middle"
+          font-family="Inter, Arial, sans-serif"
+          font-size="9" font-weight="700" fill="#AEBE9F">#oposiciones</text>
+    <rect x="128" y="134" width="86" height="20" rx="10" fill="#C4A574" fill-opacity="0.25"/>
+    <text x="171" y="148" text-anchor="middle"
+          font-family="Inter, Arial, sans-serif"
+          font-size="9" font-weight="700" fill="#D9C4A0">#funcionarios</text>
+
+    <!-- Acciones tweet -->
+    <rect x="18" y="172" width="50" height="8" rx="4" fill="white" fill-opacity="0.18"/>
+    <rect x="84" y="172" width="50" height="8" rx="4" fill="white" fill-opacity="0.18"/>
+    <rect x="150" y="172" width="50" height="8" rx="4" fill="white" fill-opacity="0.18"/>
+    <rect x="216" y="172" width="50" height="8" rx="4" fill="white" fill-opacity="0.18"/>
+
+    <!-- Link -->
+    <rect x="18" y="194" width="180" height="7" rx="3" fill="#C4A574" fill-opacity="0.60"/>
+  </g>
+
+  <!-- Línea separadora inferior -->
+  <line x1="60" y1="406" x2="1440" y2="406"
+        stroke="white" stroke-opacity="0.10" stroke-width="1"/>
+
+  <!-- Footer -->
+  <text x="60" y="450"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="22" font-weight="700"
+        fill="white" fill-opacity="0.90"
+        letter-spacing="-0.5">oponoticias.com</text>
+
+  <text x="60" y="474"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="12" font-weight="400"
+        fill="white" fill-opacity="0.34"
+        letter-spacing="0.1">
+    Fuente oficial: api.boe.es · Actualización diaria · @OpoNoticiasON
+  </text>
+
+  <!-- CTA botón -->
+  <rect x="1260" y="416" width="182" height="48" rx="24" fill="url(#cta)"/>
+  <rect x="1260" y="416" width="182" height="24" rx="24"
+        fill="white" fill-opacity="0.07"/>
+  <text x="1351" y="446"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="15" font-weight="700"
+        fill="white" text-anchor="middle" letter-spacing="-0.3">Seguir →</text>
+
+</svg>
