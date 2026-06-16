@@ -707,7 +707,18 @@ def publicar_carrusel_instagram(convocatorias, max_slides=3):
         return False
 
     # Seleccionar las de más plazas (desc), conservando orden estable
-    seleccion = sorted(convocatorias, key=_plazas_num, reverse=True)[:max_slides]
+    # Deduplicar por (puesto, plazas, lugar) para evitar imágenes idénticas
+    vistas = set()
+    seleccion = []
+    for conv in sorted(convocatorias, key=_plazas_num, reverse=True):
+        datos = _datos_imagen(conv)
+        clave = (datos['puesto'], datos['plazas'], datos['lugar'])
+        if clave not in vistas:
+            vistas.add(clave)
+            seleccion.append(conv)
+            if len(seleccion) == max_slides:
+                break
+
     fecha_slug = datetime.now().strftime("%Y-%m-%d")
 
     imagenes, lineas_caption = [], []
