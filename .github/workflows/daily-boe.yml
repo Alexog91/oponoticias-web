@@ -62,7 +62,6 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
           INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
-          X_WEBHOOK_URL: ${{ secrets.X_WEBHOOK_URL }}
           SUPABASE_STORAGE_BUCKET: social
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

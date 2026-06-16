@@ -22,7 +22,6 @@ SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")  # webhook Make.com → Facebook
 INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")  # webhook Make.com → Instagram (carrusel)
-X_WEBHOOK_URL = os.environ.get("X_WEBHOOK_URL", "")  # webhook Make.com → X
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "Alexog91/oponoticias-web"
 WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
@@ -629,9 +628,40 @@ def enviar_a_facebook(conv):
             "",
             "#oposiciones #empleopublico #BOE",
         ]
+        # Tweet para X (Buffer vía Make): mismo webhook, campo separado
+        partes_x  = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas_x  = partes_x[0] if partes_x else ""
+        puesto_x  = partes_x[1] if len(partes_x) > 1 else ""
+        ccaa_tags = {
+            "Andalucía":"#Andalucia","Aragón":"#Aragon","Asturias":"#Asturias",
+            "Canarias":"#Canarias","Cantabria":"#Cantabria",
+            "Castilla-La Mancha":"#CastillaLaMancha","Castilla y León":"#CastillaYLeon",
+            "Cataluña":"#Cataluna","Ceuta":"#Ceuta","Extremadura":"#Extremadura",
+            "Galicia":"#Galicia","Islas Baleares":"#IslasBaleares","La Rioja":"#LaRioja",
+            "Madrid":"#Madrid","Melilla":"#Melilla","Murcia":"#Murcia",
+            "Navarra":"#Navarra","País Vasco":"#PaisVasco",
+            "Comunitat Valenciana":"#ComunidadValenciana",
+        }
+        tag_ccaa  = ccaa_tags.get(comunidad, "")
+        hashtags  = f"#oposiciones #BOE {tag_ccaa}".strip()
+        t_lineas  = [f"📋 {titulo[:50]}{'…' if len(titulo)>50 else ''}"]
+        if puesto_x:
+            t_lineas.append(f"🔢 {plazas_x} · {puesto_x[:40]}")
+        if comunidad:
+            t_lineas.append(f"📍 {comunidad}")
+        t_lineas.append(f"\n🔗 {enlace_web_convocatoria(conv)}")
+        t_lineas.append(
+            "\n📘 https://www.facebook.com/profile.php?id=61590965302457"
+            "  ·  📸 https://www.instagram.com/oponoticiason/"
+            "  ·  ✈️ https://t.me/OPONOTICIAS"
+        )
+        t_lineas.append(f"\n{hashtags}")
+        tweet_texto = "\n".join(t_lineas)
+
         payload = json.dumps({
             "mensaje": "\n".join(lineas),
             "enlace": enlace_web_convocatoria(conv),
+            "tweet": tweet_texto,
         }).encode('utf-8')
         req = urllib.request.Request(
             MAKE_WEBHOOK_URL, data=payload,
@@ -644,60 +674,6 @@ def enviar_a_facebook(conv):
         print(f"⚠️  Error Facebook (no bloquea): {e}")
         return False
 
-
-def publicar_en_x(conv):
-    """Publica en X vía webhook Make.com. Best-effort."""
-    if not X_WEBHOOK_URL:
-        print("⚠️  Sin X_WEBHOOK_URL — omitiendo tweet")
-        return False
-    try:
-        partes    = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
-        plazas    = partes[0] if partes else ""
-        puesto    = partes[1] if len(partes) > 1 else ""
-        comunidad = conv.get('comunidad_autonoma') or ""
-        titulo    = limpiar_titulo(conv['titulo'])
-        url       = enlace_web_convocatoria(conv)
-
-        ccaa_tags = {
-            "Andalucía": "#Andalucia", "Aragón": "#Aragon",
-            "Asturias": "#Asturias", "Canarias": "#Canarias",
-            "Cantabria": "#Cantabria", "Castilla-La Mancha": "#CastillaLaMancha",
-            "Castilla y León": "#CastillaYLeon", "Cataluña": "#Cataluna",
-            "Ceuta": "#Ceuta", "Extremadura": "#Extremadura",
-            "Galicia": "#Galicia", "Islas Baleares": "#IslasBaleares",
-            "La Rioja": "#LaRioja", "Madrid": "#Madrid",
-            "Melilla": "#Melilla", "Murcia": "#Murcia",
-            "Navarra": "#Navarra", "País Vasco": "#PaisVasco",
-            "Comunitat Valenciana": "#ComunidadValenciana",
-        }
-        tag_ccaa = ccaa_tags.get(comunidad, "")
-        hashtags = f"#oposiciones #BOE {tag_ccaa}".strip()
-
-        lineas = [f"📋 {titulo[:50]}{'…' if len(titulo) > 50 else ''}"]
-        if puesto:
-            lineas.append(f"🔢 {plazas} · {puesto[:40]}")
-        if comunidad:
-            lineas.append(f"📍 {comunidad}")
-        lineas.append(f"\n🔗 {url}")
-        lineas.append(
-            "\n📘 https://www.facebook.com/profile.php?id=61590965302457"
-            "  ·  📸 https://www.instagram.com/oponoticiason/"
-            "  ·  ✈️ https://t.me/OPONOTICIAS"
-        )
-        lineas.append(f"\n{hashtags}")
-        texto = "\n".join(lineas)
-
-        payload = json.dumps({"tweet": texto}).encode('utf-8')
-        req = urllib.request.Request(
-            X_WEBHOOK_URL, data=payload,
-            headers={'Content-Type': 'application/json'}, method='POST'
-        )
-        urllib.request.urlopen(req, timeout=10).read()
-        print(f"🐦 Tweet enviado a Make: {titulo[:50]}…")
-        return True
-    except Exception as e:
-        print(f"⚠️  Error X (no bloquea): {e}")
-        return False
 
 
 _MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
@@ -1206,8 +1182,7 @@ if __name__ == "__main__":
             continue
         if enviar_a_telegram(conv):
             marcar_telegram_enviado(conv['enlace'])
-            enviar_a_facebook(conv)     # best-effort, no bloquea si falla
-            publicar_en_x(conv)         # best-effort, no bloquea si falla
+            enviar_a_facebook(conv)     # best-effort, no bloquea si falla (incluye tweet)
             enviadas_hoy.append(conv)
             enviadas_tg += 1
             time.sleep(2)
