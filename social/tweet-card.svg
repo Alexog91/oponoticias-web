@@ -1,0 +1,180 @@
+<svg viewBox="0 0 1200 675"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — tweet card 1200×675">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#2B2622"/>
+      <stop offset="55%"  stop-color="#473E33"/>
+      <stop offset="100%" stop-color="#2B2622"/>
+    </linearGradient>
+
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="ish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ic"><rect width="180" height="180" rx="40"/></clipPath>
+
+    <radialGradient id="o1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#7A8B6E" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="wg"
+                    gradientUnits="userSpaceOnUse"
+                    x1="290" y1="0" x2="700" y2="0">
+      <stop offset="0%"   stop-color="#D9C4A0"/>
+      <stop offset="100%" stop-color="#EFE9E0"/>
+    </linearGradient>
+
+    <linearGradient id="sep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4A574"/>
+      <stop offset="60%"  stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="pill1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4A574"/>
+      <stop offset="100%" stop-color="#A8926A"/>
+    </linearGradient>
+    <linearGradient id="pill2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#5A6E52"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1200" height="675" fill="url(#bg)"/>
+
+  <!-- Grid sutil -->
+  <g stroke="white" stroke-opacity="0.025" stroke-width="1">
+    <line x1="150" y1="0" x2="150" y2="675"/>
+    <line x1="300" y1="0" x2="300" y2="675"/>
+    <line x1="450" y1="0" x2="450" y2="675"/>
+    <line x1="600" y1="0" x2="600" y2="675"/>
+    <line x1="750" y1="0" x2="750" y2="675"/>
+    <line x1="900" y1="0" x2="900" y2="675"/>
+    <line x1="1050" y1="0" x2="1050" y2="675"/>
+    <line x1="0" y1="135" x2="1200" y2="135"/>
+    <line x1="0" y1="270" x2="1200" y2="270"/>
+    <line x1="0" y1="405" x2="1200" y2="405"/>
+    <line x1="0" y1="540" x2="1200" y2="540"/>
+  </g>
+
+  <!-- Glows -->
+  <ellipse cx="100"  cy="120"  rx="380" ry="300" fill="url(#o1)"/>
+  <ellipse cx="1120" cy="580"  rx="340" ry="280" fill="url(#o2)"/>
+
+  <!-- Barra de acento superior -->
+  <rect x="0" y="0" width="1200" height="6" fill="url(#ig)"/>
+
+  <!-- Logo ON -->
+  <g transform="translate(72, 100)">
+    <rect width="160" height="160" rx="36" fill="url(#ig)"/>
+    <rect width="160" height="160" fill="url(#ish)" clip-path="url(#ic)"/>
+    <text x="80" y="102" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="64" letter-spacing="-2">
+      <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+    </text>
+    <rect x="32" y="116" width="96" height="6" rx="3" fill="#C4A574"/>
+    <rect x="48" y="130" width="64" height="5" rx="2" fill="#ffffff" fill-opacity="0.45"/>
+    <rect x="2" y="2" width="156" height="156" rx="35"
+          fill="none" stroke="white" stroke-opacity="0.12" stroke-width="2"/>
+  </g>
+
+  <!-- Nombre -->
+  <text y="168"
+        font-family="'Merriweather', Georgia, serif"
+        letter-spacing="-1.5">
+    <tspan x="268" font-size="78" font-weight="900" fill="url(#wg)">Opo</tspan><tspan
+           font-size="78" font-weight="400" fill="white" fill-opacity="0.92">Noticias</tspan>
+  </text>
+
+  <rect x="268" y="188" width="500" height="2" fill="url(#sep)"/>
+
+  <text x="268" y="228"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="22" font-weight="400"
+        fill="white" fill-opacity="0.58"
+        letter-spacing="0.3">
+    Las convocatorias del BOE, en lenguaje claro
+  </text>
+
+  <!-- Pills -->
+  <rect x="268" y="260" width="176" height="38" rx="19" fill="url(#pill1)" fill-opacity="0.22"
+        stroke="#C4A574" stroke-opacity="0.50" stroke-width="1"/>
+  <text x="356" y="284"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="700"
+        fill="#E5D2B0" text-anchor="middle">📋 Alertas diarias</text>
+
+  <rect x="456" y="260" width="176" height="38" rx="19" fill="url(#pill2)" fill-opacity="0.20"
+        stroke="#7A8B6E" stroke-opacity="0.50" stroke-width="1"/>
+  <text x="544" y="284"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="700"
+        fill="#AEBE9F" text-anchor="middle">📍 18 CCAA</text>
+
+  <rect x="644" y="260" width="188" height="38" rx="19" fill="url(#pill2)" fill-opacity="0.18"
+        stroke="#7A8B6E" stroke-opacity="0.45" stroke-width="1"/>
+  <text x="738" y="284"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="700"
+        fill="#AEBE9F" text-anchor="middle">🆓 100% gratis</text>
+
+  <!-- Separador central -->
+  <line x1="72" y1="380" x2="1128" y2="380"
+        stroke="white" stroke-opacity="0.08" stroke-width="1"/>
+
+  <!-- Stats -->
+  <g font-family="Inter, -apple-system, Arial, sans-serif" text-anchor="middle">
+    <text x="244" y="450" font-size="52" font-weight="900" fill="white" letter-spacing="-2">100k+</text>
+    <text x="244" y="476" font-size="13" font-weight="400" fill="white" fill-opacity="0.42">plazas / año</text>
+
+    <line x1="440" y1="410" x2="440" y2="490" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+
+    <text x="600" y="450" font-size="52" font-weight="900" fill="white" letter-spacing="-2">9:30h</text>
+    <text x="600" y="476" font-size="13" font-weight="400" fill="white" fill-opacity="0.42">publicación diaria</text>
+
+    <line x1="760" y1="410" x2="760" y2="490" stroke="white" stroke-opacity="0.12" stroke-width="1"/>
+
+    <text x="960" y="450" font-size="52" font-weight="900" fill="white" letter-spacing="-2">L-S</text>
+    <text x="960" y="476" font-size="13" font-weight="400" fill="white" fill-opacity="0.42">lunes a sábado</text>
+  </g>
+
+  <!-- Footer -->
+  <rect x="0" y="580" width="1200" height="95" fill="black" fill-opacity="0.25"/>
+
+  <text x="72" y="633"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="26" font-weight="700"
+        fill="white" fill-opacity="0.92"
+        letter-spacing="-0.5">oponoticias.com</text>
+
+  <text x="72" y="657"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="400"
+        fill="white" fill-opacity="0.35"
+        letter-spacing="0.1">Fuente: api.boe.es · Automatizado · @OpoNoticiasON</text>
+
+  <!-- Badge cuenta oficial -->
+  <rect x="878" y="600" width="254" height="38" rx="19"
+        fill="#C4A574" fill-opacity="0.15"
+        stroke="#C4A574" stroke-opacity="0.50" stroke-width="1"/>
+  <circle cx="904" cy="619" r="6" fill="#7A8B6E"/>
+  <text x="1005" y="624"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="12" font-weight="700" letter-spacing="0.8"
+        fill="#D9C4A0" text-anchor="middle">CUENTA OFICIAL EN X</text>
+
+</svg>

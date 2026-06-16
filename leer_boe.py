@@ -662,6 +662,7 @@ def enviar_a_facebook(conv):
             "mensaje": "\n".join(lineas),
             "enlace": enlace_web_convocatoria(conv),
             "tweet": tweet_texto,
+            "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
         }).encode('utf-8')
         req = urllib.request.Request(
             MAKE_WEBHOOK_URL, data=payload,
