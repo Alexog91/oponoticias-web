@@ -1,0 +1,224 @@
+<svg viewBox="0 0 1200 630"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — banner Facebook 1200×630">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#2B2622"/>
+      <stop offset="50%"  stop-color="#473E33"/>
+      <stop offset="100%" stop-color="#2B2622"/>
+    </linearGradient>
+
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="ish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ic"><rect width="210" height="210" rx="46"/></clipPath>
+
+    <radialGradient id="o1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#7A8B6E" stop-opacity="0.30"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o3" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.12"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="wg"
+                    gradientUnits="userSpaceOnUse"
+                    x1="322" y1="0" x2="470" y2="0">
+      <stop offset="0%"   stop-color="#D9C4A0"/>
+      <stop offset="100%" stop-color="#EFE9E0"/>
+    </linearGradient>
+
+    <linearGradient id="sep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4A574"/>
+      <stop offset="60%"  stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </linearGradient>
+
+    <linearGradient id="cta" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#1877F2"/>
+      <stop offset="100%" stop-color="#0D5FCC"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <g stroke="white" stroke-opacity="0.035" stroke-width="1">
+    <line x1="80"   y1="0" x2="80"   y2="630"/>  <line x1="160"  y1="0" x2="160"  y2="630"/>
+    <line x1="240"  y1="0" x2="240"  y2="630"/>  <line x1="320"  y1="0" x2="320"  y2="630"/>
+    <line x1="400"  y1="0" x2="400"  y2="630"/>  <line x1="480"  y1="0" x2="480"  y2="630"/>
+    <line x1="560"  y1="0" x2="560"  y2="630"/>  <line x1="640"  y1="0" x2="640"  y2="630"/>
+    <line x1="720"  y1="0" x2="720"  y2="630"/>  <line x1="800"  y1="0" x2="800"  y2="630"/>
+    <line x1="880"  y1="0" x2="880"  y2="630"/>  <line x1="960"  y1="0" x2="960"  y2="630"/>
+    <line x1="1040" y1="0" x2="1040" y2="630"/>  <line x1="1120" y1="0" x2="1120" y2="630"/>
+    <line x1="0" y1="80"  x2="1200" y2="80"/>   <line x1="0" y1="160" x2="1200" y2="160"/>
+    <line x1="0" y1="240" x2="1200" y2="240"/>  <line x1="0" y1="320" x2="1200" y2="320"/>
+    <line x1="0" y1="400" x2="1200" y2="400"/>  <line x1="0" y1="480" x2="1200" y2="480"/>
+    <line x1="0" y1="560" x2="1200" y2="560"/>
+  </g>
+
+  <ellipse cx="100"  cy="140"  rx="340" ry="300" fill="url(#o1)"/>
+  <ellipse cx="1100" cy="500"  rx="360" ry="300" fill="url(#o2)"/>
+  <ellipse cx="580"  cy="320"  rx="280" ry="240" fill="url(#o3)"/>
+
+  <!-- Badge: Facebook oficial -->
+  <rect x="72" y="48" width="278" height="36" rx="18"
+        fill="#1877F2" fill-opacity="0.16"
+        stroke="#1877F2" stroke-opacity="0.55" stroke-width="1"/>
+  <circle cx="100" cy="66" r="10" fill="#1877F2" fill-opacity="0.80"/>
+  <text x="100" y="71" text-anchor="middle"
+        font-family="Arial, sans-serif" font-size="13" font-weight="900"
+        fill="white">f</text>
+  <text x="120" y="71"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="12" font-weight="700" letter-spacing="0.9"
+        fill="#A8C4F5">PÁGINA OFICIAL EN FACEBOOK</text>
+
+  <!-- Logo ON -->
+  <g transform="translate(72, 104)">
+    <rect width="210" height="210" rx="46" fill="url(#ig)"/>
+    <rect width="210" height="210" fill="url(#ish)" clip-path="url(#ic)"/>
+    <text x="105" y="111" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="84" letter-spacing="-3">
+      <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+    </text>
+    <rect x="57" y="132" width="97" height="8" rx="4"   fill="#C4A574"/>
+    <rect x="76" y="149" width="61" height="7" rx="3.5" fill="#ffffff" fill-opacity="0.55"/>
+    <rect x="2" y="2" width="206" height="206" rx="45"
+          fill="none" stroke="white" stroke-opacity="0.12" stroke-width="2.5"/>
+  </g>
+
+  <!-- OpoNoticias wordmark -->
+  <text y="196"
+        font-family="'Merriweather', Georgia, serif"
+        letter-spacing="-1.5">
+    <tspan x="322" font-size="74" font-weight="900" fill="url(#wg)">Opo</tspan><tspan
+           font-size="74" font-weight="400" fill="white" fill-opacity="0.92">Noticias</tspan>
+  </text>
+
+  <rect x="322" y="218" width="438" height="1.5" fill="url(#sep)"/>
+
+  <text x="322" y="252"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="22" font-weight="400"
+        fill="white" fill-opacity="0.62"
+        letter-spacing="0.2">
+    Las convocatorias del BOE, en lenguaje claro
+  </text>
+
+  <!-- Feature pills -->
+  <rect x="322" y="278" width="164" height="36" rx="18"
+        fill="#C4A574" fill-opacity="0.20"
+        stroke="#C4A574" stroke-opacity="0.55" stroke-width="1"/>
+  <text x="404" y="301"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="600"
+        fill="#E5D2B0" text-anchor="middle">Alertas diarias</text>
+
+  <rect x="496" y="278" width="182" height="36" rx="18"
+        fill="#7A8B6E" fill-opacity="0.18"
+        stroke="#7A8B6E" stroke-opacity="0.55" stroke-width="1"/>
+  <text x="587" y="301"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="600"
+        fill="#AEBE9F" text-anchor="middle">Por CCAA y cuerpo</text>
+
+  <rect x="688" y="278" width="168" height="36" rx="18"
+        fill="#7A8B6E" fill-opacity="0.18"
+        stroke="#7A8B6E" stroke-opacity="0.50" stroke-width="1"/>
+  <text x="772" y="301"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="600"
+        fill="#AEBE9F" text-anchor="middle">Gratis para empezar</text>
+
+  <!-- Stats — sin horario -->
+  <g font-family="Inter, -apple-system, Arial, sans-serif">
+    <text x="322" y="396" font-size="50" font-weight="900" fill="white" letter-spacing="-2">3M+</text>
+    <text x="322" y="418" font-size="13" font-weight="400" fill="white" fill-opacity="0.46">opositores activos</text>
+    <line x1="500" y1="366" x2="500" y2="424" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <text x="520" y="396" font-size="50" font-weight="900" fill="white" letter-spacing="-2">100k+</text>
+    <text x="520" y="418" font-size="13" font-weight="400" fill="white" fill-opacity="0.46">plazas al año</text>
+    <line x1="706" y1="366" x2="706" y2="424" stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <text x="726" y="396" font-size="50" font-weight="900" fill="white" letter-spacing="-2">18</text>
+    <text x="726" y="418" font-size="13" font-weight="400" fill="white" fill-opacity="0.46">comunidades autónomas</text>
+  </g>
+
+  <!-- Decorative post cards -->
+  <g opacity="0.72" transform="translate(892, 100) rotate(-3, 127, 105)">
+    <rect x="5" y="5" width="255" height="192" rx="18" fill="black" fill-opacity="0.28"/>
+    <rect x="0" y="0" width="255" height="192" rx="18"
+          fill="white" fill-opacity="0.055"
+          stroke="white" stroke-opacity="0.14" stroke-width="1"/>
+    <rect x="0" y="0" width="255" height="5" rx="3" fill="url(#ig)"/>
+    <rect x="16" y="18" width="52" height="20" rx="10"
+          fill="#1877F2" fill-opacity="0.22"
+          stroke="#1877F2" stroke-opacity="0.65" stroke-width="1"/>
+    <text x="42" y="32"
+          font-family="Inter, Arial, sans-serif"
+          font-size="10" font-weight="800" fill="#A8C4F5" text-anchor="middle"
+          letter-spacing="0.5">NUEVO</text>
+    <rect x="16" y="50" width="220" height="9" rx="4.5" fill="white" fill-opacity="0.55"/>
+    <rect x="16" y="66" width="168" height="9" rx="4.5" fill="white" fill-opacity="0.32"/>
+    <rect x="16" y="92"  width="58" height="7" rx="3.5" fill="white" fill-opacity="0.22"/>
+    <rect x="84" y="92"  width="78" height="7" rx="3.5" fill="white" fill-opacity="0.50"/>
+    <rect x="16" y="110" width="58" height="7" rx="3.5" fill="white" fill-opacity="0.22"/>
+    <rect x="84" y="110" width="44" height="7" rx="3.5" fill="#D9C4A0" fill-opacity="0.80"/>
+    <rect x="16" y="128" width="58" height="7" rx="3.5" fill="white" fill-opacity="0.22"/>
+    <rect x="84" y="128" width="95" height="7" rx="3.5" fill="white" fill-opacity="0.50"/>
+    <rect x="16" y="152" width="148" height="22" rx="11" fill="#1877F2" fill-opacity="0.55"/>
+    <rect x="172" y="152" width="66"  height="22" rx="11"
+          fill="white" fill-opacity="0.06"
+          stroke="white" stroke-opacity="0.20" stroke-width="1"/>
+  </g>
+
+  <g opacity="0.42" transform="translate(944, 264) rotate(2, 107, 48)">
+    <rect x="4" y="4" width="214" height="90" rx="14" fill="black" fill-opacity="0.28"/>
+    <rect x="0" y="0" width="214" height="90" rx="14"
+          fill="white" fill-opacity="0.05"
+          stroke="white" stroke-opacity="0.10" stroke-width="1"/>
+    <rect x="0" y="0" width="214" height="4" rx="2" fill="#C4A574" fill-opacity="0.85"/>
+    <rect x="14" y="18" width="185" height="8" rx="4" fill="white" fill-opacity="0.40"/>
+    <rect x="14" y="32" width="136" height="8" rx="4" fill="white" fill-opacity="0.24"/>
+    <rect x="14" y="56" width="66"  height="7" rx="3.5" fill="#1877F2" fill-opacity="0.70"/>
+    <rect x="88" y="56" width="54"  height="7" rx="3.5" fill="white" fill-opacity="0.20"/>
+  </g>
+
+  <line x1="72" y1="492" x2="1128" y2="492"
+        stroke="white" stroke-opacity="0.10" stroke-width="1"/>
+
+  <text x="72" y="546"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="24" font-weight="700"
+        fill="white" fill-opacity="0.90"
+        letter-spacing="-0.5">oponoticias.com</text>
+
+  <text x="72" y="572"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="13" font-weight="400"
+        fill="white" fill-opacity="0.34"
+        letter-spacing="0.1">
+    Fuente oficial: api.boe.es · Actualización diaria · Datos protegidos RGPD
+  </text>
+
+  <!-- CTA button — Facebook blue -->
+  <rect x="878" y="512" width="250" height="52" rx="26" fill="url(#cta)"/>
+  <rect x="878" y="512" width="250" height="26" rx="26"
+        fill="white" fill-opacity="0.09"/>
+  <text x="1003" y="544"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="17" font-weight="700"
+        fill="white" text-anchor="middle" letter-spacing="-0.3">Seguir en Facebook →</text>
+
+</svg>

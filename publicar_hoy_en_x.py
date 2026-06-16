@@ -82,7 +82,7 @@ def obtener_convocatorias_hoy():
         'telegram_enviado': 'eq.true',
         'order': 'id.desc',
         'limit': '100',
-        'select': 'titulo,enlace,resumen_ia,resumen_claude,comunidad_autonoma,ref_boe,fecha',
+        'select': 'titulo,enlace,resumen_claude,comunidad_autonoma,fecha',
     })
     url = f"{SUPABASE_URL}/rest/v1/convocatorias?{qs}"
     headers = {
