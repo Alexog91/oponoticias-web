@@ -653,12 +653,28 @@ def enviar_a_facebook(conv):
         t_lineas.append(f"\n{hashtags}")
         tweet_texto = "\n".join(t_lineas)
 
+        # Imagen propia de la convocatoria (misma plantilla que Instagram):
+        # muestra organismo, puesto, plazas y lugar → cada post es único y
+        # atractivo en el feed móvil, donde el texto se corta con "Ver más".
+        # Best-effort: si la generación/subida falla, usa la tarjeta genérica.
+        imagen_fb = "https://oponoticias.com/social/fb-card.png"
+        try:
+            import generar_imagen_instagram as gii
+            import hashlib
+            uid = hashlib.md5((conv.get('enlace', '') + titulo).encode('utf-8')).hexdigest()[:12]
+            nombre_img = f"fb/{datetime.now().strftime('%Y-%m-%d')}-{uid}.jpg"
+            url_img = gii.generar_y_subir(_datos_imagen(conv), nombre_img)
+            if url_img:
+                imagen_fb = url_img
+        except Exception as e:
+            print(f"⚠️  Imagen Facebook propia falló, uso genérica ({e})")
+
         payload = json.dumps({
             "mensaje": "\n".join(lineas),
             "enlace": enlace_web_convocatoria(conv),
             "tweet": tweet_texto,
             "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
-            "imagen_facebook": "https://oponoticias.com/social/fb-card.png",
+            "imagen_facebook": imagen_fb,
         }).encode('utf-8')
         req = urllib.request.Request(
             MAKE_WEBHOOK_URL, data=payload,
