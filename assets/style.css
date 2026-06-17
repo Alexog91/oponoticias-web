@@ -583,8 +583,11 @@ img, svg { max-width: 100%; display: block; }
 @media (max-width: 768px) {
   body { font-size: 16px; }
   .section { padding: 56px 0; }
-  .nav-links, .nav-cta .btn-ghost, .nav-social { display: none; }
+  .nav-links, .nav-cta .btn-ghost { display: none; }
   .nav-toggle { display: block; }
+  .nav-social { gap: 9px; margin-right: 2px; }
+  .nav-social-label { display: none; }
+  .nav-social svg { width: 17px; height: 17px; }
   .nav.open .nav-links { display: flex; position: absolute; top: 72px; left: 0; right: 0; flex-direction: column; gap: 0; background: var(--surface); border-bottom: 1px solid var(--line); padding: 12px 24px; box-shadow: var(--shadow); }
   .nav.open .nav-links a { padding: 12px 0; border-bottom: 1px solid var(--line); }
   .steps { grid-template-columns: 1fr; gap: 26px; }
