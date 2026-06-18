@@ -823,14 +823,14 @@ def generar_slug(titulo, ref_boe=""):
     return f"{slug}.html"
 
 
-def generar_html_convocatoria(conv, categoria):
+def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="", slug_forzado=""):
     """Genera un archivo HTML por convocatoria"""
 
-    slug = generar_slug(conv['titulo'], conv.get('ref_boe', ''))
+    slug = slug_forzado or generar_slug(conv['titulo'], conv.get('ref_boe', ''))
     html_path = WEB_CONVOCATORIA_DIR / slug
 
-    # Si ya existe, no regenerar
-    if html_path.exists():
+    # Si ya existe, no regenerar (salvo regeneración forzada del rediseño)
+    if html_path.exists() and not forzar:
         print(f"⏭️  HTML ya existe: {slug}")
         return slug
 
@@ -848,6 +848,16 @@ def generar_html_convocatoria(conv, categoria):
     desc = conv.get('resumen_ia', 'Convocatoria disponible')
     meta_desc = f"Resumen: {desc[:120]}. Enlace al BOE oficial."
     canonical = f"https://oponoticias.com/convocatoria/{slug.replace('.html', '')}"
+
+    # Datos para el titular corto y las tarjetas (ficha escaneable)
+    _p = [x.strip() for x in (conv.get('resumen_ia') or '').split(' - ')]
+    plazas_t = re.sub(r'(?i)\s*plazas?', '', _p[0]).strip().capitalize() if _p and _p[0] else "—"
+    puesto_t = _p[1].capitalize() if len(_p) > 1 and _p[1] else "Convocatoria"
+    organismo_t = html_lib.escape(_extraer_organismo(conv['titulo']) or "Administración Pública")
+    ambito_t = html_lib.escape(conv.get('comunidad_autonoma') or "Nacional")
+    plazas_t = html_lib.escape(plazas_t)
+    puesto_t = html_lib.escape(puesto_t)
+    titular_corto = f"{puesto_t} — {organismo_t}"
 
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
@@ -927,14 +937,15 @@ def generar_html_convocatoria(conv, categoria):
         <span class="sep">/</span>
         <a href="../index.html#categorias">{categoria}</a>
         <span class="sep">/</span>
-        <span aria-current="page">{conv['titulo'][:80]}</span>
+        <span aria-current="page">{titular_corto}</span>
       </nav>
 
       <div class="article-layout">
         <article>
           <header class="article-header reveal">
             <span class="article-tag">{categoria}</span>
-            <h1>{conv['titulo']}</h1>
+            <h1>{titular_corto}</h1>
+            <p style="color:var(--gray); font-size:0.95rem; margin:8px 0 0; line-height:1.45;">{conv['titulo']}</p>
             <div class="article-meta">
               <span>Publicado: <b>{fecha_str}</b></span>
               <span>Fuente: <b>BOE</b></span>
@@ -943,22 +954,25 @@ def generar_html_convocatoria(conv, categoria):
           </header>
 
           <div class="prose reveal">
-            <p class="lead">{desc}</p>
-
-            <h2>Requisitos principales</h2>
-            <ul>
-              <li>Tener la <strong>titulación</strong> exigida para el puesto.</li>
-              <li>Poseer la <strong>nacionalidad española</strong> o de un país de la UE.</li>
-              <li>No haber sido <strong>separado del servicio</strong> de ninguna administración pública.</li>
-            </ul>
-
-            <div class="info-box">
-              <h3>Información de la convocatoria</h3>
-              <table class="info-table">
-                <tr><th>Categoría</th><td>{categoria}</td></tr>
-                <tr><th>Publicación</th><td>{fecha_str}</td></tr>
-                <tr><th>Referencia BOE</th><td>{conv.get('ref_boe', 'BOE')}</td></tr>
-              </table>
+            <div style="display:grid; gap:10px; margin:6px 0 26px;">
+              <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
+                <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gray); margin-bottom:4px;">Puesto</div>
+                <div style="font-size:1.05rem; font-weight:600; color:var(--ink);">{puesto_t}</div>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
+                  <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gray); margin-bottom:4px;">Plazas</div>
+                  <div style="font-size:1.05rem; font-weight:600; color:var(--ink);">{plazas_t}</div>
+                </div>
+                <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
+                  <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gray); margin-bottom:4px;">Ámbito</div>
+                  <div style="font-size:1.05rem; font-weight:600; color:var(--ink);">{ambito_t}</div>
+                </div>
+              </div>
+              <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
+                <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gray); margin-bottom:4px;">Organismo</div>
+                <div style="font-size:1.05rem; font-weight:600; color:var(--ink);">{organismo_t}</div>
+              </div>
             </div>
 
             <a href="{conv['enlace']}" class="boe-link" rel="noopener" target="_blank">
@@ -966,7 +980,8 @@ def generar_html_convocatoria(conv, categoria):
               <span class="arrow">→</span>
             </a>
 
-            <p style="margin-top:30px; color:var(--gray); font-size:0.9rem;">Este resumen tiene carácter informativo. La información válida y vinculante es siempre la publicada en el Boletín Oficial del Estado.</p>
+            <p style="margin-top:24px; color:var(--gray); font-size:0.9rem;">Este resumen tiene carácter informativo. La información válida y vinculante es siempre la publicada en el Boletín Oficial del Estado.</p>
+{relacionadas_html}
           </div>
         </article>
 
