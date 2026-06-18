@@ -153,7 +153,7 @@ def url_convocatoria(titulo, enlace_boe):
     ref = ref_boe_desde_enlace(enlace_boe)
     slug = generar_slug(titulo, ref)
     if (CONVOCATORIA_DIR / slug).exists():
-        return f"https://oponoticias.com/convocatoria/{slug}", True
+        return f"https://oponoticias.com/convocatoria/{slug.replace('.html', '')}", True
     return html_lib.escape(enlace_boe or '#'), False
 
 

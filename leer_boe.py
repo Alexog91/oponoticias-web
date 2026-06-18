@@ -592,7 +592,7 @@ def enlace_web_convocatoria(conv):
     """URL de la página en oponoticias.com si ya existe el HTML, si no la home."""
     slug = generar_slug(conv['titulo'], conv.get('ref_boe', ''))
     if (WEB_CONVOCATORIA_DIR / slug).exists():
-        return f"https://oponoticias.com/convocatoria/{slug}"
+        return f"https://oponoticias.com/convocatoria/{slug.replace('.html', '')}"
     return "https://oponoticias.com"
 
 
@@ -847,7 +847,7 @@ def generar_html_convocatoria(conv, categoria):
 
     desc = conv.get('resumen_ia', 'Convocatoria disponible')
     meta_desc = f"Resumen: {desc[:120]}. Enlace al BOE oficial."
-    canonical = f"https://oponoticias.com/convocatoria/{slug}"
+    canonical = f"https://oponoticias.com/convocatoria/{slug.replace('.html', '')}"
 
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
@@ -866,7 +866,7 @@ def generar_html_convocatoria(conv, categoria):
   <meta property="og:title" content="{conv['titulo'][:100]}">
   <meta property="og:description" content="{desc[:160]}">
   <meta property="og:url" content="{canonical}">
-  <meta property="og:image" content="https://oponoticias.com/assets/banner-telegram.svg">
+  <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
   <meta property="og:locale" content="es_ES">
   <meta name="twitter:card" content="summary_large_image">
 

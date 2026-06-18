@@ -338,7 +338,7 @@ def plantilla_articulo(art):
   <meta property="og:title" content="{titulo}">
   <meta property="og:description" content="{resumen}">
   <meta property="og:url" content="{url}">
-  <meta property="og:image" content="{BASE_URL}/assets/banner-telegram.svg">
+  <meta property="og:image" content="{BASE_URL}/social/telegram-banner.png">
   <meta property="og:locale" content="es_ES">
   <meta name="twitter:card" content="summary_large_image">
 
