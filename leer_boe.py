@@ -596,7 +596,7 @@ def enlace_web_convocatoria(conv):
     return "https://oponoticias.com"
 
 
-def enviar_a_facebook(conv):
+def enviar_a_facebook(conv, incluir_tweet=True):
     """Publica en Facebook vía webhook de Make.com (texto plano, sin HTML).
 
     Best-effort: si falla no bloquea ni revierte el envío de Telegram. El
@@ -669,13 +669,18 @@ def enviar_a_facebook(conv):
         except Exception as e:
             print(f"⚠️  Imagen Facebook propia falló, uso genérica ({e})")
 
-        payload = json.dumps({
+        datos_post = {
             "mensaje": "\n".join(lineas),
             "enlace": enlace_web_convocatoria(conv),
-            "tweet": tweet_texto,
-            "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
             "imagen_facebook": imagen_fb,
-        }).encode('utf-8')
+        }
+        # X (Buffer) solo para las convocatorias destacadas del día: evita saturar
+        # el plan gratuito de Buffer y que X corte el token por spam. Las que no
+        # llevan tweet hacen fallar a Buffer y el handler "Resume" las pasa a Facebook.
+        if incluir_tweet:
+            datos_post["tweet"] = tweet_texto
+            datos_post["imagen_tweet"] = "https://oponoticias.com/social/tweet-card.png"
+        payload = json.dumps(datos_post).encode('utf-8')
         req = urllib.request.Request(
             MAKE_WEBHOOK_URL, data=payload,
             headers={'Content-Type': 'application/json'}, method='POST'
@@ -1204,6 +1209,11 @@ if __name__ == "__main__":
     # Desacoplado del guardado: si un envío falla, el flag queda en false y se
     # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
     print("\n📤 Telegram + Facebook — enviando convocatorias pendientes…")
+    # X (Buffer) solo para las convocatorias con más plazas del día: el plan
+    # gratuito de Buffer se satura y X corta el token por spam si se publica
+    # demasiado. Telegram, web y Facebook reciben todas; X solo las destacadas.
+    MAX_X = 5
+    top_x = {c['enlace'] for c in sorted(convocatorias, key=_plazas_num, reverse=True)[:MAX_X]}
     enviadas_tg = 0
     enviadas_hoy = []
     for conv in convocatorias:
@@ -1212,7 +1222,7 @@ if __name__ == "__main__":
             continue
         if enviar_a_telegram(conv):
             marcar_telegram_enviado(conv['enlace'])
-            enviar_a_facebook(conv)     # best-effort, no bloquea si falla (incluye tweet)
+            enviar_a_facebook(conv, incluir_tweet=conv['enlace'] in top_x)
             enviadas_hoy.append(conv)
             enviadas_tg += 1
             time.sleep(2)
