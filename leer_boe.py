@@ -606,6 +606,7 @@ def enviar_resumen_privado(convocatorias_enviadas):
         f"📋 <b>BOE del {fecha_str} — {n} convocatorias nuevas</b>\n\n"
         f"🏆 <b>Top por plazas:</b>\n"
         + "\n".join(lineas) + "\n\n"
+        "🔎 <b>Consulta todas las convocatorias en detalle:</b>\n"
         "📌 https://oponoticias.com\n"
         "✈️ https://t.me/OPONOTICIAS\n"
         "📘 https://www.facebook.com/profile.php?id=61590965302457\n"
