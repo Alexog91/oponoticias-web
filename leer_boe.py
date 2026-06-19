@@ -607,7 +607,9 @@ def enviar_resumen_privado(convocatorias_enviadas):
         f"🏆 <b>Top por plazas:</b>\n"
         + "\n".join(lineas) + "\n\n"
         "📌 https://oponoticias.com\n"
-        "✈️ https://t.me/OPONOTICIAS\n\n"
+        "✈️ https://t.me/OPONOTICIAS\n"
+        "📘 https://www.facebook.com/profile.php?id=61590965302457\n"
+        "📸 https://www.instagram.com/oponoticiason/\n\n"
         "<i>☝️ Copia esto en el Canal de WhatsApp</i>"
     )
     try:
