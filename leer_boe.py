@@ -22,6 +22,7 @@ SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY", "")
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")  # webhook Make.com → Facebook
 INSTAGRAM_WEBHOOK_URL = os.environ.get("INSTAGRAM_WEBHOOK_URL", "")  # webhook Make.com → Instagram (carrusel)
+TELEGRAM_ADMIN_CHAT_ID = os.environ.get("TELEGRAM_ADMIN_CHAT_ID", "")  # chat privado del admin (resumen diario)
 GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN", "")
 GITHUB_REPO = "Alexog91/oponoticias-web"
 WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
@@ -586,6 +587,46 @@ def enviar_a_telegram(conv):
     except Exception as e:
         print(f"❌ Error Telegram: {e}")
         return False
+
+
+def enviar_resumen_privado(convocatorias_enviadas):
+    """Envía un resumen diario al chat privado del admin, listo para copiar al Canal de WhatsApp."""
+    if not TELEGRAM_ADMIN_CHAT_ID or not convocatorias_enviadas:
+        return
+    top5 = sorted(convocatorias_enviadas, key=_plazas_num, reverse=True)[:5]
+    lineas = []
+    for conv in top5:
+        partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas = partes[0] if partes else "?"
+        puesto  = partes[1] if len(partes) > 1 else limpiar_titulo(conv['titulo'])[:45]
+        lineas.append(f"• {plazas} — {puesto[:50]}")
+    n = len(convocatorias_enviadas)
+    fecha_str = datetime.now().strftime("%d/%m/%Y")
+    mensaje = (
+        f"📋 <b>BOE del {fecha_str} — {n} convocatorias nuevas</b>\n\n"
+        f"🏆 <b>Top por plazas:</b>\n"
+        + "\n".join(lineas) + "\n\n"
+        "📌 https://oponoticias.com\n"
+        "✈️ https://t.me/OPONOTICIAS\n\n"
+        "<i>☝️ Copia esto en el Canal de WhatsApp</i>"
+    )
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {
+            'chat_id': TELEGRAM_ADMIN_CHAT_ID,
+            'text': mensaje,
+            'parse_mode': 'HTML',
+            'disable_web_page_preview': True,
+        }
+        req = urllib.request.Request(
+            url,
+            data=urllib.parse.urlencode(data).encode('utf-8'),
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        urllib.request.urlopen(req, timeout=10).read()
+        print("✅ Resumen diario enviado al admin por privado")
+    except Exception as e:
+        print(f"⚠️  Resumen privado: {e}")
 
 
 def enlace_web_convocatoria(conv):
@@ -1229,6 +1270,9 @@ if __name__ == "__main__":
 
     # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
     publicar_carrusel_instagram(enviadas_hoy)
+
+    # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
+    enviar_resumen_privado(enviadas_hoy)
 
     # ── 3) Sitemap + push a GitHub si hay HTML nuevos ─────────────────────────
     if slugs_generados:
