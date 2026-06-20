@@ -31,7 +31,7 @@ from datetime import datetime
 FFMPEG  = os.environ.get("FFMPEG_BIN", "ffmpeg")
 FFPROBE = os.environ.get("FFPROBE_BIN", "ffprobe")
 VOZ     = os.environ.get("VIDEO_VOZ", "es-ES-ElviraNeural")
-RATE    = os.environ.get("VIDEO_RATE", "+6%")
+RATE    = os.environ.get("VIDEO_RATE", "+7%")
 
 SUPABASE_URL    = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
@@ -39,8 +39,8 @@ STORAGE_BUCKET  = os.environ.get("SUPABASE_STORAGE_BUCKET", "social")
 VIDEO_WEBHOOK_URL = os.environ.get("VIDEO_WEBHOOK_URL", "")  # Make.com → TikTok/IG/FB Reels
 
 W, H = 1080, 1920
-GAP  = 0.28   # silencio entre frases (s)
-TAIL = 0.5    # cola final (s)
+GAP  = 0.16   # silencio entre frases (s) — ritmo ágil para TikTok
+TAIL = 0.4    # cola final (s)
 
 _MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
           "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
@@ -103,10 +103,10 @@ def construir_guion(convocatorias, max_items=4):
 
     n = len(convocatorias)
     lineas = []
-    # Hook
+    # Hook (los primeros 2 segundos deciden la retención)
     lineas.append((
-        f"Hoy en el BOE:\n{n} convocatorias nuevas",
-        f"Atención opositores. Hoy el BOE publica {n} convocatorias nuevas. Estas son las destacadas.",
+        f"HOY en el BOE\n{n} oposiciones nuevas",
+        f"¡Atención opositores! Hoy el BOE trae {n} convocatorias nuevas. Estas son las top.",
     ))
     # Cuerpo
     for plazas, puesto, lugar in sel:
@@ -118,8 +118,8 @@ def construir_guion(convocatorias, max_items=4):
         lineas.append((cap, narr))
     # CTA
     lineas.append((
-        "Síguenos para no\nperderte ninguna\noponoticias.com",
-        "Síguenos para no perderte ninguna convocatoria. Toda la información en oponoticias punto com.",
+        "Síguenos y no te\npierdas ninguna\noponoticias.com",
+        "Síguenos para no perderte ninguna. Todo en oponoticias punto com.",
     ))
     return lineas
 
@@ -296,16 +296,42 @@ def _music_bed():
     return None
 
 
-def montar(fondo, voice, overlays, total, salida):
-    """Fondo con leve Ken Burns + overlays PNG temporizados (con fundido) + voz.
-    Solo usa filtros básicos de ffmpeg (sin libass): máxima portabilidad."""
+def _generar_musica(total, destino):
+    """Sintetiza una cama ambiental cálida (acorde La mayor) si no hay pista
+    propia en assets/. Pad suave: tremolo lento + lowpass + eco, sin estridencia.
+    Devuelve la ruta o None si la síntesis falla."""
+    dur = total + 0.5
+    fade_out = max(0.0, dur - 2.0)
+    filtro = (
+        "[0][1][2][3]amix=inputs=4:normalize=1,volume=2.2,"
+        "highpass=f=70,lowpass=f=1100,"
+        "tremolo=f=0.12:d=0.5,aecho=0.8:0.6:55:0.25,"
+        f"afade=t=in:d=2,afade=t=out:st={fade_out:.2f}:d=2[a]"
+    )
+    cmd = [
+        FFMPEG, "-y",
+        "-f", "lavfi", "-i", f"sine=f=220.00:d={dur}",   # A3
+        "-f", "lavfi", "-i", f"sine=f=277.18:d={dur}",   # C#4
+        "-f", "lavfi", "-i", f"sine=f=329.63:d={dur}",   # E4
+        "-f", "lavfi", "-i", f"sine=f=110.00:d={dur}",   # A2 (sub)
+        "-filter_complex", filtro, "-map", "[a]", str(destino),
+    ]
+    try:
+        subprocess.run(cmd, check=True, capture_output=True)
+        return str(destino)
+    except subprocess.CalledProcessError:
+        return None
+
+
+def montar(fondo, voice, overlays, total, salida, musica=None):
+    """Fondo con leve Ken Burns + overlays PNG temporizados (con fundido) + voz
+    (+ cama de música opcional). Solo filtros básicos de ffmpeg (sin libass)."""
     total_frames = int(total * 30) + 2
     fade = 0.2
 
     cmd = [FFMPEG, "-y", "-loop", "1", "-i", str(fondo), "-i", str(voice)]
     for png, _s, _e in overlays:
         cmd += ["-loop", "1", "-i", str(png)]
-    musica = _music_bed()
     if musica:
         cmd += ["-stream_loop", "-1", "-i", str(musica)]
 
@@ -330,12 +356,13 @@ def montar(fondo, voice, overlays, total, salida):
         prev = sig
     partes.append(f"[{prev}]format=yuv420p[vout]")
 
-    # Cadena de audio
+    # Cadena de audio (voz al frente, música de fondo a volumen bajo)
     if musica:
         mus_idx = base_idx + len(overlays)
         partes.append(
-            f"[{mus_idx}:a]volume=0.10[m];"
-            f"[1:a][m]amix=inputs=2:duration=first:dropout_transition=0[aout]"
+            f"[{mus_idx}:a]volume=0.12[m];"
+            f"[1:a]volume=1.0[v0];"
+            f"[v0][m]amix=inputs=2:duration=longest:dropout_transition=0[aout]"
         )
         amap = "[aout]"
     else:
@@ -365,7 +392,8 @@ def generar(convocatorias, salida=None):
             fondo = tmp / "fondo.png"
             crear_fondo(fondo)
             overlays = crear_overlays(tiempos, tmp)
-            montar(fondo, voice, overlays, total, salida)
+            musica = _music_bed() or _generar_musica(total, tmp / "music.wav")
+            montar(fondo, voice, overlays, total, salida, musica)
         print(f"🎬 Vídeo generado: {salida} ({total:.1f}s)")
         return salida
     except subprocess.CalledProcessError as e:
