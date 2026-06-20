@@ -32,8 +32,8 @@ FFMPEG  = os.environ.get("FFMPEG_BIN", "ffmpeg")
 FFPROBE = os.environ.get("FFPROBE_BIN", "ffprobe")
 FPS     = 30
 
-# Motor de voz: "piper" (neuronal offline, gratis, más natural) o "edge" (edge-tts).
-TTS_BACKEND = os.environ.get("VIDEO_TTS", "piper")
+# Motor de voz: "edge" (edge-tts, voz Ximena — la elegida) o "piper" (alternativa).
+TTS_BACKEND = os.environ.get("VIDEO_TTS", "edge")
 # Voz Piper (femenina sharvard por defecto; masculina: es_ES-davefx-medium).
 PIPER_VOICE = os.environ.get("PIPER_VOICE", "es_ES-sharvard-medium")
 PIPER_LENGTH = os.environ.get("PIPER_LENGTH", "1.0")   # >1 más lento, <1 más rápido
