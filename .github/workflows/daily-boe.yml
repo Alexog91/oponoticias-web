@@ -55,6 +55,16 @@ jobs:
             "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf" || true
           fc-cache -f ~/.fonts || true
 
+      # Node + Remotion: render del vídeo diario animado (motion graphics).
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependencias de Remotion
+        continue-on-error: true
+        run: cd remotion && npm ci
+
       - name: Run leer_boe.py
         env:
           TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}

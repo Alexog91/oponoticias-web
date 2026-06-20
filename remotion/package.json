@@ -1,0 +1,21 @@
+{
+  "name": "oponoticias-video",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Vídeo diario animado (Remotion) para TikTok/IG/FB Reels",
+  "scripts": {
+    "render": "remotion render DailyVideo",
+    "studio": "remotion studio"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.380",
+    "@remotion/google-fonts": "4.0.380",
+    "react": "19.0.0",
+    "react-dom": "19.0.0",
+    "remotion": "4.0.380"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.0",
+    "typescript": "5.5.4"
+  }
+}

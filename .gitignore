@@ -165,3 +165,9 @@ facebook/
 
 # Vídeos generados (se suben a Supabase, no al repo)
 video_*.mp4
+
+# Remotion (proyecto de vídeo): deps y artefactos generados
+remotion/node_modules/
+remotion/out/
+remotion/props.json
+remotion/public/
