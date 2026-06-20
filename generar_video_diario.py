@@ -401,13 +401,14 @@ def montar(fondo, voice, overlays, total, salida, musica=None):
     # Cadena de audio: música de fondo con DUCKING (sidechain) — suena clara en
     # las pausas y baja automáticamente bajo la voz. Cierre con loudnorm a
     # -16 LUFS (estándar de redes) para volumen alto y consistente cada día.
-    norm = "loudnorm=I=-16:TP=-1.5:LRA=11"
+    norm = (f"loudnorm=I=-16:TP=-1.5:LRA=11,"
+            f"afade=t=out:st={max(0.0, total - 0.6):.2f}:d=0.6")
     if musica:
         mus_idx = base_idx + len(overlays)
         partes.append(
-            f"[{mus_idx}:a]volume=1.6[m];"
+            f"[{mus_idx}:a]volume=1.8[m];"
             f"[1:a]volume=1.0,asplit=2[vmix][vkey];"
-            f"[m][vkey]sidechaincompress=threshold=0.03:ratio=8:attack=15:release=350[mduck];"
+            f"[m][vkey]sidechaincompress=threshold=0.06:ratio=4:attack=20:release=400[mduck];"
             f"[vmix][mduck]amix=inputs=2:duration=longest:dropout_transition=0[premix];"
             f"[premix]{norm}[aout]"
         )
@@ -490,7 +491,8 @@ def enviar_video_redes(convocatorias):
     caption = (
         f"🎯 Convocatorias del BOE · {hoy.day} {_MESES[hoy.month - 1]}\n\n"
         "👉 Toda la información y el enlace al BOE en oponoticias.com\n\n"
-        "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario #opositar"
+        "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario #opositar\n\n"
+        "🎵 Música: Kevin MacLeod (incompetech.com) · CC BY 4.0"
     )
     try:
         payload = json.dumps({"video_url": url, "caption": caption}).encode("utf-8")

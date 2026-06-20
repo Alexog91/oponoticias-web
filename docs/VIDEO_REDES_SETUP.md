@@ -71,6 +71,9 @@ Variables de entorno (se pueden añadir como secrets o en el `env:` del workflow
 | `VIDEO_VOZ`   | `es-ES-ElviraNeural` | Voz (alt.: `es-ES-AlvaroNeural`)      |
 | `VIDEO_RATE`  | `+6%`                | Velocidad del habla                   |
 
-**Música**: si colocas un MP3 en `assets/music_bed.mp3`, se mezcla de fondo a
-volumen bajo. (En TikTok suele rendir más añadir un *sonido trending* desde la
-app; para FB/IG la música incrustada está bien.)
+**Música**: ya incluye una cama real en `assets/music_bed.mp3` ("Friday Morning"
+de Kevin MacLeod, CC BY 4.0) mezclada con *ducking* (baja sola bajo la voz) y
+normalizada a -16 LUFS. Para cambiarla, sustituye ese archivo por cualquier MP3.
+La atribución CC BY se añade automáticamente al final del caption. (En TikTok
+suele rendir más añadir un *sonido trending* desde la app; para FB/IG la música
+incrustada está perfecta.)
