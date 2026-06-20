@@ -30,8 +30,9 @@ from datetime import datetime
 # ── Configuración ──────────────────────────────────────────────────────────────
 FFMPEG  = os.environ.get("FFMPEG_BIN", "ffmpeg")
 FFPROBE = os.environ.get("FFPROBE_BIN", "ffprobe")
-VOZ     = os.environ.get("VIDEO_VOZ", "es-ES-ElviraNeural")
-RATE    = os.environ.get("VIDEO_RATE", "+7%")
+VOZ     = os.environ.get("VIDEO_VOZ", "es-ES-AlvaroNeural")
+RATE    = os.environ.get("VIDEO_RATE", "+2%")
+PITCH   = os.environ.get("VIDEO_PITCH", "+0Hz")
 
 SUPABASE_URL    = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
@@ -44,6 +45,23 @@ TAIL = 0.4    # cola final (s)
 
 _MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
           "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+
+
+def _num_es(n, fem=True):
+    """Convierte un número a palabras en español (femenino para 'plazas') para
+    que la voz lo lea con naturalidad. Si num2words no está, devuelve el dígito."""
+    try:
+        from num2words import num2words
+        w = num2words(int(n), lang="es")
+    except Exception:
+        return str(n)
+    if fem:
+        w = w.replace("quinientos", "quinientas")    # 500 (irregular)
+        w = w.replace("cientos", "cientas")          # doscientos → doscientas, etc.
+        w = re.sub(r"\bveintiuno\b", "veintiuna", w)
+        w = re.sub(r"\buno\b", "una", w)             # uno → una
+        w = re.sub(r"uno$", "una", w)                # treinta y uno → ... una
+    return w
 
 # Paleta de marca (RGB)
 INK   = (43, 38, 34)
@@ -106,15 +124,17 @@ def construir_guion(convocatorias, max_items=4):
     # Hook (los primeros 2 segundos deciden la retención)
     lineas.append((
         f"HOY en el BOE\n{n} oposiciones nuevas",
-        f"¡Atención opositores! Hoy el BOE trae {n} convocatorias nuevas. Estas son las top.",
+        f"¡Atención, opositores! Hoy el BOE trae {_num_es(n)} convocatorias nuevas. "
+        f"Estas son las que más plazas ofrecen.",
     ))
     # Cuerpo
     for plazas, puesto, lugar in sel:
-        num = re.search(r"\d+", plazas)
-        num_txt = num.group() if num else plazas
+        m = re.search(r"\d+", plazas)
+        num_txt = m.group() if m else ""
         cap = f"{num_txt} plazas\n{puesto}\n{lugar}" if num_txt else f"{puesto}\n{lugar}"
-        narr = (f"{num_txt} plazas de {puesto} en {lugar}." if num_txt
-                else f"{puesto} en {lugar}.")
+        # Narración con números en palabras y pausas naturales
+        narr = (f"{_num_es(num_txt)} plazas de {puesto}, en {lugar}." if num_txt
+                else f"{puesto}, en {lugar}.")
         lineas.append((cap, narr))
     # CTA
     lineas.append((
@@ -127,7 +147,7 @@ def construir_guion(convocatorias, max_items=4):
 # ── 2) Voz (línea a línea, con tiempos exactos) ────────────────────────────────
 async def _tts_a_mp3(texto, destino):
     import edge_tts
-    comm = edge_tts.Communicate(texto, VOZ, rate=RATE)
+    comm = edge_tts.Communicate(texto, VOZ, rate=RATE, pitch=PITCH)
     with open(destino, "wb") as f:
         async for chunk in comm.stream():
             if chunk["type"] == "audio":
@@ -296,27 +316,49 @@ def _music_bed():
     return None
 
 
-def _generar_musica(total, destino):
-    """Sintetiza una cama ambiental cálida (acorde La mayor) si no hay pista
-    propia en assets/. Pad suave: tremolo lento + lowpass + eco, sin estridencia.
-    Devuelve la ruta o None si la síntesis falla."""
-    dur = total + 0.5
-    fade_out = max(0.0, dur - 2.0)
-    filtro = (
-        "[0][1][2][3]amix=inputs=4:normalize=1,volume=2.2,"
-        "highpass=f=70,lowpass=f=1100,"
-        "tremolo=f=0.12:d=0.5,aecho=0.8:0.6:55:0.25,"
-        f"afade=t=in:d=2,afade=t=out:st={fade_out:.2f}:d=2[a]"
-    )
-    cmd = [
-        FFMPEG, "-y",
-        "-f", "lavfi", "-i", f"sine=f=220.00:d={dur}",   # A3
-        "-f", "lavfi", "-i", f"sine=f=277.18:d={dur}",   # C#4
-        "-f", "lavfi", "-i", f"sine=f=329.63:d={dur}",   # E4
-        "-f", "lavfi", "-i", f"sine=f=110.00:d={dur}",   # A2 (sub)
-        "-filter_complex", filtro, "-map", "[a]", str(destino),
+def _generar_musica(tmp, destino):
+    """Sintetiza una cama musical en bucle si no hay pista propia en assets/.
+    Progresión de 4 acordes (Do–Sol–Lam–Fa) tipo pad ambiental cálido, con
+    crossfade entre acordes, reverb y leve tremolo. Suena a música (no a un
+    zumbido). El bucle lo repite ffmpeg en el montaje. Devuelve ruta o None."""
+    tmp = Path(tmp)
+    D = 4.0  # duración por acorde
+    # Triadas en registro grave-medio para sentarse bajo la voz (Hz)
+    acordes = [
+        (130.81, 164.81, 196.00),   # Do mayor  (C E G)
+        (98.00, 123.47, 146.83),    # Sol mayor (G B D)
+        (110.00, 130.81, 164.81),   # La menor  (A C E)
+        (87.31, 110.00, 130.81),    # Fa mayor  (F A C)
     ]
     try:
+        chord_files = []
+        for i, (f1, f2, f3) in enumerate(acordes):
+            cf = tmp / f"chord{i}.wav"
+            subprocess.run([
+                FFMPEG, "-y",
+                "-f", "lavfi", "-i", f"sine=f={f1}:d={D}",
+                "-f", "lavfi", "-i", f"sine=f={f2}:d={D}",
+                "-f", "lavfi", "-i", f"sine=f={f3}:d={D}",
+                "-filter_complex",
+                "[0][1][2]amix=inputs=3:normalize=1,lowpass=f=950,volume=2.0[a]",
+                "-map", "[a]", str(cf),
+            ], check=True, capture_output=True)
+            chord_files.append(cf)
+
+        # Encadena con crossfade y añade reverb + tremolo + fundidos del bucle
+        prog = 4 * D - 3 * 1.0  # 13 s
+        fade_out = prog - 1.0
+        cadena = (
+            "[0][1]acrossfade=d=1[x1];[x1][2]acrossfade=d=1[x2];"
+            "[x2][3]acrossfade=d=1[x3];"
+            "[x3]aecho=0.8:0.7:70:0.3,tremolo=f=0.2:d=0.25,"
+            f"highpass=f=70,afade=t=in:d=1,afade=t=out:st={fade_out:.2f}:d=1,"
+            "volume=1.3[a]"
+        )
+        cmd = [FFMPEG, "-y"]
+        for cf in chord_files:
+            cmd += ["-i", str(cf)]
+        cmd += ["-filter_complex", cadena, "-map", "[a]", str(destino)]
         subprocess.run(cmd, check=True, capture_output=True)
         return str(destino)
     except subprocess.CalledProcessError:
@@ -356,17 +398,22 @@ def montar(fondo, voice, overlays, total, salida, musica=None):
         prev = sig
     partes.append(f"[{prev}]format=yuv420p[vout]")
 
-    # Cadena de audio (voz al frente, música de fondo a volumen bajo)
+    # Cadena de audio: música de fondo con DUCKING (sidechain) — suena clara en
+    # las pausas y baja automáticamente bajo la voz. Cierre con loudnorm a
+    # -16 LUFS (estándar de redes) para volumen alto y consistente cada día.
+    norm = "loudnorm=I=-16:TP=-1.5:LRA=11"
     if musica:
         mus_idx = base_idx + len(overlays)
         partes.append(
-            f"[{mus_idx}:a]volume=0.12[m];"
-            f"[1:a]volume=1.0[v0];"
-            f"[v0][m]amix=inputs=2:duration=longest:dropout_transition=0[aout]"
+            f"[{mus_idx}:a]volume=1.6[m];"
+            f"[1:a]volume=1.0,asplit=2[vmix][vkey];"
+            f"[m][vkey]sidechaincompress=threshold=0.03:ratio=8:attack=15:release=350[mduck];"
+            f"[vmix][mduck]amix=inputs=2:duration=longest:dropout_transition=0[premix];"
+            f"[premix]{norm}[aout]"
         )
-        amap = "[aout]"
     else:
-        amap = "1:a"
+        partes.append(f"[1:a]{norm}[aout]")
+    amap = "[aout]"
 
     cmd += ["-filter_complex", ";".join(partes), "-map", "[vout]", "-map", amap]
     cmd += [
@@ -392,7 +439,7 @@ def generar(convocatorias, salida=None):
             fondo = tmp / "fondo.png"
             crear_fondo(fondo)
             overlays = crear_overlays(tiempos, tmp)
-            musica = _music_bed() or _generar_musica(total, tmp / "music.wav")
+            musica = _music_bed() or _generar_musica(tmp, tmp / "music.wav")
             montar(fondo, voice, overlays, total, salida, musica)
         print(f"🎬 Vídeo generado: {salida} ({total:.1f}s)")
         return salida

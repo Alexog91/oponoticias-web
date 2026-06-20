@@ -30,10 +30,11 @@ jobs:
         continue-on-error: true
         run: sudo apt-get update && sudo apt-get install -y librsvg2-bin ffmpeg fonts-dejavu-core
 
-      # Pillow: PNG→JPEG (IG) y render de subtítulos del vídeo. edge-tts: voz.
-      - name: Instalar Pillow y edge-tts
+      # Pillow: PNG→JPEG (IG) y subtítulos del vídeo. edge-tts: voz.
+      # num2words: números a palabras para que la voz los lea con naturalidad.
+      - name: Instalar Pillow, edge-tts y num2words
         continue-on-error: true
-        run: pip install pillow edge-tts
+        run: pip install pillow edge-tts num2words
 
       # Chrome headless como respaldo del renderizador de imágenes.
       # continue-on-error: si falla, el flujo principal (BOE/Telegram) sigue.
