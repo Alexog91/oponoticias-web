@@ -76,6 +76,12 @@ def _num_es(n, fem=True):
     return w
 
 
+def _limpiar_puesto_narr(puesto):
+    """Elimina variantes de género (enfermero/a → enfermero) para que el TTS no diga 'barra'."""
+    # "palabra/a" o "palabra/as" → queda la forma masculina
+    return re.sub(r"/[aeo]s?\b", "", puesto).strip()
+
+
 def _icono(puesto):
     p = (puesto or "").lower()
     pares = [
@@ -132,8 +138,9 @@ def construir_guion(convocatorias, max_items=4):
     for plazas, puesto, lugar in sel:
         m = re.search(r"\d+", plazas)
         num_txt = m.group() if m else ""
-        narr = (f"{_num_es(num_txt)} plazas de {puesto}, en {lugar}." if num_txt
-                else f"{puesto}, en {lugar}.")
+        puesto_narr = _limpiar_puesto_narr(puesto)
+        narr = (f"{_num_es(num_txt)} plazas de {puesto_narr}, en {lugar}." if num_txt
+                else f"{puesto_narr}, en {lugar}.")
         escenas.append({
             "kind": "item",
             "narr": narr,
