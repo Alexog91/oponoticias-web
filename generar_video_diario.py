@@ -30,10 +30,18 @@ from datetime import datetime
 # ── Configuración ──────────────────────────────────────────────────────────────
 FFMPEG  = os.environ.get("FFMPEG_BIN", "ffmpeg")
 FFPROBE = os.environ.get("FFPROBE_BIN", "ffprobe")
-VOZ     = os.environ.get("VIDEO_VOZ", "es-ES-AlvaroNeural")
+FPS     = 30
+
+# Motor de voz: "piper" (neuronal offline, gratis, más natural) o "edge" (edge-tts).
+TTS_BACKEND = os.environ.get("VIDEO_TTS", "piper")
+# Voz Piper (femenina sharvard por defecto; masculina: es_ES-davefx-medium).
+PIPER_VOICE = os.environ.get("PIPER_VOICE", "es_ES-sharvard-medium")
+PIPER_LENGTH = os.environ.get("PIPER_LENGTH", "1.0")   # >1 más lento, <1 más rápido
+PIPER_BIN = shutil.which("piper") or "piper"
+# Voz edge-tts (alternativa).
+VOZ     = os.environ.get("VIDEO_VOZ", "es-ES-XimenaNeural")
 RATE    = os.environ.get("VIDEO_RATE", "+2%")
 PITCH   = os.environ.get("VIDEO_PITCH", "+0Hz")
-FPS     = 30
 
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
@@ -143,13 +151,51 @@ def construir_guion(convocatorias, max_items=4):
 
 
 # ── 2) Voz frase a frase (tiempos exactos) ─────────────────────────────────────
-async def _tts_a_mp3(texto, destino):
+def _piper_model():
+    """Asegura el modelo Piper en caché (lo descarga de HuggingFace si falta).
+    Devuelve la ruta al .onnx."""
+    cache = REPO / ".cache" / "piper"
+    cache.mkdir(parents=True, exist_ok=True)
+    onnx = cache / f"{PIPER_VOICE}.onnx"
+    cfg = cache / f"{PIPER_VOICE}.onnx.json"
+    if onnx.exists() and cfg.exists():
+        return str(onnx)
+    m = re.match(r"(([a-z]{2})_[A-Z]{2})-([^-]+)-(.+)", PIPER_VOICE)
+    if not m:
+        raise RuntimeError(f"PIPER_VOICE inválida: {PIPER_VOICE}")
+    loc, lang, name, qual = m.group(1), m.group(2), m.group(3), m.group(4)
+    base = (f"https://huggingface.co/rhasspy/piper-voices/resolve/main/"
+            f"{lang}/{loc}/{name}/{qual}/{PIPER_VOICE}")
+    for url, dest in ((f"{base}.onnx", onnx), (f"{base}.onnx.json", cfg)):
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=120) as r:
+            dest.write_bytes(r.read())
+    return str(onnx)
+
+
+async def _tts_edge(texto, destino):
     import edge_tts
     comm = edge_tts.Communicate(texto, VOZ, rate=RATE, pitch=PITCH)
     with open(destino, "wb") as f:
         async for chunk in comm.stream():
             if chunk["type"] == "audio":
                 f.write(chunk["data"])
+
+
+def _voz_frase(texto, wav_out, tmp, i, modelo):
+    """Sintetiza una frase a WAV 44100 estéreo, según el backend elegido."""
+    if TTS_BACKEND == "piper":
+        raw = tmp / f"raw{i}.wav"
+        subprocess.run(
+            [PIPER_BIN, "-m", modelo, "--length-scale", PIPER_LENGTH,
+             "--sentence-silence", "0.35", "-f", str(raw)],
+            input=texto.encode("utf-8"), check=True, capture_output=True,
+        )
+    else:
+        raw = tmp / f"raw{i}.mp3"
+        asyncio.run(_tts_edge(texto, raw))
+    subprocess.run([FFMPEG, "-y", "-i", str(raw), "-ar", "44100", "-ac", "2", str(wav_out)],
+                   check=True, capture_output=True)
 
 
 def _dur(path):
@@ -164,14 +210,12 @@ def _dur(path):
 def sintetizar(escenas, tmp):
     """Genera voice.wav y los tiempos por escena. Devuelve (voice, tiempos, total)."""
     tmp = Path(tmp)
+    modelo = _piper_model() if TTS_BACKEND == "piper" else None
     piezas, tiempos = [], []
     t = 0.0
     for i, esc in enumerate(escenas):
-        mp3 = tmp / f"seg{i}.mp3"
-        asyncio.run(_tts_a_mp3(esc["narr"], mp3))
         wav = tmp / f"seg{i}.wav"
-        subprocess.run([FFMPEG, "-y", "-i", str(mp3), "-ar", "44100", "-ac", "2", str(wav)],
-                       check=True, capture_output=True)
+        _voz_frase(esc["narr"], wav, tmp, i, modelo)
         d = _dur(wav)
         if i > 0:
             t += GAP
