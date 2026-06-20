@@ -162,3 +162,6 @@ anuncio_web.py
 rellenar_convocatorias.py
 host.odt
 facebook/
+
+# Vídeos generados (se suben a Supabase, no al repo)
+video_*.mp4

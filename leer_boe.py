@@ -1282,6 +1282,13 @@ if __name__ == "__main__":
     # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
     enviar_resumen_privado(enviadas_hoy)
 
+    # ── 2d) Vídeo diario para TikTok / IG Reels / FB Reels (best-effort) ──────
+    try:
+        import generar_video_diario as gvd
+        gvd.enviar_video_redes(enviadas_hoy)
+    except Exception as e:
+        print(f"⚠️  Vídeo diario: {e}")
+
     # ── 3) Sitemap + push a GitHub si hay HTML nuevos ─────────────────────────
     if slugs_generados:
         regenerar_sitemap(slugs_generados)

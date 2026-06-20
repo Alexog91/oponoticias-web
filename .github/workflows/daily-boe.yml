@@ -25,14 +25,15 @@ jobs:
 
       # Renderizador SVG principal del carrusel de Instagram: rsvg-convert
       # (librsvg). Determinista, sin navegador. Chrome queda como respaldo.
-      - name: Instalar librsvg (rsvg-convert)
+      # librsvg (carrusel IG) + ffmpeg y DejaVu Bold (vídeo diario TikTok/Reels).
+      - name: Instalar librsvg, ffmpeg y fuentes
         continue-on-error: true
-        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin
+        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin ffmpeg fonts-dejavu-core
 
-      # Pillow: convierte el PNG a JPEG (Instagram solo acepta JPEG).
-      - name: Instalar Pillow
+      # Pillow: PNG→JPEG (IG) y render de subtítulos del vídeo. edge-tts: voz.
+      - name: Instalar Pillow y edge-tts
         continue-on-error: true
-        run: pip install pillow
+        run: pip install pillow edge-tts
 
       # Chrome headless como respaldo del renderizador de imágenes.
       # continue-on-error: si falla, el flujo principal (BOE/Telegram) sigue.
@@ -63,6 +64,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
           INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
+          VIDEO_WEBHOOK_URL: ${{ secrets.VIDEO_WEBHOOK_URL }}
           SUPABASE_STORAGE_BUCKET: social
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
