@@ -896,6 +896,8 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     valid_through = (datetime.fromisoformat(fecha_schema) + timedelta(days=30)).strftime("%Y-%m-%d")
 
     desc = conv.get('resumen_ia', 'Convocatoria disponible')
+    desc_json = json.dumps(desc)[1:-1]          # escapa \n, " y \ sin las comillas externas
+    titulo_json = json.dumps(conv['titulo'])[1:-1]
     meta_desc = f"Resumen: {desc[:120]}. Enlace al BOE oficial."
     canonical = f"https://oponoticias.com/convocatoria/{slug.replace('.html', '')}"
 
@@ -940,8 +942,8 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
   {{
     "@context": "https://schema.org",
     "@type": "JobPosting",
-    "title": "{conv['titulo']}",
-    "description": "{desc}",
+    "title": "{titulo_json}",
+    "description": "{desc_json}",
     "datePosted": "{fecha_schema}",
     "validThrough": "{valid_through}",
     "employmentType": "FULL_TIME",
