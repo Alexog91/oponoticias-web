@@ -720,22 +720,11 @@ def enviar_a_facebook(conv, incluir_tweet=True):
         mensaje = "\n".join(lineas)
 
         # ── Vía preferente: Graph API directa (gratis, sin límite de Make) ──────
+        # NOTA: NO se reenvía nada a MAKE_WEBHOOK_URL aquí. Ese webhook dispara el
+        # escenario de Make que también publica en Facebook → duplicaría el post.
+        # Make queda totalmente desacoplado del flujo diario de FB/IG.
         if publicar_meta.configurado():
-            ok = publicar_meta.publicar_foto_facebook(imagen_fb, mensaje)
-            # X (Buffer) sigue por Make si está configurado y la conv es destacada
-            if incluir_tweet and MAKE_WEBHOOK_URL:
-                try:
-                    payload = json.dumps({
-                        "tweet": tweet_texto,
-                        "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
-                    }).encode('utf-8')
-                    req = urllib.request.Request(
-                        MAKE_WEBHOOK_URL, data=payload,
-                        headers={'Content-Type': 'application/json'}, method='POST')
-                    urllib.request.urlopen(req, timeout=10).read()
-                except Exception as e:
-                    print(f"⚠️  Tweet vía Make falló (no bloquea): {e}")
-            return ok
+            return publicar_meta.publicar_foto_facebook(imagen_fb, mensaje)
 
         # ── Fallback: webhook de Make.com (comportamiento anterior) ────────────
         datos_post = {
