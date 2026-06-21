@@ -642,13 +642,16 @@ def enlace_web_convocatoria(conv):
 
 
 def enviar_a_facebook(conv, incluir_tweet=True):
-    """Publica en Facebook vía webhook de Make.com (texto plano, sin HTML).
+    """Publica en Facebook directamente vía Graph API (texto plano, sin HTML).
 
-    Best-effort: si falla no bloquea ni revierte el envío de Telegram. El
-    bot de Telegram no recibe sus propios posts de canal, así que Make no
-    puede escuchar el canal — por eso el script empuja los datos al webhook.
+    Vía preferente: API directa de Meta (gratis, sin límite de operaciones).
+    Fallback: webhook de Make.com si la API directa no está configurada.
+    X (Buffer) sigue saliendo por Make si MAKE_WEBHOOK_URL está configurado.
+
+    Best-effort: si falla no bloquea ni revierte el envío de Telegram.
     """
-    if not MAKE_WEBHOOK_URL:
+    import publicar_meta
+    if not (publicar_meta.configurado() or MAKE_WEBHOOK_URL):
         return False
     try:
         partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
@@ -714,8 +717,29 @@ def enviar_a_facebook(conv, incluir_tweet=True):
         except Exception as e:
             print(f"⚠️  Imagen Facebook propia falló, uso genérica ({e})")
 
+        mensaje = "\n".join(lineas)
+
+        # ── Vía preferente: Graph API directa (gratis, sin límite de Make) ──────
+        if publicar_meta.configurado():
+            ok = publicar_meta.publicar_foto_facebook(imagen_fb, mensaje)
+            # X (Buffer) sigue por Make si está configurado y la conv es destacada
+            if incluir_tweet and MAKE_WEBHOOK_URL:
+                try:
+                    payload = json.dumps({
+                        "tweet": tweet_texto,
+                        "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
+                    }).encode('utf-8')
+                    req = urllib.request.Request(
+                        MAKE_WEBHOOK_URL, data=payload,
+                        headers={'Content-Type': 'application/json'}, method='POST')
+                    urllib.request.urlopen(req, timeout=10).read()
+                except Exception as e:
+                    print(f"⚠️  Tweet vía Make falló (no bloquea): {e}")
+            return ok
+
+        # ── Fallback: webhook de Make.com (comportamiento anterior) ────────────
         datos_post = {
-            "mensaje": "\n".join(lineas),
+            "mensaje": mensaje,
             "enlace": enlace_web_convocatoria(conv),
             "imagen_facebook": imagen_fb,
         }
@@ -790,7 +814,9 @@ def publicar_carrusel_instagram(convocatorias, max_slides=3):
     convocatorias con más plazas del día, genera un PNG por cada una, lo sube a
     Supabase Storage y empuja las URLs + caption al webhook de Instagram.
     """
-    if not INSTAGRAM_WEBHOOK_URL:
+    import publicar_meta
+    api_directa = publicar_meta.configurado() and bool(publicar_meta.FB_IG_ID)
+    if not (api_directa or INSTAGRAM_WEBHOOK_URL):
         return False
     if not convocatorias:
         print("📷 Instagram: sin convocatorias nuevas, no se publica carrusel.")
@@ -826,9 +852,12 @@ def publicar_carrusel_instagram(convocatorias, max_slides=3):
         imagenes.append(url)
         lineas_caption.append(f"📍 {datos['puesto']} · {datos['plazas']} plazas · {datos['lugar']}")
 
-    # El escenario de Make tiene 3 slides fijos mapeados a imagenes[1..3]:
-    # necesitamos exactamente `max_slides` imágenes o Make falla por slide vacío.
-    if len(imagenes) < max_slides:
+    # Un carrusel necesita ≥2 imágenes. La API directa acepta 2-10 (sin slots
+    # fijos); el fallback de Make necesita exactamente `max_slides`.
+    if len(imagenes) < 2:
+        print(f"⚠️  Instagram: solo {len(imagenes)} imagen(es), se omite el carrusel.")
+        return False
+    if not api_directa and len(imagenes) < max_slides:
         print(f"⚠️  Instagram: solo {len(imagenes)}/{max_slides} imágenes, "
               f"se omite el carrusel (Make espera {max_slides}).")
         return False
@@ -843,6 +872,11 @@ def publicar_carrusel_instagram(convocatorias, max_slides=3):
         "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario",
     ])
 
+    # ── Vía preferente: Graph API directa ──────────────────────────────────────
+    if api_directa:
+        return publicar_meta.publicar_carrusel_instagram(imagenes, caption)
+
+    # ── Fallback: webhook de Make.com ──────────────────────────────────────────
     try:
         payload = json.dumps({"imagenes": imagenes, "caption": caption}).encode('utf-8')
         req = urllib.request.Request(

@@ -378,9 +378,16 @@ def subir_video(archivo, nombre_remoto):
 
 
 def enviar_video_redes(convocatorias):
-    """Genera el vídeo, lo sube y dispara el webhook de Make. Best-effort."""
-    if not VIDEO_WEBHOOK_URL:
-        print("🎬 Vídeo: VIDEO_WEBHOOK_URL no configurado, se omite.")
+    """Genera el vídeo, lo sube y lo publica en redes. Best-effort.
+
+    Vía preferente: API directa de Meta → FB (vídeo) + Instagram (Reel), gratis.
+    TikTok no tiene API libre (requiere auditoría), así que sigue por el webhook
+    de Make (VIDEO_WEBHOOK_URL) si está configurado. Si no hay ninguna vía, se omite.
+    """
+    import publicar_meta
+    api_directa = publicar_meta.configurado()
+    if not (api_directa or VIDEO_WEBHOOK_URL):
+        print("🎬 Vídeo: sin API directa ni VIDEO_WEBHOOK_URL, se omite.")
         return False
     fecha_slug = datetime.now().strftime("%Y-%m-%d")
     salida = f"/tmp/video_{fecha_slug}.mp4"
@@ -399,16 +406,26 @@ def enviar_video_redes(convocatorias):
         "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario #opositar\n\n"
         "🎵 Música: Kevin MacLeod (incompetech.com) · CC BY 4.0"
     )
-    try:
-        payload = json.dumps({"video_url": url, "caption": caption}).encode("utf-8")
-        req = urllib.request.Request(VIDEO_WEBHOOK_URL, data=payload,
-                                     headers={"Content-Type": "application/json"}, method="POST")
-        urllib.request.urlopen(req, timeout=20).read()
-        print(f"🎬 Vídeo enviado a redes: {url}")
-        return True
-    except Exception as e:
-        print(f"⚠️  Vídeo: webhook falló (no bloquea): {e}")
-        return False
+
+    ok = False
+    # ── Vía preferente: API directa (FB vídeo + IG Reel) ───────────────────────
+    if api_directa:
+        fb = publicar_meta.publicar_video_facebook(url, caption)
+        ig = publicar_meta.publicar_reel_instagram(url, caption)
+        ok = fb or ig
+
+    # ── TikTok (y respaldo) vía webhook de Make si está configurado ────────────
+    if VIDEO_WEBHOOK_URL:
+        try:
+            payload = json.dumps({"video_url": url, "caption": caption}).encode("utf-8")
+            req = urllib.request.Request(VIDEO_WEBHOOK_URL, data=payload,
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            urllib.request.urlopen(req, timeout=20).read()
+            print(f"🎬 Vídeo enviado al webhook (TikTok/Make): {url}")
+            ok = True
+        except Exception as e:
+            print(f"⚠️  Vídeo: webhook falló (no bloquea): {e}")
+    return ok
 
 
 if __name__ == "__main__":

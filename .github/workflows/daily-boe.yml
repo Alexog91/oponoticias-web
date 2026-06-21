@@ -76,6 +76,10 @@ jobs:
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
           INSTAGRAM_WEBHOOK_URL: ${{ secrets.INSTAGRAM_WEBHOOK_URL }}
           VIDEO_WEBHOOK_URL: ${{ secrets.VIDEO_WEBHOOK_URL }}
+          # Publicación directa en Meta (Graph API) — reemplaza a Make: gratis, sin límite
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID: ${{ secrets.FB_IG_ID }}
           SUPABASE_STORAGE_BUCKET: social
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
