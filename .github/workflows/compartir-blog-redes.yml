@@ -1,0 +1,38 @@
+name: Compartir Blog en Redes
+
+# Cada día laborable a las 11:00 CEST publica 2 artículos del blog en FB+IG.
+# Se para solo cuando todos los artículos ya están compartidos (sin error).
+on:
+  schedule:
+    - cron: '0 9 * * 1-6'   # 11:00 CEST (9:00 UTC) · lunes a sábado
+  workflow_dispatch:          # Lanzar manualmente para forzar publicación hoy
+
+permissions:
+  contents: read
+
+jobs:
+  compartir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar librsvg y Pillow
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
+          pip install pillow
+
+      - name: Publicar artículos del blog en Facebook e Instagram
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID: ${{ secrets.FB_IG_ID }}
+          SUPABASE_STORAGE_BUCKET: social
+          ARTICULOS_POR_DIA: '2'
+        run: python3 compartir_blog_redes.py
