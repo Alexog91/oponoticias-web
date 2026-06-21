@@ -633,6 +633,49 @@ def enviar_resumen_privado(convocatorias_enviadas):
         print(f"⚠️  Resumen privado: {e}")
 
 
+def publicar_tweet_resumen(convocatorias_enviadas):
+    """Publica un tweet-resumen del día en X (Buffer vía Make), reutilizando el
+    mismo top de plazas que el resumen de WhatsApp.
+
+    skip_facebook=true → el filtro del escenario de Make bloquea Facebook y solo
+    publica en X. Best-effort: nunca bloquea el flujo principal.
+    """
+    if not MAKE_WEBHOOK_URL or not convocatorias_enviadas:
+        return False
+    top = sorted(convocatorias_enviadas, key=_plazas_num, reverse=True)[:3]
+    lineas = []
+    for conv in top:
+        partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas = partes[0] if partes and partes[0] else ""
+        puesto = partes[1] if len(partes) > 1 else limpiar_titulo(conv['titulo'])
+        lineas.append(f"• {plazas} {puesto[:32]}".strip())
+    n = len(convocatorias_enviadas)
+    fecha_str = datetime.now().strftime("%d/%m")
+    tweet = (
+        f"📋 BOE {fecha_str} · {n} convocatorias nuevas\n\n"
+        "🏆 Top plazas:\n" + "\n".join(lineas) + "\n\n"
+        "🔎 Todas en oponoticias.com\n"
+        "#oposiciones #empleopublico"
+    )
+    if len(tweet) > 280:
+        tweet = tweet[:279] + "…"
+    try:
+        payload = json.dumps({
+            "tweet": tweet,
+            "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
+            "skip_facebook": True,
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            MAKE_WEBHOOK_URL, data=payload,
+            headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=10).read()
+        print("🐦 Tweet-resumen del día enviado a X")
+        return True
+    except Exception as e:
+        print(f"⚠️  Tweet-resumen X falló (no bloquea): {e}")
+        return False
+
+
 def enlace_web_convocatoria(conv):
     """URL de la página en oponoticias.com si ya existe el HTML, si no la home."""
     slug = generar_slug(conv['titulo'], conv.get('ref_boe', ''))
@@ -720,11 +763,25 @@ def enviar_a_facebook(conv, incluir_tweet=True):
         mensaje = "\n".join(lineas)
 
         # ── Vía preferente: Graph API directa (gratis, sin límite de Make) ──────
-        # NOTA: NO se reenvía nada a MAKE_WEBHOOK_URL aquí. Ese webhook dispara el
-        # escenario de Make que también publica en Facebook → duplicaría el post.
-        # Make queda totalmente desacoplado del flujo diario de FB/IG.
         if publicar_meta.configurado():
-            return publicar_meta.publicar_foto_facebook(imagen_fb, mensaje)
+            ok = publicar_meta.publicar_foto_facebook(imagen_fb, mensaje)
+            # X/Twitter (Buffer vía Make) SOLO para las destacadas del día.
+            # skip_facebook=true → el filtro del escenario bloquea Facebook y solo
+            # publica en X, así NO se duplica el post de FB que ya hizo la API directa.
+            if incluir_tweet and MAKE_WEBHOOK_URL:
+                try:
+                    payload = json.dumps({
+                        "tweet": tweet_texto,
+                        "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
+                        "skip_facebook": True,
+                    }).encode('utf-8')
+                    req = urllib.request.Request(
+                        MAKE_WEBHOOK_URL, data=payload,
+                        headers={'Content-Type': 'application/json'}, method='POST')
+                    urllib.request.urlopen(req, timeout=10).read()
+                except Exception as e:
+                    print(f"⚠️  Tweet X vía Make falló (no bloquea): {e}")
+            return ok
 
         # ── Fallback: webhook de Make.com (comportamiento anterior) ────────────
         datos_post = {
@@ -1304,6 +1361,9 @@ if __name__ == "__main__":
 
     # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
     enviar_resumen_privado(enviadas_hoy)
+
+    # ── 2c bis) Tweet-resumen del día en X (mismo top que el de WhatsApp) ──────
+    publicar_tweet_resumen(enviadas_hoy)
 
     # ── 2d) Vídeo diario para TikTok / IG Reels / FB Reels (best-effort) ──────
     try:
