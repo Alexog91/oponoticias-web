@@ -80,6 +80,9 @@ jobs:
           FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
           FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
           FB_IG_ID: ${{ secrets.FB_IG_ID }}
+          # TikTok Content Posting API — sube como borrador (video.upload scope)
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
           SUPABASE_STORAGE_BUCKET: social
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

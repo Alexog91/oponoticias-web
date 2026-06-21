@@ -380,9 +380,10 @@ def subir_video(archivo, nombre_remoto):
 def enviar_video_redes(convocatorias):
     """Genera el vídeo, lo sube y lo publica en redes. Best-effort.
 
-    Vía preferente: API directa de Meta → FB (vídeo) + Instagram (Reel), gratis.
-    TikTok no tiene API libre (requiere auditoría), así que sigue por el webhook
-    de Make (VIDEO_WEBHOOK_URL) si está configurado. Si no hay ninguna vía, se omite.
+    - Meta (FB + IG Reel): API directa con FB_PAGE_TOKEN, sin límite.
+    - TikTok: API directa (borrador) si TIKTOK_CLIENT_KEY/SECRET están en env;
+      el usuario ve el vídeo en Borradores y lo publica con un toque.
+      Fallback: VIDEO_WEBHOOK_URL (Make) si no hay credenciales TikTok.
     """
     import publicar_meta
     api_directa = publicar_meta.configurado()
@@ -414,14 +415,19 @@ def enviar_video_redes(convocatorias):
         ig = publicar_meta.publicar_reel_instagram(url, caption)
         ok = fb or ig
 
-    # ── TikTok (y respaldo) vía webhook de Make si está configurado ────────────
-    if VIDEO_WEBHOOK_URL:
+    # ── TikTok: API directa (borrador) si hay credenciales ─────────────────────
+    import publicar_tiktok
+    if publicar_tiktok.configurado():
+        if publicar_tiktok.publicar_draft_tiktok(url):
+            ok = True
+    elif VIDEO_WEBHOOK_URL:
+        # Fallback: webhook de Make (solo si no hay TikTok API configurada)
         try:
             payload = json.dumps({"video_url": url, "caption": caption}).encode("utf-8")
             req = urllib.request.Request(VIDEO_WEBHOOK_URL, data=payload,
                                          headers={"Content-Type": "application/json"}, method="POST")
             urllib.request.urlopen(req, timeout=20).read()
-            print(f"🎬 Vídeo enviado al webhook (TikTok/Make): {url}")
+            print(f"🎬 Vídeo enviado al webhook (Make): {url}")
             ok = True
         except Exception as e:
             print(f"⚠️  Vídeo: webhook falló (no bloquea): {e}")
