@@ -669,6 +669,56 @@ def regenerar_indice_y_sitemap():
     print(f"  🔄  Índice y sitemap regenerados ({len(articulos)} artículos)")
 
 
+# ── Publicación en redes sociales ─────────────────────────────────────────────
+
+def _publicar_en_redes(art):
+    """Publica el artículo en Facebook (foto tarjeta) e Instagram (foto tarjeta).
+
+    Best-effort: cualquier fallo se reporta sin interrumpir el flujo.
+    Requiere FB_PAGE_TOKEN, FB_PAGE_ID, FB_IG_ID y Supabase configurados.
+    """
+    try:
+        import publicar_meta
+        import generar_imagen_instagram as gii
+    except ImportError as e:
+        print(f"  ℹ️  Redes: módulo no disponible ({e}), omitiendo.")
+        return
+
+    if not publicar_meta.configurado():
+        print("  ℹ️  Redes: FB_PAGE_TOKEN no configurado, omitiendo.")
+        return
+
+    url_articulo = f"{BASE_URL}/{BLOG_DIR}/{art['slug']}.html"
+    categoria_nombre = NOMBRE_CATEGORIA.get(art["categoria"], art["categoria"].capitalize())
+    slug_corto = art["slug"][:40]
+    nombre_remoto = f"blog/{datetime.now().strftime('%Y%m')}-{slug_corto}.jpg"
+
+    # Generar imagen tarjeta personalizada
+    img_url = gii.generar_y_subir_blog({
+        "categoria": categoria_nombre,
+        "titulo":    art["titulo"],
+        "resumen":   art.get("resumen", ""),
+    }, nombre_remoto)
+
+    if not img_url:
+        print("  ⚠️  Redes: no se pudo generar la imagen tarjeta, omitiendo.")
+        return
+
+    caption_base = (
+        f"📚 {art['titulo']}\n\n"
+        f"{art.get('resumen', '')}\n\n"
+        f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
+    )
+
+    # Facebook: foto + texto + enlace al artículo
+    msg_fb = caption_base + f"\n\n👉 {url_articulo}"
+    publicar_meta.publicar_foto_facebook(img_url, msg_fb)
+
+    # Instagram: foto + caption (el enlace va en bio)
+    caption_ig = caption_base + "\n\n🔗 Enlace en bio · oponoticias.com"
+    publicar_meta.publicar_foto_instagram(img_url, caption_ig)
+
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -709,6 +759,7 @@ def main():
         print(f"  📝 {art['titulo'][:60]}…")
         if guardar_articulo(art, categoria):
             generados += 1
+            _publicar_en_redes(art)
         time.sleep(3)
 
     if generados:

@@ -19,11 +19,26 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Generar artículos de blog
+      # rsvg-convert renderiza el SVG de la tarjeta de blog a PNG.
+      - name: Instalar librsvg y fuentes
+        continue-on-error: true
+        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
+
+      # Pillow convierte PNG → JPEG para Instagram/Facebook.
+      - name: Instalar Pillow
+        continue-on-error: true
+        run: pip install pillow
+
+      - name: Generar artículos de blog y publicar en redes
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Publicación directa en Meta (Graph API)
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID: ${{ secrets.FB_IG_ID }}
+          SUPABASE_STORAGE_BUCKET: social
         run: python3 generar_blog.py
 
       - name: Subir artículos generados

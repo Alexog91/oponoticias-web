@@ -168,6 +168,33 @@ def publicar_carrusel_instagram(image_urls, caption):
         return False
 
 
+def publicar_foto_instagram(image_url, caption):
+    """Publica una foto individual en Instagram vía Graph API."""
+    if not configurado() or not FB_IG_ID:
+        return False
+    try:
+        cont = _post(f"{FB_IG_ID}/media", {
+            "image_url": image_url,
+            "caption": caption,
+            "access_token": FB_PAGE_TOKEN,
+        })
+        if not cont.get("id"):
+            print(f"⚠️  Instagram foto: no se creó contenedor {cont}")
+            return False
+        pub = _post(f"{FB_IG_ID}/media_publish", {
+            "creation_id": cont["id"],
+            "access_token": FB_PAGE_TOKEN,
+        })
+        if pub.get("id"):
+            print(f"📷 Instagram foto (API directa): {pub['id']}")
+            return True
+        print(f"⚠️  Instagram foto: publicación inesperada {pub}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error Instagram foto API (no bloquea): {e}")
+        return False
+
+
 def publicar_reel_instagram(video_url, caption):
     """Publica un Reel en Instagram vía Graph API (contenedor REELS + publish)."""
     if not configurado() or not FB_IG_ID:
