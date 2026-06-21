@@ -1,0 +1,47 @@
+name: Planificar Blog (borradores)
+
+# Ejecución manual desde GitHub UI → Actions → "Planificar Blog"
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  planificar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar librsvg y Pillow
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
+          pip install pillow
+
+      - name: Generar borradores para todas las categorías
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID: ${{ secrets.FB_IG_ID }}
+          SUPABASE_STORAGE_BUCKET: social
+        run: python3 planificar_blog.py
+
+      - name: Subir páginas HTML de borradores
+        run: |
+          git config user.name  "OpoNoticias Bot"
+          git config user.email "bot@oponoticias.com"
+          git add blog/ 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "Sin HTML nuevos."
+          else
+            git commit -m "Blog: borradores programados [skip ci]"
+            git push
+          fi

@@ -29,6 +29,17 @@ jobs:
         continue-on-error: true
         run: pip install pillow
 
+      # Publica primero los borradores cuya fecha ha llegado, luego genera nuevos.
+      - name: Publicar borradores programados
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID: ${{ secrets.FB_IG_ID }}
+          SUPABASE_STORAGE_BUCKET: social
+        run: python3 publicar_programados.py
+
       - name: Generar artículos de blog y publicar en redes
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
