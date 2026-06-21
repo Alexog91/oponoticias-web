@@ -20,10 +20,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar librsvg y Pillow
+      - name: Instalar dependencias
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core google-chrome-stable
           pip install pillow
 
       - name: Publicar artículos del blog en Facebook e Instagram

@@ -76,6 +76,29 @@ def publicar_foto_facebook(image_url, mensaje):
         return False
 
 
+def publicar_enlace_facebook(mensaje, link_url=None):
+    """Post de texto + enlace en la página de Facebook (sin imagen adjunta).
+
+    Facebook genera automáticamente el preview del enlace (og:image, título…).
+    `link_url` puede omitirse si ya va incluido en el texto de `mensaje`.
+    """
+    if not configurado():
+        return False
+    try:
+        params = {"message": mensaje, "access_token": FB_PAGE_TOKEN}
+        if link_url:
+            params["link"] = link_url
+        r = _post(f"{FB_PAGE_ID}/feed", params)
+        if r.get("id"):
+            print(f"📘 Facebook (texto+enlace): post {r['id']}")
+            return True
+        print(f"⚠️  Facebook: respuesta inesperada {r}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error Facebook feed API (no bloquea): {e}")
+        return False
+
+
 def publicar_video_facebook(video_url, descripcion):
     """Publica un vídeo (reel/feed) en la página de Facebook por URL."""
     if not configurado():

@@ -389,6 +389,65 @@ def generar_y_subir_blog(datos, nombre_remoto):
         return None
 
 
+def screenshot_blog_html(html_path, nombre_remoto):
+    """Captura el artículo del blog a 1080×1350 px y sube la imagen a Supabase.
+
+    Abre el HTML local con Chrome headless (sin red externa para fuentes, pero
+    los estilos locales cargan bien vía file://). Devuelve URL pública o None.
+    """
+    html_path = Path(html_path)
+    if not html_path.exists():
+        print(f"⚠️  Screenshot blog: no existe {html_path}")
+        return None
+    chrome = _chrome_bin()
+    if not chrome:
+        print("⚠️  Screenshot blog: Chrome no disponible")
+        return None
+    try:
+        with tempfile.TemporaryDirectory() as _tmp:
+            tmp = Path(_tmp)
+            out_png = tmp / "blog_ig.png"
+            user_dir = tmp / "ud"
+            err_log = tmp / "err.txt"
+            with open(err_log, "wb") as ferr:
+                proc = subprocess.Popen([
+                    chrome, "--headless", "--disable-gpu", "--no-sandbox",
+                    "--no-first-run", "--disable-dev-shm-usage",
+                    "--disable-background-networking",
+                    "--disable-extensions", "--mute-audio",
+                    "--hide-scrollbars",
+                    "--screenshot=blog_ig.png",
+                    "--window-size=1080,1350",
+                    f"--user-data-dir={user_dir}",
+                    f"file://{html_path.absolute()}",
+                ], cwd=str(tmp), stdout=subprocess.DEVNULL, stderr=ferr)
+                for _ in range(40):
+                    if out_png.exists() and out_png.stat().st_size > 0:
+                        break
+                    if proc.poll() is not None:
+                        break
+                    time.sleep(0.5)
+                time.sleep(0.3)
+                try:
+                    proc.terminate()
+                    proc.wait(timeout=3)
+                except Exception:
+                    proc.kill()
+            if not (out_png.exists() and out_png.stat().st_size > 0):
+                try:
+                    err = err_log.read_text(encoding="utf-8", errors="replace")[-400:]
+                except Exception:
+                    err = ""
+                print(f"⚠️  Screenshot blog: Chrome no generó PNG. stderr: {err}")
+                return None
+            jpg = tmp / "blog_ig.jpg"
+            _a_jpeg(str(out_png), jpg)
+            return subir_a_storage(str(jpg), nombre_remoto)
+    except Exception as e:
+        print(f"⚠️  Screenshot blog falló ({nombre_remoto}): {e}")
+        return None
+
+
 if __name__ == "__main__":
     # Prueba local: genera 2 JPEGs de ejemplo en social/ (sin subir).
     ejemplos = [

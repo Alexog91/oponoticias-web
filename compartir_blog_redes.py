@@ -3,16 +3,15 @@
 compartir_blog_redes.py — Publica en Facebook e Instagram los artículos
 del blog que aún no se han compartido en redes sociales.
 
-Diseñado para ponerse al día con artículos ya publicados antes de que
-se añadiera la publicación automática en redes.
+Facebook: post de texto con el contenido del artículo + enlace al final.
+Instagram: screenshot real del HTML del artículo (1080×1350) con Chrome.
 
-Toma los 2 artículos más antiguos sin compartir y los publica (tarjeta
-personalizada en FB e IG). Llamar una vez por día (cron o GitHub Actions).
-
-NO llama a Claude → no gasta créditos de IA.
+Toma los 2 artículos más antiguos sin compartir y los publica.
+Llamar una vez por día (cron o GitHub Actions). NO llama a Claude.
 
 Requiere:
-  SUPABASE_URL, SUPABASE_API_KEY, FB_PAGE_TOKEN, FB_PAGE_ID, FB_IG_ID
+  SUPABASE_URL, SUPABASE_API_KEY, FB_PAGE_TOKEN, FB_PAGE_ID, FB_IG_ID,
+  Chrome (google-chrome o chromium-browser en PATH / CHROME_BIN)
 
 Antes de la primera ejecución, correr en Supabase → SQL Editor:
   ALTER TABLE articulos_blog
@@ -20,21 +19,24 @@ Antes de la primera ejecución, correr en Supabase → SQL Editor:
 """
 
 import os
+import re
 import sys
 import json
 import urllib.request
 import urllib.parse
 from datetime import datetime, timezone
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import generar_blog as gb
 import publicar_meta
 import generar_imagen_instagram as gii
 
-SUPABASE_URL     = os.environ.get("SUPABASE_URL", "").rstrip("/")
-SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
-BASE_URL         = "https://oponoticias.com"
+SUPABASE_URL      = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_API_KEY  = os.environ.get("SUPABASE_API_KEY", "")
+BASE_URL          = "https://oponoticias.com"
 ARTICULOS_POR_DIA = int(os.environ.get("ARTICULOS_POR_DIA", "2"))
+BLOG_DIR          = Path(__file__).resolve().parent / "blog"
 
 HEADERS_SB = {
     "apikey":        SUPABASE_API_KEY,
@@ -46,18 +48,18 @@ HEADERS_SB = {
 def obtener_pendientes():
     """Artículos publicados que aún no se han compartido en redes."""
     params = urllib.parse.urlencode({
-        "select":            "id,titulo,slug,resumen,categoria,fecha_pub",
-        "publicado":         "eq.true",
-        "compartido_redes":  "eq.false",
-        "order":             "fecha_pub.asc",
-        "limit":             str(ARTICULOS_POR_DIA),
+        "select":           "id,titulo,slug,resumen,contenido,categoria,fecha_pub",
+        "publicado":        "eq.true",
+        "compartido_redes": "eq.false",
+        "order":            "fecha_pub.asc",
+        "limit":            str(ARTICULOS_POR_DIA),
     })
     try:
         return gb.supabase_get("articulos_blog", params)
     except Exception:
-        # La columna puede no existir aún → fallback sin filtro
+        # Columna puede no existir aún → fallback sin filtro
         params2 = urllib.parse.urlencode({
-            "select":    "id,titulo,slug,resumen,categoria,fecha_pub",
+            "select":    "id,titulo,slug,resumen,contenido,categoria,fecha_pub",
             "publicado": "eq.true",
             "order":     "fecha_pub.asc",
             "limit":     str(ARTICULOS_POR_DIA),
@@ -65,8 +67,8 @@ def obtener_pendientes():
         arts = gb.supabase_get("articulos_blog", params2)
         if not arts:
             return []
-        print("⚠️  Columna 'compartido_redes' no encontrada — usando fallback sin filtro.")
-        print("    Corre este SQL en Supabase → SQL Editor:")
+        print("⚠️  Columna 'compartido_redes' no encontrada — usando fallback.")
+        print("    Corre en Supabase → SQL Editor:")
         print("    ALTER TABLE articulos_blog")
         print("      ADD COLUMN IF NOT EXISTS compartido_redes BOOLEAN DEFAULT FALSE;")
         return arts
@@ -89,41 +91,59 @@ def marcar_compartido(art_id):
         print(f"  ⚠️  No se pudo marcar compartido_redes ({e})")
 
 
+def _strip_markdown(texto):
+    """Elimina el marcado Markdown básico para obtener texto plano."""
+    texto = re.sub(r'^#{1,6}\s+', '', texto, flags=re.MULTILINE)
+    texto = re.sub(r'\*{1,2}([^*\n]+)\*{1,2}', r'\1', texto)
+    texto = re.sub(r'_{1,2}([^_\n]+)_{1,2}', r'\1', texto)
+    texto = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', texto)
+    texto = re.sub(r'^[\-\*\d+\.]\s+', '', texto, flags=re.MULTILINE)
+    texto = re.sub(r'\n{3,}', '\n\n', texto)
+    return texto.strip()
+
+
 def compartir_articulo(art):
-    """Genera la tarjeta, publica en FB e IG y marca el artículo como compartido."""
-    categoria_nombre = gb.NOMBRE_CATEGORIA.get(art["categoria"], art["categoria"].capitalize())
-    url_articulo = f"{BASE_URL}/blog/{art['slug']}.html"
-    slug_corto   = art["slug"][:40]
-    nombre_img   = f"blog/{datetime.now(timezone.utc).strftime('%Y%m')}-{slug_corto}.jpg"
-
-    print(f"  🖼️  Generando tarjeta…")
-    img_url = gii.generar_y_subir_blog({
-        "categoria": categoria_nombre,
-        "titulo":    art["titulo"],
-        "resumen":   art.get("resumen", ""),
-    }, nombre_img)
-
-    if not img_url:
-        print("  ⚠️  No se pudo generar la imagen, omitiendo este artículo.")
-        return False
-
-    caption_base = (
-        f"📚 {art['titulo']}\n\n"
-        f"{art.get('resumen', '')}\n\n"
+    """Publica en FB (texto+enlace) e IG (screenshot) y marca el artículo."""
+    url_articulo  = f"{BASE_URL}/blog/{art['slug']}.html"
+    hashtags      = (
         f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
     )
 
-    # Facebook: foto + enlace al artículo
-    ok_fb = publicar_meta.publicar_foto_facebook(
-        img_url,
-        caption_base + f"\n\n👉 {url_articulo}",
+    # ── Facebook: texto del artículo + enlace ──────────────────────────────
+    print("  📝 Construyendo post de Facebook…")
+    contenido_limpio = _strip_markdown(art.get("contenido", ""))
+    parrafos = [p.strip() for p in contenido_limpio.split("\n\n") if p.strip()]
+    extracto = ""
+    for p in parrafos:
+        if len(extracto) + len(p) + 2 > 2500:
+            break
+        extracto = (extracto + "\n\n" + p).strip()
+    msg_fb = (
+        f"📚 {art['titulo']}\n\n"
+        f"{extracto}\n\n"
+        f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
+        f"{hashtags}"
     )
+    ok_fb = publicar_meta.publicar_enlace_facebook(msg_fb)
 
-    # Instagram: foto + enlace en bio
-    ok_ig = publicar_meta.publicar_foto_instagram(
-        img_url,
-        caption_base + "\n\n🔗 Enlace en bio · oponoticias.com",
-    )
+    # ── Instagram: screenshot del HTML del artículo ─────────────────────────
+    print("  📸 Generando screenshot del artículo para Instagram…")
+    slug_corto    = art["slug"][:40]
+    nombre_remoto = f"blog/ig-{datetime.now(timezone.utc).strftime('%Y%m')}-{slug_corto}.jpg"
+    html_path     = BLOG_DIR / f"{art['slug']}.html"
+    img_url       = gii.screenshot_blog_html(str(html_path), nombre_remoto)
+
+    ok_ig = False
+    if img_url:
+        caption_ig = (
+            f"📚 {art['titulo']}\n\n"
+            f"{art.get('resumen', '')}\n\n"
+            f"🔗 Enlace en bio · oponoticias.com\n\n"
+            f"{hashtags}"
+        )
+        ok_ig = publicar_meta.publicar_foto_instagram(img_url, caption_ig)
+    else:
+        print("  ⚠️  No se pudo generar screenshot para Instagram.")
 
     if ok_fb or ok_ig:
         marcar_compartido(art["id"])
@@ -157,11 +177,11 @@ def main():
         if compartir_articulo(art):
             publicados += 1
             print(f"  ✅ Compartido en FB + IG\n")
+        else:
+            print(f"  ⚠️  No se publicó en ninguna red\n")
 
     print(f"{'=' * 62}")
     print(f"✅ {publicados}/{len(pendientes)} artículo(s) compartidos hoy.")
-    if publicados < len(obtener_pendientes()):
-        print("   Quedan más artículos. Se publicarán en la próxima ejecución.")
     print("=" * 62)
 
 

@@ -671,8 +671,20 @@ def regenerar_indice_y_sitemap():
 
 # ── Publicación en redes sociales ─────────────────────────────────────────────
 
+def _strip_markdown(texto):
+    """Elimina el marcado Markdown básico para obtener texto plano."""
+    import re
+    texto = re.sub(r'^#{1,6}\s+', '', texto, flags=re.MULTILINE)
+    texto = re.sub(r'\*{1,2}([^*\n]+)\*{1,2}', r'\1', texto)
+    texto = re.sub(r'_{1,2}([^_\n]+)_{1,2}', r'\1', texto)
+    texto = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', texto)
+    texto = re.sub(r'^[\-\*\d+\.]\s+', '', texto, flags=re.MULTILINE)
+    texto = re.sub(r'\n{3,}', '\n\n', texto)
+    return texto.strip()
+
+
 def _publicar_en_redes(art):
-    """Publica el artículo en Facebook (foto tarjeta) e Instagram (foto tarjeta).
+    """Publica el artículo en Facebook (texto+enlace) e Instagram (screenshot del HTML).
 
     Best-effort: cualquier fallo se reporta sin interrumpir el flujo.
     Requiere FB_PAGE_TOKEN, FB_PAGE_ID, FB_IG_ID y Supabase configurados.
@@ -689,34 +701,40 @@ def _publicar_en_redes(art):
         return
 
     url_articulo = f"{BASE_URL}/{BLOG_DIR}/{art['slug']}.html"
-    categoria_nombre = NOMBRE_CATEGORIA.get(art["categoria"], art["categoria"].capitalize())
-    slug_corto = art["slug"][:40]
-    nombre_remoto = f"blog/{datetime.now().strftime('%Y%m')}-{slug_corto}.jpg"
+    hashtags = f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
 
-    # Generar imagen tarjeta personalizada
-    img_url = gii.generar_y_subir_blog({
-        "categoria": categoria_nombre,
-        "titulo":    art["titulo"],
-        "resumen":   art.get("resumen", ""),
-    }, nombre_remoto)
-
-    if not img_url:
-        print("  ⚠️  Redes: no se pudo generar la imagen tarjeta, omitiendo.")
-        return
-
-    caption_base = (
+    # ── Facebook: texto del artículo + enlace ──────────────────────────────
+    contenido_limpio = _strip_markdown(art.get("contenido", ""))
+    # Recorta al primer párrafo natural o a 2 500 chars para no saturar el post
+    parrafos = [p.strip() for p in contenido_limpio.split("\n\n") if p.strip()]
+    extracto = ""
+    for p in parrafos:
+        if len(extracto) + len(p) + 2 > 2500:
+            break
+        extracto = (extracto + "\n\n" + p).strip()
+    msg_fb = (
         f"📚 {art['titulo']}\n\n"
-        f"{art.get('resumen', '')}\n\n"
-        f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
+        f"{extracto}\n\n"
+        f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
+        f"{hashtags}"
     )
+    publicar_meta.publicar_enlace_facebook(msg_fb)
 
-    # Facebook: foto + texto + enlace al artículo
-    msg_fb = caption_base + f"\n\n👉 {url_articulo}"
-    publicar_meta.publicar_foto_facebook(img_url, msg_fb)
-
-    # Instagram: foto + caption (el enlace va en bio)
-    caption_ig = caption_base + "\n\n🔗 Enlace en bio · oponoticias.com"
-    publicar_meta.publicar_foto_instagram(img_url, caption_ig)
+    # ── Instagram: screenshot del HTML del artículo ─────────────────────────
+    html_path = os.path.join(BLOG_DIR, f"{art['slug']}.html")
+    slug_corto = art["slug"][:40]
+    nombre_remoto = f"blog/ig-{datetime.now().strftime('%Y%m')}-{slug_corto}.jpg"
+    img_url = gii.screenshot_blog_html(html_path, nombre_remoto)
+    if img_url:
+        caption_ig = (
+            f"📚 {art['titulo']}\n\n"
+            f"{art.get('resumen', '')}\n\n"
+            f"🔗 Enlace en bio · oponoticias.com\n\n"
+            f"{hashtags}"
+        )
+        publicar_meta.publicar_foto_instagram(img_url, caption_ig)
+    else:
+        print("  ⚠️  Redes: no se pudo generar screenshot para Instagram, omitiendo IG.")
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
