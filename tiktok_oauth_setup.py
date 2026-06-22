@@ -100,18 +100,25 @@ if __name__ == "__main__":
         print("   Usa: TIKTOK_CLIENT_SECRET=<valor> python3 tiktok_oauth_setup.py")
         raise SystemExit(1)
 
-    print()
-    print("1. Abre esta URL en tu navegador (logueado como @oponoticias):")
-    print()
-    print(auth_url())
-    print()
-    print("2. Acepta los permisos.")
-    print("3. TikTok te redirigirá a https://oponoticias.com/callback?code=XXXX")
-    print("   La página puede dar 404 — es normal.")
-    print("4. Copia el valor del parámetro 'code' de la URL.")
-    print()
+    # Modo no interactivo (GitHub Actions): el código llega por variable de entorno.
+    code = os.environ.get("TIKTOK_AUTH_CODE", "").strip()
+    if code:
+        # TikTok URL-encodea el code en el redirect (p.ej. '...%2A...'); lo normalizamos.
+        code = urllib.parse.unquote(code)
+        print("Código recibido por TIKTOK_AUTH_CODE (modo no interactivo).")
+    else:
+        print()
+        print("1. Abre esta URL en tu navegador (logueado como @oponoticias):")
+        print()
+        print(auth_url())
+        print()
+        print("2. Acepta los permisos.")
+        print("3. TikTok te redirigirá a https://oponoticias.com/callback?code=XXXX")
+        print("   La página puede dar 404 — es normal.")
+        print("4. Copia el valor del parámetro 'code' de la URL.")
+        print()
+        code = input("Pega el code aquí: ").strip()
 
-    code = input("Pega el code aquí: ").strip()
     if not code:
         print("❌ Sin código. Abortando.")
         raise SystemExit(1)
