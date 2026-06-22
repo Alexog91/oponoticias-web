@@ -1,0 +1,51 @@
+name: Publicar HOY en Redes
+
+# Publica en Facebook (agrupado) e Instagram (carrusel) las convocatorias de HOY
+# que ya están en Supabase pero no se publicaron en redes (token caducado, etc.).
+# NO toca Telegram. Lanzar manualmente: Actions → "Publicar HOY en Redes".
+on:
+  workflow_dispatch:
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4   # necesario: las páginas HTML dan los enlaces
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # rsvg-convert (tarjetas) + Pillow (PNG→JPEG)
+      - name: Instalar librsvg, fuentes y Pillow
+        continue-on-error: true
+        run: |
+          sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
+          pip install pillow
+
+      # Fuentes de marca para que las tarjetas coincidan con el diseño
+      - name: Instalar fuentes de marca
+        continue-on-error: true
+        run: |
+          mkdir -p ~/.fonts
+          curl -fsSL -o ~/.fonts/Merriweather.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/merriweather/Merriweather%5Bopsz,wdth,wght%5D.ttf" || true
+          curl -fsSL -o ~/.fonts/Inter.ttf \
+            "https://github.com/google/fonts/raw/main/ofl/inter/Inter%5Bopsz,wght%5D.ttf" || true
+          fc-cache -f ~/.fonts || true
+
+      - name: Instalar Chrome (respaldo del render)
+        id: setup-chrome
+        continue-on-error: true
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Publicar convocatorias de hoy en FB e IG
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          FB_PAGE_TOKEN: ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID: ${{ secrets.FB_IG_ID }}
+          SUPABASE_STORAGE_BUCKET: social
+          CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+        run: python3 publicar_hoy_redes.py
