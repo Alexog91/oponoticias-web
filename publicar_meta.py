@@ -36,6 +36,29 @@ def configurado():
     return bool(FB_PAGE_TOKEN and FB_PAGE_ID)
 
 
+_PAGE_TOKEN_CACHE = None
+
+
+def _page_token():
+    """Page Access Token de la página, derivado del token configurado.
+
+    Para PUBLICAR en una página hay que usar el token DE LA PÁGINA, no un token
+    de usuario / System User directamente; con éste Meta devuelve el confuso
+    '(#200) publish_actions are not available'. Se obtiene una vez con
+    GET /{page}?fields=access_token y se cachea. Si falla, usa el configurado.
+    """
+    global _PAGE_TOKEN_CACHE
+    if _PAGE_TOKEN_CACHE:
+        return _PAGE_TOKEN_CACHE
+    try:
+        r = _get(FB_PAGE_ID, {"fields": "access_token", "access_token": FB_PAGE_TOKEN})
+        _PAGE_TOKEN_CACHE = r.get("access_token") or FB_PAGE_TOKEN
+    except Exception as e:
+        print(f"⚠️  No se pudo obtener el token de página, uso el configurado ({e})")
+        _PAGE_TOKEN_CACHE = FB_PAGE_TOKEN
+    return _PAGE_TOKEN_CACHE
+
+
 def _leer_error(e):
     """Extrae el cuerpo JSON de un HTTPError de la Graph API.
 
@@ -94,7 +117,7 @@ def publicar_foto_facebook(image_url, mensaje):
         r = _post(f"{FB_PAGE_ID}/photos", {
             "url": image_url,
             "caption": mensaje,
-            "access_token": FB_PAGE_TOKEN,
+            "access_token": _page_token(),
         })
         if r.get("id") or r.get("post_id"):
             print(f"📘 Facebook (API directa): post {r.get('post_id') or r.get('id')}")
@@ -115,7 +138,7 @@ def publicar_enlace_facebook(mensaje, link_url=None):
     if not configurado():
         return False
     try:
-        params = {"message": mensaje, "access_token": FB_PAGE_TOKEN}
+        params = {"message": mensaje, "access_token": _page_token()}
         if link_url:
             params["link"] = link_url
         r = _post(f"{FB_PAGE_ID}/feed", params)
@@ -137,7 +160,7 @@ def publicar_video_facebook(video_url, descripcion):
         r = _post(f"{FB_PAGE_ID}/videos", {
             "file_url": video_url,
             "description": descripcion,
-            "access_token": FB_PAGE_TOKEN,
+            "access_token": _page_token(),
         }, timeout=120)
         if r.get("id"):
             print(f"📘 Facebook vídeo (API directa): {r['id']}")

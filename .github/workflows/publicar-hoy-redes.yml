@@ -5,6 +5,15 @@ name: Publicar HOY en Redes
 # NO toca Telegram. Lanzar manualmente: Actions → "Publicar HOY en Redes".
 on:
   workflow_dispatch:
+    inputs:
+      publicar_fb:
+        description: 'Publicar en Facebook'
+        type: boolean
+        default: true
+      publicar_ig:
+        description: 'Publicar en Instagram'
+        type: boolean
+        default: true
 
 jobs:
   publicar:
@@ -48,4 +57,6 @@ jobs:
           FB_IG_ID: ${{ secrets.FB_IG_ID }}
           SUPABASE_STORAGE_BUCKET: social
           CHROME_BIN: ${{ steps.setup-chrome.outputs.chrome-path }}
+          PUBLICAR_FB: ${{ inputs.publicar_fb }}
+          PUBLICAR_IG: ${{ inputs.publicar_ig }}
         run: python3 publicar_hoy_redes.py

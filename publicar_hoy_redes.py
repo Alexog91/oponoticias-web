@@ -92,11 +92,20 @@ def main():
         print("ℹ️  No hay convocatorias de hoy para publicar.")
         return
 
-    print(f"\n🔵 Facebook (agrupado, máx. 6 posts)…")
-    leer_boe.publicar_facebook_agrupado(convs)
+    pub_fb = os.environ.get("PUBLICAR_FB", "true").lower() != "false"
+    pub_ig = os.environ.get("PUBLICAR_IG", "true").lower() != "false"
 
-    print(f"\n🟣 Instagram (carrusel de las de más plazas)…")
-    leer_boe.publicar_carrusel_instagram(convs)
+    if pub_fb:
+        print(f"\n🔵 Facebook (agrupado, máx. 6 posts)…")
+        leer_boe.publicar_facebook_agrupado(convs)
+    else:
+        print("\n⏭️  Facebook omitido (PUBLICAR_FB=false).")
+
+    if pub_ig:
+        print(f"\n🟣 Instagram (carrusel de las de más plazas)…")
+        leer_boe.publicar_carrusel_instagram(convs)
+    else:
+        print("\n⏭️  Instagram omitido (PUBLICAR_IG=false).")
 
     print("=" * 62)
     print("✅ Hecho.")
