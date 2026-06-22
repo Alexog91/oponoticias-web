@@ -685,7 +685,13 @@ def enlace_web_convocatoria(conv):
 
 
 def enviar_a_facebook(conv, incluir_tweet=True):
-    """Publica en Facebook directamente vía Graph API (texto plano, sin HTML).
+    """[OBSOLETO desde 22 jun 2026 — ya NO se llama]
+
+    Publicaba 1 post por convocatoria (~32/día) → Meta bloqueó la cuenta de
+    desarrollador por spam. Sustituido por `publicar_facebook_agrupado()`
+    (máx. 6 posts/día) + `enviar_tweet_x()` (X). Se conserva como referencia.
+
+    Publica en Facebook directamente vía Graph API (texto plano, sin HTML).
 
     Vía preferente: API directa de Meta (gratis, sin límite de operaciones).
     Fallback: webhook de Make.com si la API directa no está configurada.
@@ -851,6 +857,139 @@ def _plazas_num(conv):
         return 0
     m = re.search(r'\d+', partes[0])
     return int(m.group()) if m else 0
+
+
+# Hashtags por CCAA para los tweets de X (Buffer vía Make).
+_CCAA_TAGS = {
+    "Andalucía": "#Andalucia", "Aragón": "#Aragon", "Asturias": "#Asturias",
+    "Canarias": "#Canarias", "Cantabria": "#Cantabria",
+    "Castilla-La Mancha": "#CastillaLaMancha", "Castilla y León": "#CastillaYLeon",
+    "Cataluña": "#Cataluna", "Ceuta": "#Ceuta", "Extremadura": "#Extremadura",
+    "Galicia": "#Galicia", "Islas Baleares": "#IslasBaleares", "La Rioja": "#LaRioja",
+    "Madrid": "#Madrid", "Melilla": "#Melilla", "Murcia": "#Murcia",
+    "Navarra": "#Navarra", "País Vasco": "#PaisVasco",
+    "Comunitat Valenciana": "#ComunidadValenciana",
+}
+
+
+def enviar_tweet_x(conv):
+    """Envía SOLO el tweet (X vía Buffer/Make) de una convocatoria destacada.
+
+    `skip_facebook=True` para que el escenario de Make no duplique en Facebook
+    (FB ahora va por `publicar_facebook_agrupado`, no por aquí). Best-effort.
+    """
+    if not MAKE_WEBHOOK_URL:
+        return False
+    try:
+        partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        plazas = partes[0] if partes else ""
+        puesto = partes[1] if len(partes) > 1 else ""
+        comunidad = conv.get('comunidad_autonoma', '') or ''
+        titulo = limpiar_titulo(conv['titulo'])
+        hashtags = f"#oposiciones #BOE {_CCAA_TAGS.get(comunidad, '')}".strip()
+        t = [f"📋 {titulo[:50]}{'…' if len(titulo) > 50 else ''}"]
+        if puesto:
+            t.append(f"🔢 {plazas} · {puesto[:40]}")
+        if comunidad:
+            t.append(f"📍 {comunidad}")
+        t.append(f"\n🔗 {enlace_web_convocatoria(conv)}")
+        t.append("\n📘 https://www.facebook.com/profile.php?id=61590965302457"
+                 "  ·  📸 https://www.instagram.com/oponoticiason/"
+                 "  ·  ✈️ https://t.me/OPONOTICIAS")
+        t.append(f"\n{hashtags}")
+        payload = json.dumps({
+            "tweet": "\n".join(t),
+            "imagen_tweet": "https://oponoticias.com/social/tweet-card.png",
+            "skip_facebook": True,
+        }).encode('utf-8')
+        req = urllib.request.Request(
+            MAKE_WEBHOOK_URL, data=payload,
+            headers={'Content-Type': 'application/json'}, method='POST')
+        urllib.request.urlopen(req, timeout=10).read()
+        print(f"🐦 Tweet X (Buffer/Make): {titulo[:40]}…")
+        return True
+    except Exception as e:
+        print(f"⚠️  Tweet X falló (no bloquea): {e}")
+        return False
+
+
+def _linea_fb_conv(conv):
+    """Una entrada del listado de un post agrupado de Facebook."""
+    partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+    plazas = partes[0] if partes and partes[0] else ""
+    puesto = partes[1] if len(partes) > 1 else ""
+    comunidad = conv.get('comunidad_autonoma', '') or ''
+    titulo = limpiar_titulo(conv['titulo'])
+    det = " · ".join([x for x in [plazas, puesto[:40], comunidad] if x])
+    linea = f"🎯 {titulo[:80]}{'…' if len(titulo) > 80 else ''}"
+    if det:
+        linea += f"\n   {det}"
+    linea += f"\n   🔗 {enlace_web_convocatoria(conv)}"
+    return linea
+
+
+def publicar_facebook_agrupado(convocatorias, max_posts=6):
+    """Publica las convocatorias del día en COMO MUCHO `max_posts` posts de FB.
+
+    Antes se publicaba 1 post por convocatoria (~32/día) → Meta lo interpretó
+    como spam/automatización y BLOQUEÓ la cuenta de desarrollador (incidente
+    22 jun 2026). Ahora se reparten en grupos: cada post agrupa varias
+    convocatorias (su listado con enlaces) + la tarjeta de la de más plazas del
+    grupo. Telegram/web/email siguen recibiéndolas todas. Best-effort.
+    """
+    import publicar_meta
+    if not convocatorias:
+        return
+    if not publicar_meta.configurado():
+        print("📘 Facebook: API directa no configurada, se omite el agrupado.")
+        return
+
+    import math
+    import hashlib
+    try:
+        import generar_imagen_instagram as gii
+    except Exception:
+        gii = None
+
+    convs = sorted(convocatorias, key=_plazas_num, reverse=True)
+    grupos_n = min(max_posts, len(convs))
+    tam = math.ceil(len(convs) / grupos_n)
+    grupos = [convs[i:i + tam] for i in range(0, len(convs), tam)]
+    total = len(grupos)
+
+    hoy = datetime.now()
+    fecha_txt = f"{hoy.day} {_MESES_CORTO[hoy.month - 1]}"
+    publicados = 0
+
+    for idx, grupo in enumerate(grupos, 1):
+        # Tarjeta de la convocatoria con más plazas del grupo (best-effort)
+        imagen = None
+        if gii:
+            try:
+                lider = grupo[0]
+                uid = hashlib.md5((lider.get('enlace', '') + lider['titulo'])
+                                  .encode('utf-8')).hexdigest()[:10]
+                imagen = gii.generar_y_subir(
+                    _datos_imagen(lider), f"fb/{hoy:%Y-%m-%d}-g{idx}-{uid}.jpg")
+            except Exception as e:
+                print(f"⚠️  Tarjeta FB grupo {idx} falló ({e})")
+
+        encabezado = (f"📋 Convocatorias del BOE · {fecha_txt}"
+                      + (f" ({idx}/{total})" if total > 1 else ""))
+        cuerpo = "\n\n".join(_linea_fb_conv(c) for c in grupo)
+        mensaje = f"{encabezado}\n\n{cuerpo}\n\n#oposiciones #BOE #empleopublico #opositar"
+
+        ok = False
+        if imagen:
+            ok = publicar_meta.publicar_foto_facebook(imagen, mensaje)
+        if not ok:
+            ok = publicar_meta.publicar_enlace_facebook(mensaje)
+        if ok:
+            publicados += 1
+        time.sleep(3)
+
+    print(f"📘 Facebook: {publicados}/{total} posts agrupados "
+          f"({len(convs)} convocatorias del día).")
 
 
 def publicar_carrusel_instagram(convocatorias, max_slides=3):
@@ -1351,10 +1490,17 @@ if __name__ == "__main__":
             continue
         if enviar_a_telegram(conv):
             marcar_telegram_enviado(conv['enlace'])
-            enviar_a_facebook(conv, incluir_tweet=conv['enlace'] in top_x)
+            # X (Buffer/Make) solo para las destacadas del día.
+            if conv['enlace'] in top_x:
+                enviar_tweet_x(conv)
             enviadas_hoy.append(conv)
             enviadas_tg += 1
             time.sleep(2)
+
+    # ── 2a bis) Facebook: posts AGRUPADOS (máx. 6/día) con TODAS las del día ──
+    # Reemplaza el antiguo 1-post-por-convocatoria (~32/día) que provocó el
+    # bloqueo de la cuenta de desarrollador por spam/automatización.
+    publicar_facebook_agrupado(enviadas_hoy)
 
     # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
     publicar_carrusel_instagram(enviadas_hoy)
