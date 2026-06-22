@@ -24,6 +24,7 @@ import json
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
 
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
@@ -160,35 +161,81 @@ def publicar_draft_tiktok(video_url, titulo=""):
         print("⚠️  TikTok: no se pudo obtener access_token — omitiendo publicación")
         return False
 
+    # Descargamos el vídeo y lo subimos por FILE_UPLOAD (bytes directos). Así no
+    # hace falta verificar el dominio en TikTok, cosa imposible con la URL pública
+    # de Supabase (*.supabase.co no es nuestro). El vídeo diario pesa ~8-13 MB,
+    # bien dentro del límite de un solo chunk (<64 MB).
+    try:
+        with urllib.request.urlopen(video_url, timeout=120) as r:
+            video_bytes = r.read()
+    except Exception as e:
+        print(f"⚠️  TikTok: no se pudo descargar el vídeo ({e})")
+        return False
+    video_size = len(video_bytes)
+    if video_size == 0:
+        print("⚠️  TikTok: el vídeo descargado está vacío")
+        return False
+
+    # 1) init: reservamos la subida y obtenemos upload_url + publish_id
     payload = json.dumps({
         "source_info": {
-            "source": "PULL_FROM_URL",
-            "video_url": video_url,
-            "video_cover_timestamp_ms": 1000,
+            "source":            "FILE_UPLOAD",
+            "video_size":        video_size,
+            "chunk_size":        video_size,
+            "total_chunk_count": 1,
         }
-    }, ensure_ascii=False).encode("utf-8")
-
+    }).encode("utf-8")
     req = urllib.request.Request(
         f"{TIKTOK_API}/post/publish/inbox/video/init/",
         data=payload,
         headers={
-            "Authorization":  f"Bearer {access_token}",
-            "Content-Type":   "application/json; charset=UTF-8",
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type":  "application/json; charset=UTF-8",
         },
         method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=60) as r:
             resp = json.loads(r.read().decode("utf-8"))
-
-        err_code = resp.get("error", {}).get("code", "")
-        if err_code == "ok":
-            publish_id = resp.get("data", {}).get("publish_id", "")
-            print(f"🎵 TikTok (borrador): publish_id={publish_id} — abre la app para publicar")
-            return True
-
-        print(f"⚠️  TikTok: respuesta inesperada {resp}")
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:400]
+        print(f"⚠️  TikTok init falló: HTTP {e.code} · {cuerpo}")
         return False
     except Exception as e:
-        print(f"⚠️  Error TikTok API (no bloquea): {e}")
+        print(f"⚠️  Error TikTok init (no bloquea): {e}")
         return False
+
+    if resp.get("error", {}).get("code", "") != "ok":
+        print(f"⚠️  TikTok init: respuesta inesperada {resp}")
+        return False
+
+    data = resp.get("data", {})
+    upload_url = data.get("upload_url", "")
+    publish_id = data.get("publish_id", "")
+    if not upload_url:
+        print(f"⚠️  TikTok: init sin upload_url {resp}")
+        return False
+
+    # 2) subimos los bytes del vídeo al upload_url (PUT, sin Authorization)
+    put = urllib.request.Request(
+        upload_url,
+        data=video_bytes,
+        headers={
+            "Content-Type":  "video/mp4",
+            "Content-Range": f"bytes 0-{video_size - 1}/{video_size}",
+        },
+        method="PUT",
+    )
+    try:
+        urllib.request.urlopen(put, timeout=180).read()
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:400]
+        print(f"⚠️  TikTok upload falló: HTTP {e.code} · {cuerpo}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error TikTok upload (no bloquea): {e}")
+        return False
+
+    print(f"🎵 TikTok (borrador): publish_id={publish_id} — "
+          f"abre la app (Perfil → Borradores) para publicar")
+    return True
