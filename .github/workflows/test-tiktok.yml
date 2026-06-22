@@ -1,0 +1,29 @@
+name: Test TikTok (borrador sandbox)
+
+# Prueba el pipeline de subida a TikTok: genera un vídeo corto, lo sube a
+# Supabase y lo manda como borrador. Requiere haber corrido antes el OAuth
+# (tiktok-oauth.yml) para tener los tokens en Supabase.
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Subir vídeo de prueba a TikTok (borrador)
+        env:
+          TIKTOK_CLIENT_KEY: sbawre9qt8j0j0hvvm   # client key del sandbox
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_SANDBOX_CLIENT_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          SUPABASE_STORAGE_BUCKET: social
+        run: python3 test_tiktok_subida.py
