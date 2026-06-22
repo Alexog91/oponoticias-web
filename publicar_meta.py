@@ -22,6 +22,7 @@ import json
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
 
 GRAPH = "https://graph.facebook.com/v21.0"
 
@@ -35,20 +36,49 @@ def configurado():
     return bool(FB_PAGE_TOKEN and FB_PAGE_ID)
 
 
+def _leer_error(e):
+    """Extrae el cuerpo JSON de un HTTPError de la Graph API.
+
+    Meta devuelve el motivo real (token caducado, permiso, etc.) en el cuerpo
+    de la respuesta 400/401, que urllib NO incluye en str(e). Sin esto solo
+    veríamos 'HTTP Error 400: Bad Request' sin saber la causa.
+    """
+    try:
+        cuerpo = e.read().decode("utf-8", "replace")
+    except Exception:
+        return str(e)
+    try:
+        err = json.loads(cuerpo).get("error", {})
+        msg  = err.get("message", "")
+        code = err.get("code", "")
+        sub  = err.get("error_subcode", "")
+        return f"HTTP {e.code} · code={code}{f'/{sub}' if sub else ''} · {msg}"
+    except Exception:
+        return f"HTTP {getattr(e, 'code', '?')} · {cuerpo[:300]}"
+
+
 def _post(path, params, timeout=60):
-    """POST a la Graph API. Devuelve dict de respuesta o lanza excepción."""
+    """POST a la Graph API. Devuelve dict de respuesta o lanza excepción.
+
+    En error HTTP relanza con el mensaje real de Meta (no solo el código)."""
     data = urllib.parse.urlencode(params).encode("utf-8")
     req = urllib.request.Request(f"{GRAPH}/{path}", data=data, method="POST")
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(_leer_error(e)) from None
 
 
 def _get(path, params, timeout=30):
     """GET a la Graph API. Devuelve dict de respuesta o lanza excepción."""
     qs = urllib.parse.urlencode(params)
     req = urllib.request.Request(f"{GRAPH}/{path}?{qs}", method="GET")
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        return json.loads(r.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(_leer_error(e)) from None
 
 
 # ── Facebook ────────────────────────────────────────────────────────────────
@@ -247,3 +277,63 @@ def publicar_reel_instagram(video_url, caption):
     except Exception as e:
         print(f"⚠️  Error Instagram Reel API (no bloquea): {e}")
         return False
+
+
+# ── Diagnóstico ────────────────────────────────────────────────────────────────
+def diagnosticar():
+    """Comprueba el estado del token y los IDs sin exponer el secreto.
+
+    Llama a la Graph API con el token actual y reporta:
+      - validez del token (debug_token: tipo, app, caducidad, scopes)
+      - acceso a la página (GET /{FB_PAGE_ID})
+      - acceso a la cuenta de Instagram (GET /{FB_IG_ID})
+    Pensado para ejecutarse en CI: `python3 -c "import publicar_meta; publicar_meta.diagnosticar()"`.
+    """
+    print("=" * 62)
+    print("🔎  Diagnóstico Meta Graph API")
+    print(f"    Versión API: {GRAPH}")
+    print(f"    FB_PAGE_TOKEN: {'definido (' + str(len(FB_PAGE_TOKEN)) + ' chars)' if FB_PAGE_TOKEN else 'VACÍO'}")
+    print(f"    FB_PAGE_ID:    {FB_PAGE_ID or 'VACÍO'}")
+    print(f"    FB_IG_ID:      {FB_IG_ID or 'VACÍO'}")
+    print("=" * 62)
+    if not FB_PAGE_TOKEN:
+        print("❌ Sin FB_PAGE_TOKEN: nada que comprobar.")
+        return
+
+    # 1) ¿El token es válido? debug_token devuelve metadatos del propio token.
+    try:
+        r = _get("debug_token", {"input_token": FB_PAGE_TOKEN,
+                                 "access_token": FB_PAGE_TOKEN})
+        d = r.get("data", {})
+        validez = d.get("is_valid")
+        exp = d.get("expires_at", 0)
+        exp_txt = ("nunca caduca" if exp == 0
+                   else time.strftime('%Y-%m-%d %H:%M', time.gmtime(exp)))
+        print(f"1) Token válido: {validez}")
+        print(f"   Tipo: {d.get('type')} · App ID: {d.get('app_id')}")
+        print(f"   Caduca: {exp_txt}")
+        print(f"   Permisos: {', '.join(d.get('scopes', [])) or '—'}")
+        if d.get("error"):
+            print(f"   ⚠️  error en token: {d['error']}")
+    except Exception as e:
+        print(f"1) ❌ debug_token falló: {e}")
+
+    # 2) ¿Da acceso a la página?
+    try:
+        r = _get(FB_PAGE_ID, {"fields": "id,name", "access_token": FB_PAGE_TOKEN})
+        print(f"2) Página OK: {r.get('name')} ({r.get('id')})")
+    except Exception as e:
+        print(f"2) ❌ Acceso a la página falló: {e}")
+
+    # 3) ¿Da acceso a la cuenta de Instagram?
+    if FB_IG_ID:
+        try:
+            r = _get(FB_IG_ID, {"fields": "id,username", "access_token": FB_PAGE_TOKEN})
+            print(f"3) Instagram OK: @{r.get('username')} ({r.get('id')})")
+        except Exception as e:
+            print(f"3) ❌ Acceso a Instagram falló: {e}")
+    print("=" * 62)
+
+
+if __name__ == "__main__":
+    diagnosticar()
