@@ -7,10 +7,9 @@ name: TikTok OAuth (sandbox)
 # El code caduca en pocos minutos y es de un solo uso: ejecútalo justo después
 # de autorizar en TikTok.
 #
-# Requiere estos GitHub Secrets (valores del SANDBOX, App details → Credentials):
-#   TIKTOK_SANDBOX_CLIENT_KEY
+# Requiere UN GitHub Secret (valor del SANDBOX, App details → Credentials → Client secret):
 #   TIKTOK_SANDBOX_CLIENT_SECRET
-# (SUPABASE_URL y SUPABASE_API_KEY ya existen.)
+# (El client key del sandbox no es secreto y va fijo abajo. SUPABASE ya existen.)
 on:
   workflow_dispatch:
     inputs:
@@ -30,7 +29,7 @@ jobs:
 
       - name: Intercambiar code por tokens y guardarlos en Supabase
         env:
-          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_SANDBOX_CLIENT_KEY }}
+          TIKTOK_CLIENT_KEY: sbawre9qt8j0j0hvvm   # client key del sandbox (no es secreto)
           TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_SANDBOX_CLIENT_SECRET }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
