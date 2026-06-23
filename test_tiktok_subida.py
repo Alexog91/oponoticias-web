@@ -49,7 +49,7 @@ def main():
 
     # 3) Mandar a TikTok como borrador
     print("🎵 Enviando a TikTok (borrador)…")
-    ok = publicar_tiktok.publicar_draft_tiktok(url, "Prueba OpoNoticias")
+    ok = publicar_tiktok.publicar_draft_tiktok(url, "Prueba OpoNoticias", verificar_estado=True)
     print("=" * 60)
     if ok:
         print("✅ TikTok aceptó el vídeo. Ábrelo en la app → Perfil → Borradores.")

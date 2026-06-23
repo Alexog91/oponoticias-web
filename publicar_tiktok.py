@@ -143,12 +143,41 @@ def configurado():
     return bool(CLIENT_KEY and CLIENT_SECRET and SUPABASE_URL and SUPABASE_API_KEY)
 
 
-def publicar_draft_tiktok(video_url, titulo=""):
+def _consultar_estado(publish_id, access_token):
+    """Consulta el estado de un publish_id (status/fetch). Devuelve el dict data o {}."""
+    payload = json.dumps({"publish_id": publish_id}).encode("utf-8")
+    req = urllib.request.Request(
+        f"{TIKTOK_API}/post/publish/status/fetch/",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type":  "application/json; charset=UTF-8",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+        return resp.get("data", {}) or {}
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:300]
+        print(f"⚠️  TikTok status falló: HTTP {e.code} · {cuerpo}")
+        return {}
+    except Exception as e:
+        print(f"⚠️  Error TikTok status: {e}")
+        return {}
+
+
+def publicar_draft_tiktok(video_url, titulo="", verificar_estado=False):
     """
     Sube un vídeo a la bandeja de borradores de TikTok (Content Posting API).
 
     El usuario lo verá en TikTok app → Perfil → Borradores y podrá publicarlo
     en un par de toques. Best-effort: nunca bloquea el flujo principal.
+
+    Si verificar_estado=True, tras subir consulta el endpoint status/fetch
+    varias veces y muestra el estado real (PROCESSING / SEND_TO_USER_INBOX /
+    FAILED + fail_reason). Útil para diagnóstico.
 
     Returns True si la API aceptó el vídeo (el procesamiento es asíncrono).
     """
@@ -238,4 +267,24 @@ def publicar_draft_tiktok(video_url, titulo=""):
 
     print(f"🎵 TikTok (borrador): publish_id={publish_id} — "
           f"abre la app (Perfil → Borradores) para publicar")
+
+    if verificar_estado:
+        print("🔎 Consultando estado real del borrador (status/fetch)…")
+        ultimo = {}
+        for intento in range(6):
+            time.sleep(5)
+            ultimo = _consultar_estado(publish_id, access_token)
+            estado = ultimo.get("status", "?")
+            print(f"   intento {intento + 1}: status={estado} "
+                  f"fail_reason={ultimo.get('fail_reason', '')}")
+            if estado in ("SEND_TO_USER_INBOX", "PUBLISH_COMPLETE", "FAILED"):
+                break
+        estado = ultimo.get("status", "")
+        if estado == "SEND_TO_USER_INBOX":
+            print("✅ Entregado al inbox/borradores del usuario.")
+        elif estado == "FAILED":
+            print(f"❌ TikTok marcó la publicación como FAILED: {ultimo.get('fail_reason', '')}")
+        else:
+            print(f"ℹ️  Estado final: {estado or 'desconocido'} (data completa: {ultimo})")
+
     return True
