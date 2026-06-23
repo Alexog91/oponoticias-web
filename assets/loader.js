@@ -142,9 +142,61 @@ function convocatoriaReal(c) {
   return !RESUMEN_NEGATIVOS.some(n => r.includes(n));
 }
 
+/** Normaliza para comparar (mayúsculas, sin acentos). */
+function _norm(s) {
+  return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase();
+}
+
+// Cuerpos con gran masa de opositores potenciales (oposiciones muy demandadas):
+// muchísima gente interesada aunque convoquen pocas plazas a la vez.
+const CUERPOS_MASIVOS = [
+  'CORREOS',
+  'AUXILIAR ADMINISTRATIVO', 'ADMINISTRATIVO DEL ESTADO', 'ADMINISTRACION GENERAL DEL ESTADO',
+  'CUERPO GENERAL ADMINISTRATIVO', 'CUERPO GENERAL AUXILIAR', 'GESTION DE LA ADMINISTRACION',
+  'TRAMITACION PROCESAL', 'AUXILIO JUDICIAL', 'GESTION PROCESAL',
+  'GUARDIA CIVIL', 'POLICIA NACIONAL', 'POLICIA LOCAL', 'BOMBERO',
+  'AGENCIA TRIBUTARIA', 'AGENTE DE HACIENDA', 'SEGURIDAD SOCIAL',
+  'INSTITUTO NACIONAL DE LA SEGURIDAD',
+  'MAESTRO', 'MAESTRA', 'PROFESOR DE ENSENANZA SECUNDARIA',
+  'CUERPO DE MAESTROS', 'CUERPO DE PROFESORES',
+  'ENFERMER', 'AUXILIAR DE ENFERMERIA', 'TECNICO EN CUIDADOS', 'TCAE', 'CELADOR',
+];
+
+// Interés amplio pero más moderado.
+const CUERPOS_MEDIOS = [
+  'ADMINISTRATIV', 'AUXILIAR', 'TECNICO', 'MEDICO', 'TRABAJADOR SOCIAL',
+  'SUBALTERNO', 'ORDENANZA', 'PEON', 'CONDUCTOR', 'LIMPIEZA', 'JUSTICIA',
+  'ESTATUTARIO', 'SANITARIO', 'EDUCADOR',
+];
+
+// Puestos muy especializados de interés limitado: plazas docentes universitarias,
+// investigación, cátedras… (poca gente potencialmente interesada).
+const CUERPOS_NICHO = [
+  'CUERPOS DOCENTES UNIVERSITARIOS', 'CUERPO DOCENTE UNIVERSITARIO',
+  'PROFESOR TITULAR', 'PROFESORA TITULAR', 'CATEDRATICO', 'CATEDRATICA',
+  'AYUDANTE DOCTOR', 'CONTRATADO DOCTOR', 'PROFESOR CONTRATADO',
+  'PROFESOR DE UNIVERSIDAD', 'TITULAR DE UNIVERSIDAD', 'PROFESOR ASOCIADO',
+  'INVESTIGADOR', 'PROFESOR VISITANTE',
+];
+
 /**
- * Puntúa una convocatoria. La prioridad principal es el NÚMERO DE PLAZAS,
- * seguido de la especificidad del puesto y la variedad de categoría.
+ * Bonus por demanda potencial del cuerpo: cuántas personas podrían estar
+ * interesadas según el tipo de plaza (no solo el nº de plazas convocadas).
+ * Lo nicho (docencia universitaria, investigación) penaliza.
+ */
+function relevanciaCuerpo(c) {
+  const parsed = parsearResumen(c.resumen_claude);
+  const txt = _norm(`${parsed ? parsed.puesto : ''} ${c.categoria || ''} ${c.titulo || ''}`);
+  if (CUERPOS_NICHO.some(k => txt.includes(k)))   return -30;
+  if (CUERPOS_MASIVOS.some(k => txt.includes(k))) return 50;
+  if (CUERPOS_MEDIOS.some(k => txt.includes(k)))  return 20;
+  return 0;
+}
+
+/**
+ * Puntúa una convocatoria por ATRACTIVO para el gran público: combina el
+ * número de plazas convocadas con la demanda potencial del cuerpo (cuántos
+ * posibles interesados hay). La frescura desempata para que la portada rote.
  */
 /** Días transcurridos desde que se registró la convocatoria. */
 function diasDesde(c) {
@@ -158,7 +210,8 @@ function puntuarConvocatoria(c) {
   const parsed = parsearResumen(c.resumen_claude);
 
   let pts = 10;                            // base por ser válida
-  pts += Math.min(numPlazas(parsed.plazas), 60);  // más plazas = más relevante
+  pts += Math.min(numPlazas(parsed.plazas), 80);  // más plazas = más relevante
+  pts += relevanciaCuerpo(c);              // demanda potencial del cuerpo
   if (parsed.puesto.length > 12) pts += 4; // puesto descriptivo
   if (parsed.puesto.length > 22) pts += 3;
   if (c.categoria && c.categoria !== 'Administración') pts += 3; // variedad
@@ -204,8 +257,22 @@ async function cargarPortada() {
 
   /* 2 · Artículo destacado — elige la mejor convocatoria */
   const featured   = seleccionarDestacada(convs);
-  // Para el grid: solo convocatorias válidas, más recientes primero
-  const restantes  = convs.filter(c => c.id !== featured.id && convocatoriaValida(c));
+  // Para el grid: SOLO la última edición del BOE (mismo día) — nunca mezclamos
+  // días. Dentro de ese día, las más ATRACTIVAS (nº de plazas + demanda
+  // potencial del cuerpo). Excluimos la destacada, que ya se muestra arriba.
+  const validas = convs.filter(convocatoriaValida);
+  const tiempos = validas.map(c => parseFecha(c.fecha)).filter(Boolean).map(d => d.getTime());
+  const maxDate = tiempos.length ? new Date(Math.max(...tiempos)) : null;
+  const mismoDia = (c) => {
+    const d = parseFecha(c.fecha);
+    return maxDate && d
+        && d.getFullYear() === maxDate.getFullYear()
+        && d.getMonth()    === maxDate.getMonth()
+        && d.getDate()     === maxDate.getDate();
+  };
+  const restantes  = validas
+    .filter(c => c.id !== featured.id && mismoDia(c))
+    .sort((a, b) => puntuarConvocatoria(b) - puntuarConvocatoria(a));
 
   /* 2a · Hero card (parte superior derecha) */
   const heroCard = document.querySelector('.hero-card');
