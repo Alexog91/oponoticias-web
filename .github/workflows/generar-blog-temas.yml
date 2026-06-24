@@ -12,6 +12,10 @@ on:
         description: 'Regenerar (sobrescribir) los N primeros temas de la lista. Vacío = generar nuevos pendientes.'
         required: false
         default: ''
+      regenerar_slugs:
+        description: 'Regenerar (sobrescribir) solo estos slugs, separados por comas. Tiene prioridad sobre regenerar_n.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -42,6 +46,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_STORAGE_BUCKET: social
           REGENERAR_N: ${{ inputs.regenerar_n }}
+          REGENERAR_SLUGS: ${{ inputs.regenerar_slugs }}
         run: python3 generar_blog_temas.py
 
       - name: Subir borradores generados

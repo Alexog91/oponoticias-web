@@ -402,12 +402,19 @@ def main():
     # Modo regeneración: REGENERAR_N=k rehace los k primeros temas de la lista
     # (sobrescribiendo) en vez de saltar los ya existentes. Útil para refrescar
     # una tanda con el prompt actualizado.
+    regen_slugs = os.environ.get("REGENERAR_SLUGS", "").strip()
     regen_n = os.environ.get("REGENERAR_N", "").strip()
-    overwrite = regen_n.isdigit() and int(regen_n) > 0
-    if overwrite:
+    if regen_slugs:
+        wanted = {s.strip() for s in regen_slugs.split(",") if s.strip()}
+        seleccion = [t for t in TEMAS if t["slug"] in wanted]
+        overwrite = True
+        print(f"♻️  Regeneración por slug de {len(seleccion)} tema(s) (sobrescribe)\n")
+    elif regen_n.isdigit() and int(regen_n) > 0:
+        overwrite = True
         seleccion = TEMAS[:int(regen_n)]
         print(f"♻️  Regeneración forzada de {len(seleccion)} tema(s) (sobrescribe)\n")
     else:
+        overwrite = False
         seleccion = temas_pendientes()
         if not seleccion:
             print("✅ No quedan temas pendientes: todos publicados o programados.")
