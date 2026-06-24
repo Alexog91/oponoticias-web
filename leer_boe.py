@@ -1138,7 +1138,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
   <title>{conv['titulo']} — Convocatoria | OpoNoticias</title>
   <meta name="description" content="{meta_desc}">
   <link rel="canonical" href="{canonical}">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="noindex, follow">
   <meta name="theme-color" content="#5A5047">
   <script>document.documentElement.className += ' js';</script>
 
@@ -1342,6 +1342,8 @@ def regenerar_sitemap(slugs_nuevos):
             ("https://oponoticias.com/", hoy, "daily", "1.0"),
             ("https://oponoticias.com/boe-hoy", hoy, "daily", "0.9"),
             ("https://oponoticias.com/blog", hoy, "weekly", "0.8"),
+            ("https://oponoticias.com/sobre-nosotros", hoy, "monthly", "0.5"),
+            ("https://oponoticias.com/contacto", hoy, "monthly", "0.5"),
             ("https://oponoticias.com/categoria/educacion", hoy, "daily", "0.8"),
             ("https://oponoticias.com/categoria/sanidad", hoy, "daily", "0.8"),
             ("https://oponoticias.com/categoria/justicia", hoy, "daily", "0.8"),
@@ -1352,24 +1354,10 @@ def regenerar_sitemap(slugs_nuevos):
             ("https://oponoticias.com/categoria/tecnica", hoy, "daily", "0.8"),
         ]
 
-        # Recoger todos los slugs históricos ya generados en el repo web
-        slugs_existentes = set()
-        if WEB_CONVOCATORIA_DIR.exists():
-            for f in sorted(WEB_CONVOCATORIA_DIR.glob("*.html")):
-                slugs_existentes.add(f.stem)
-
-        # Añadir también los del día (por si aún no están en disco)
-        for slug in slugs_nuevos:
-            slugs_existentes.add(slug.replace(".html", ""))
-
-        # Eliminar duplicados manteniendo orden determinista
-        for slug in sorted(slugs_existentes):
-            urls.append((
-                f"https://oponoticias.com/convocatoria/{slug}",
-                hoy,
-                "weekly",
-                "0.7"
-            ))
+        # Las fichas de convocatoria se sirven en noindex (contenido fino derivado
+        # del BOE): se mantienen para los usuarios pero NO van al sitemap, para que
+        # el sitio indexado sea el de páginas con valor (blog, categorías, CCAA).
+        # Las CCAA las añade generar_ccaa.actualizar_sitemap tras este paso.
 
         xml_lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
