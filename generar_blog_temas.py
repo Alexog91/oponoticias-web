@@ -207,32 +207,51 @@ def _contar_palabras(md):
     return len(gb._strip_markdown(md or "").split())
 
 
+MAX_PALABRAS = 550   # tope relajado (mejor para SEO que ceñir a 450)
+
+
+def _repeticiones(md):
+    """Detecta deslices torpes: palabra duplicada adyacente o patrón 'X de X'."""
+    txt = gb._strip_markdown(md or "").lower()
+    hits = set()
+    for m in re.finditer(r'\b(\w{3,})\s+\1\b', txt):
+        hits.add(m.group(0))
+    for m in re.finditer(r'\b(\w{4,})\s+de\s+\1\b', txt):
+        hits.add(m.group(0))
+    return sorted(hits)
+
+
 def _problemas(md):
-    """Lista de incumplimientos del formato (palabras, párrafos, negritas)."""
+    """Lista de incumplimientos del formato (palabras, párrafos, negritas, deslices)."""
     probs = []
     n = _contar_palabras(md)
-    if n > 460:
-        probs.append(f"tiene {n} palabras: recórtalo por debajo de 450")
+    if n > MAX_PALABRAS:
+        probs.append(f"tiene {n} palabras: recórtalo por debajo de {MAX_PALABRAS}")
     elif n < 320:
-        probs.append(f"tiene solo {n} palabras: amplíalo hasta unas 400")
+        probs.append(f"tiene solo {n} palabras: amplíalo hasta unas 420")
     cuerpo = re.split(r'##\s*Preguntas', md, flags=re.I)[0]
     bloques = [b.strip() for b in cuerpo.split('\n\n')
                if b.strip() and not b.lstrip().startswith('#')]
     sin_negrita = [b for b in bloques if '**' not in b]
     if sin_negrita:
-        probs.append(f"{len(sin_negrita)} párrafo(s) del cuerpo sin negrita de impacto")
+        probs.append(f"{len(sin_negrita)} párrafo(s) del cuerpo SIN su negrita de impacto "
+                     f"(debe haber una en cada párrafo, incluido el primero)")
     if len(bloques) > 6:
         probs.append(f"{len(bloques)} párrafos: únelos en 4-6 párrafos densos")
+    rep = _repeticiones(md)
+    if rep:
+        probs.append("repeticiones torpes que debes corregir: " + ", ".join(f'\"{r}\"' for r in rep))
     return probs
 
 
-def _refinar(art, tema):
-    """Una pasada de corrección si el artículo incumple el formato (1 reintento)."""
-    probs = _problemas(art.get("contenido", ""))
-    if not probs:
-        return art
-    print(f"  ✏️  Corrigiendo formato: {'; '.join(probs)}")
-    prompt = f"""Has redactado este artículo para el blog de OpoNoticias, pero NO cumple el formato exigido.
+def _refinar(art, tema, max_pasadas=2):
+    """Corrige el formato/redacción mientras incumpla, hasta max_pasadas veces."""
+    for _ in range(max_pasadas):
+        probs = _problemas(art.get("contenido", ""))
+        if not probs:
+            return art
+        print(f"  ✏️  Corrigiendo: {'; '.join(probs)}")
+        prompt = f"""Has redactado este artículo para el blog de OpoNoticias, pero NO cumple el formato exigido.
 
 CONTENIDO ACTUAL (markdown):
 {art['contenido']}
@@ -240,16 +259,18 @@ CONTENIDO ACTUAL (markdown):
 DEFECTOS A CORREGIR: {'; '.join(probs)}.
 
 Reescríbelo respetando TODAS estas reglas a la vez:
-- Máximo 450 palabras EN TOTAL (cuéntalas de verdad; es un límite estricto).
+- Máximo {MAX_PALABRAS} palabras EN TOTAL (cuéntalas de verdad).
 - Entre 4 y 6 párrafos densos de 5 a 7 líneas cada uno (no párrafos cortos sueltos).
-- En CADA párrafo del cuerpo, exactamente UNA frase o expresión en **negrita** de alto impacto.
+- En CADA párrafo del cuerpo, incluido el PRIMERO, exactamente UNA frase o expresión en **negrita** de alto impacto. Ningún párrafo del cuerpo puede quedarse sin negrita.
+- Lenguaje impecable: sin repeticiones torpes ni palabras duplicadas.
 - Conserva el mismo tema, tono, los mismos enlaces markdown ya presentes, la sección "## Preguntas frecuentes" con una sola pregunta (###) y el cierre invitando al Telegram [OpoNoticias](https://t.me/OPONOTICIAS).
 
 DEVUELVE SOLO ESTE JSON (sin ``` ni texto alrededor):
 {{"titulo": "...", "resumen": "...", "contenido": "..."}}"""
-    nuevo = _parsear_json(gb.claude(prompt, max_tokens=2500))
-    if nuevo and nuevo.get("titulo") and nuevo.get("contenido"):
-        return nuevo
+        nuevo = _parsear_json(gb.claude(prompt, max_tokens=2500))
+        if not (nuevo and nuevo.get("titulo") and nuevo.get("contenido")):
+            break
+        art = nuevo
     return art
 
 
