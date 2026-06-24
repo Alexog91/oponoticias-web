@@ -51,7 +51,7 @@ BASE_URL         = "https://oponoticias.com"
 BLOG_DIR         = "blog"
 
 CATEGORIA_TEMAS = "preparacion"   # mapea a "Preparación" en gb.NOMBRE_CATEGORIA
-MAX_POR_EJECUCION = 3
+MAX_POR_EJECUCION = 2   # 2 artículos por ejecución; el workflow corre 1 vez/semana
 
 # ── Banco de temas (metodología y preparación) ──────────────────────────────────
 # slug: estable, sin mes → un único artículo evergreen por tema.
