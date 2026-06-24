@@ -217,8 +217,9 @@ def generar_articulo_tema(tema):
 PALABRA CLAVE principal: "{tema['keyword']}". Debe aparecer en el título, en la primera frase del artículo y en al menos un subtítulo H2.
 
 CÓMO ESCRIBIR (lo más importante):
-- Extensión: ENTRE 350 Y 450 palabras de contenido real. No te pases ni te quedes corto.
-- Divide el texto en párrafos homogéneos de 5 a 7 líneas cada uno. En CADA párrafo marca en **negrita** una sola frase o expresión de alto impacto: la idea más accionable o memorable del párrafo (no marques en negrita palabras sueltas sin fuerza).
+- Extensión: ENTRE 350 Y 450 palabras de contenido real. Es un LÍMITE ESTRICTO: no superes las 450 palabras bajo ningún concepto. Cuenta las palabras antes de devolver el JSON y recorta si te pasas.
+- El cuerpo debe tener ENTRE 4 Y 6 PÁRRAFOS en total (sin contar la sección de preguntas frecuentes). Cada párrafo debe ser DENSO, de 5 a 7 líneas: no escribas párrafos sueltos de 2-3 líneas ni trocees una idea en varios párrafos cortos.
+- En CADA UNO de esos párrafos marca en **negrita** una (y solo una) frase o expresión de alto impacto: la idea más accionable o memorable del párrafo. Si escribes 5 párrafos, habrá exactamente 5 fragmentos en **negrita**. No marques palabras sueltas sin fuerza ni dejes ningún párrafo sin su negrita.
 - Registro profesional y técnico del ámbito de las oposiciones, pero divulgativo y humano: escribes para futuros funcionarios. Usa con precisión la terminología (cuerpos y escalas, grupos A1, A2, B, C1 y C2; oposición, concurso-oposición y concurso; turno libre y promoción interna; bases, temario, fase de oposición y fase de concurso). No uses un término por otro.
 - Empieza con un gancho concreto: un dato, una cifra, una situación real del opositor. NUNCA empieces con "En el mundo actual", "Es importante destacar", "Las oposiciones son una de las mejores opciones".
 - Varía la longitud de las frases. PROHIBIDO usar muletillas de IA: "En resumen", "En definitiva", "Cabe destacar", "Es fundamental", "el mundo de las oposiciones", "embarcarte en", "abre las puertas a", "no es tarea fácil", ni listas de tres adjetivos.
@@ -258,7 +259,27 @@ def _generar_portada(art, slug):
     return url or ""
 
 
-def guardar_borrador(art, tema, fecha_pub, imagen):
+def _upsert_borrador(data):
+    """Inserta o sobrescribe (on_conflict=slug) un borrador. Devuelve True si OK."""
+    import urllib.request, urllib.error, json as _json
+    url = f"{SUPABASE_URL}/rest/v1/articulos_blog?on_conflict=slug"
+    req = urllib.request.Request(
+        url, data=_json.dumps(data).encode(),
+        headers={**gb.HEADERS_SB, "Prefer": "return=minimal,resolution=merge-duplicates"},
+        method="POST",
+    )
+    try:
+        urllib.request.urlopen(req, timeout=15)
+        return True
+    except urllib.error.HTTPError as e:
+        print(f"  ❌  Upsert Supabase: {e.code} — {e.read().decode()[:200]}")
+        return False
+    except Exception as e:
+        print(f"  ❌  Upsert Supabase: {e}")
+        return False
+
+
+def guardar_borrador(art, tema, fecha_pub, imagen, overwrite=False):
     art["slug"] = tema["slug"]
     art["categoria"] = CATEGORIA_TEMAS
     art["fecha_pub"] = fecha_pub.isoformat() + "T08:00:00+00:00"
@@ -274,13 +295,17 @@ def guardar_borrador(art, tema, fecha_pub, imagen):
         "publicado": False,
         "fecha_pub": art["fecha_pub"],
     }
-    status = gb.supabase_post("articulos_blog", data)
-    if status == 409:
-        print(f"  ⚠️  Slug duplicado '{tema['slug']}', saltando…")
-        return False
-    if status not in (200, 201):
-        print(f"  ❌  Error Supabase (status {status})")
-        return False
+    if overwrite:
+        if not _upsert_borrador(data):
+            return False
+    else:
+        status = gb.supabase_post("articulos_blog", data)
+        if status == 409:
+            print(f"  ⚠️  Slug duplicado '{tema['slug']}', saltando…")
+            return False
+        if status not in (200, 201):
+            print(f"  ❌  Error Supabase (status {status})")
+            return False
 
     os.makedirs(BLOG_DIR, exist_ok=True)
     ruta = os.path.join(BLOG_DIR, f"{tema['slug']}.html")
@@ -300,17 +325,26 @@ def main():
         print("❌ Faltan SUPABASE_URL, SUPABASE_API_KEY o ANTHROPIC_API_KEY")
         return
 
-    pendientes = temas_pendientes()
-    if not pendientes:
-        print("✅ No quedan temas pendientes: todos publicados o programados.")
-        return
-
-    print(f"📚 {len(pendientes)} tema(s) pendientes · genero hasta {MAX_POR_EJECUCION}\n")
+    # Modo regeneración: REGENERAR_N=k rehace los k primeros temas de la lista
+    # (sobrescribiendo) en vez de saltar los ya existentes. Útil para refrescar
+    # una tanda con el prompt actualizado.
+    regen_n = os.environ.get("REGENERAR_N", "").strip()
+    overwrite = regen_n.isdigit() and int(regen_n) > 0
+    if overwrite:
+        seleccion = TEMAS[:int(regen_n)]
+        print(f"♻️  Regeneración forzada de {len(seleccion)} tema(s) (sobrescribe)\n")
+    else:
+        seleccion = temas_pendientes()
+        if not seleccion:
+            print("✅ No quedan temas pendientes: todos publicados o programados.")
+            return
+        print(f"📚 {len(seleccion)} tema(s) pendientes · genero hasta {MAX_POR_EJECUCION}\n")
+        seleccion = seleccion[:MAX_POR_EJECUCION]
 
     fechas_usadas = []
     plan = []
 
-    for tema in pendientes[:MAX_POR_EJECUCION]:
+    for tema in seleccion:
         print(f"📂 {tema['tema'][:60]}…")
         art = generar_articulo_tema(tema)
         if not art or not art.get("titulo") or not art.get("contenido"):
@@ -326,7 +360,7 @@ def main():
         print(f"  📝 {art['titulo'][:55]}")
         print(f"  📅 Programado: {fecha_pub.strftime('%A %d/%m/%Y')}")
 
-        if guardar_borrador(art, tema, fecha_pub, imagen):
+        if guardar_borrador(art, tema, fecha_pub, imagen, overwrite=overwrite):
             plan.append({"fecha": fecha_pub, "titulo": art["titulo"], "slug": tema["slug"]})
             print("  ✅ Borrador guardado\n")
         time.sleep(4)

@@ -7,6 +7,11 @@ on:
   schedule:
     - cron: '0 7 * * 3'   # Miércoles 09:00 CEST (UTC+2) = 7:00 UTC
   workflow_dispatch:
+    inputs:
+      regenerar_n:
+        description: 'Regenerar (sobrescribir) los N primeros temas de la lista. Vacío = generar nuevos pendientes.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -36,6 +41,7 @@ jobs:
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           SUPABASE_STORAGE_BUCKET: social
+          REGENERAR_N: ${{ inputs.regenerar_n }}
         run: python3 generar_blog_temas.py
 
       - name: Subir borradores generados
