@@ -56,6 +56,10 @@ NOMBRE_CATEGORIA = {
     "administracion": "Administración", "justicia": "Justicia",
     "seguridad": "Seguridad", "hacienda": "Hacienda",
     "correos": "Correos", "tecnica": "Técnica",
+    # Pista de contenido metodológico (artículos de preparación/estudio).
+    # No es una categoría de convocatorias: no entra en el bucle de generación
+    # por categoría, solo da nombre y miga de pan a los artículos temáticos.
+    "preparacion": "Preparación",
 }
 
 FUENTES_REFERENCIA = [
@@ -305,11 +309,23 @@ def plantilla_articulo(art):
     fecha_iso = art["fecha_pub"][:10]
     fecha_legible = fecha_es(datetime.fromisoformat(art["fecha_pub"].replace("Z", "+00:00")))
 
+    # Portada propia del artículo (1200×630) si está disponible; si no, banner genérico.
+    imagen = art.get("imagen") or ""
+    og_image = imagen or f"{BASE_URL}/social/telegram-banner.png"
+    cover_html = ""
+    if imagen:
+        cover_html = (
+            f'\n        <figure class="article-cover">'
+            f'<img src="{html.escape(imagen)}" alt="{titulo}" '
+            f'width="1200" height="630" loading="eager"></figure>'
+        )
+
     schema = {
         "@context": "https://schema.org",
         "@type": "Article",
         "headline": art["titulo"],
         "description": art["resumen"],
+        "image": og_image,
         "datePublished": fecha_iso,
         "dateModified": fecha_iso,
         "author": {"@type": "Organization", "name": "OpoNoticias"},
@@ -338,15 +354,18 @@ def plantilla_articulo(art):
   <meta property="og:title" content="{titulo}">
   <meta property="og:description" content="{resumen}">
   <meta property="og:url" content="{url}">
-  <meta property="og:image" content="{BASE_URL}/social/telegram-banner.png">
+  <meta property="og:image" content="{og_image}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
   <meta property="og:locale" content="es_ES">
   <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:image" content="{og_image}">
 
   <link rel="icon" type="image/svg+xml" href="../assets/icon-512.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/style.css?v=4">
+  <link rel="stylesheet" href="../assets/style.css?v=5">
 
   <script type="application/ld+json">
   {json.dumps(schema, ensure_ascii=False, indent=2)}
@@ -396,7 +415,7 @@ def plantilla_articulo(art):
           <div class="article-meta">
             <span>Publicado el <b>{fecha_legible}</b></span>
           </div>
-        </header>
+        </header>{cover_html}
         <div class="prose">
 {cuerpo}
         </div>

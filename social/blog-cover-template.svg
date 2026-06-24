@@ -1,0 +1,109 @@
+<svg viewBox="0 0 1200 630"
+     xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="OpoNoticias — portada de artículo">
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#2B2622"/>
+      <stop offset="50%"  stop-color="#473E33"/>
+      <stop offset="100%" stop-color="#2B2622"/>
+    </linearGradient>
+
+    <linearGradient id="ig" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%"   stop-color="#5A5047"/>
+      <stop offset="55%"  stop-color="#9C8A6E"/>
+      <stop offset="100%" stop-color="#7A8B6E"/>
+    </linearGradient>
+    <linearGradient id="ish" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"   stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="ic"><rect width="88" height="88" rx="20"/></clipPath>
+
+    <radialGradient id="o1" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#C4A574" stop-opacity="0.32"/>
+      <stop offset="100%" stop-color="#C4A574" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="o2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#7A8B6E" stop-opacity="0.28"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="wg" gradientUnits="userSpaceOnUse" x1="180" y1="0" x2="380" y2="0">
+      <stop offset="0%"   stop-color="#D9C4A0"/>
+      <stop offset="100%" stop-color="#EFE9E0"/>
+    </linearGradient>
+
+    <linearGradient id="sep" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#C4A574"/>
+      <stop offset="70%"  stop-color="#7A8B6E"/>
+      <stop offset="100%" stop-color="#7A8B6E" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Fondo -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Rejilla sutil -->
+  <g stroke="white" stroke-opacity="0.035" stroke-width="1">
+    <line x1="120"  y1="0" x2="120"  y2="630"/> <line x1="240"  y1="0" x2="240"  y2="630"/>
+    <line x1="360"  y1="0" x2="360"  y2="630"/> <line x1="480"  y1="0" x2="480"  y2="630"/>
+    <line x1="600"  y1="0" x2="600"  y2="630"/> <line x1="720"  y1="0" x2="720"  y2="630"/>
+    <line x1="840"  y1="0" x2="840"  y2="630"/> <line x1="960"  y1="0" x2="960"  y2="630"/>
+    <line x1="1080" y1="0" x2="1080" y2="630"/>
+    <line x1="0" y1="120"  x2="1200" y2="120"/>  <line x1="0" y1="240"  x2="1200" y2="240"/>
+    <line x1="0" y1="360"  x2="1200" y2="360"/>  <line x1="0" y1="480"  x2="1200" y2="480"/>
+  </g>
+
+  <!-- Halos de color -->
+  <ellipse cx="140"  cy="120"  rx="420" ry="320" fill="url(#o1)"/>
+  <ellipse cx="1080" cy="560"  rx="460" ry="340" fill="url(#o2)"/>
+
+  <!-- Logo mark -->
+  <g transform="translate(70, 52)">
+    <rect width="88" height="88" rx="20" fill="url(#ig)"/>
+    <rect width="88" height="88" fill="url(#ish)" clip-path="url(#ic)"/>
+    <text x="44" y="47" text-anchor="middle"
+          font-family="'Merriweather', Georgia, serif"
+          font-size="35" letter-spacing="-1.4">
+      <tspan font-weight="900" fill="#ffffff">O</tspan><tspan font-weight="400" fill="#ffffff">N</tspan>
+    </text>
+    <rect x="24" y="55" width="40" height="4" rx="2" fill="#C4A574"/>
+    <rect x="32" y="63" width="25" height="3" rx="1.5" fill="#ffffff" fill-opacity="0.55"/>
+    <rect x="1.5" y="1.5" width="85" height="85" rx="19"
+          fill="none" stroke="white" stroke-opacity="0.12" stroke-width="2"/>
+  </g>
+
+  <!-- Wordmark -->
+  <text x="180" y="92"
+        font-family="'Merriweather', Georgia, serif" letter-spacing="-1.2">
+    <tspan font-size="38" font-weight="900" fill="url(#wg)">Opo</tspan><tspan
+           font-size="38" font-weight="400" fill="#ffffff" fill-opacity="0.94">Noticias</tspan>
+  </text>
+  <text x="182" y="122"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="16" font-weight="400" fill="#ffffff" fill-opacity="0.55"
+        letter-spacing="0.3">Guías y artículos de oposiciones</text>
+
+  <!-- Pill de categoría -->
+  <rect x="70" y="170" width="520" height="42" rx="21"
+        fill="#7A8B6E" fill-opacity="0.18"
+        stroke="#7A8B6E" stroke-opacity="0.55" stroke-width="1.5"/>
+  <circle cx="100" cy="191" r="5" fill="#AEBE9F"/>
+  <text x="118" y="198"
+        font-family="Inter, -apple-system, Arial, sans-serif"
+        font-size="17" font-weight="700" letter-spacing="1"
+        fill="#AEBE9F">{{CATEGORIA}}</text>
+
+  <!-- Título del artículo (escalado automático, base anclada en y≈500) -->
+  <text x="70" y="{{TITULO_Y}}"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="{{TITULO_SIZE}}" font-weight="900" fill="#ffffff" letter-spacing="-1.8">{{TITULO_TSPANS}}</text>
+
+  <!-- Separador de pie -->
+  <rect x="70" y="548" width="420" height="3" fill="url(#sep)"/>
+  <text x="70" y="592"
+        font-family="'Merriweather', Georgia, serif"
+        font-size="26" font-weight="700" fill="#ffffff" fill-opacity="0.90"
+        letter-spacing="-0.4">oponoticias.com</text>
+</svg>

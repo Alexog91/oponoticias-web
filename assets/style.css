@@ -423,6 +423,9 @@ img, svg { max-width: 100%; display: block; }
 .article-meta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 0.86rem; color: var(--gray); }
 .article-meta b { color: var(--ink); }
 
+.article-cover { margin: 28px 0 0; border-radius: 14px; overflow: hidden; border: 1px solid var(--line); line-height: 0; }
+.article-cover img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 630; object-fit: cover; }
+
 .prose { font-size: 1.06rem; line-height: 1.78; color: #3a3530; }
 .prose > * + * { margin-top: 22px; }
 .prose p { text-align: justify; hyphens: auto; -webkit-hyphens: auto; }

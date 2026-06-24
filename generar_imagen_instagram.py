@@ -153,7 +153,7 @@ def rellenar_template(datos):
     return svg
 
 
-def _render_rsvg(svg_texto, salida_png, tmp):
+def _render_rsvg(svg_texto, salida_png, tmp, width=1080, height=1350):
     """Renderiza con rsvg-convert (librsvg). Determinista, sin navegador.
     Devuelve True si generó el PNG."""
     rsvg = shutil.which("rsvg-convert")
@@ -162,7 +162,7 @@ def _render_rsvg(svg_texto, salida_png, tmp):
     svg_tmp = tmp / "in.svg"
     svg_tmp.write_text(svg_texto, encoding="utf-8")
     res = subprocess.run(
-        [rsvg, "-w", "1080", "-h", "1350", "-o", str(salida_png), str(svg_tmp)],
+        [rsvg, "-w", str(width), "-h", str(height), "-o", str(salida_png), str(svg_tmp)],
         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=60,
     )
     if res.returncode != 0:
@@ -171,7 +171,7 @@ def _render_rsvg(svg_texto, salida_png, tmp):
     return salida_png.exists() and salida_png.stat().st_size > 0
 
 
-def _render_chrome(svg_texto, salida_png, tmp):
+def _render_chrome(svg_texto, salida_png, tmp, width=1080, height=1350):
     """Renderiza con Chrome headless (fallback para Mac local)."""
     chrome = _chrome_bin()
     if not chrome:
@@ -182,7 +182,7 @@ def _render_chrome(svg_texto, salida_png, tmp):
     html_tmp.write_text(
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<style>html,body{margin:0;padding:0;}"
-        "svg{display:block;width:1080px;height:1350px;}</style></head>"
+        f"svg{{display:block;width:{width}px;height:{height}px;}}</style></head>"
         f"<body>{svg_texto}</body></html>",
         encoding="utf-8",
     )
@@ -200,7 +200,7 @@ def _render_chrome(svg_texto, salida_png, tmp):
             "--virtual-time-budget=5000",       # renderiza y sale solo
             "--force-device-scale-factor=1",
             "--screenshot=screenshot.png",
-            "--window-size=1080,1350",
+            f"--window-size={width},{height}",
             "--default-background-color=00000000",
             "--hide-scrollbars",
             f"--user-data-dir={user_dir}",
@@ -231,8 +231,8 @@ def _render_chrome(svg_texto, salida_png, tmp):
     raise RuntimeError(f"Chrome no generó {salida_png}. stderr: {err}")
 
 
-def render_png(svg_texto, salida_png):
-    """Renderiza un SVG (texto) a PNG 1080×1350.
+def render_png(svg_texto, salida_png, width=1080, height=1350):
+    """Renderiza un SVG (texto) a PNG del tamaño indicado (por defecto 1080×1350).
 
     Prefiere rsvg-convert (librsvg) por ser determinista y rápido; si no está
     disponible (p.ej. Mac local sin librsvg), cae a Chrome headless."""
@@ -241,8 +241,8 @@ def render_png(svg_texto, salida_png):
         salida_png.unlink()
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        if not _render_rsvg(svg_texto, salida_png, tmp):
-            _render_chrome(svg_texto, salida_png, tmp)
+        if not _render_rsvg(svg_texto, salida_png, tmp, width, height):
+            _render_chrome(svg_texto, salida_png, tmp, width, height)
 
     if not (salida_png.exists() and salida_png.stat().st_size > 0):
         raise RuntimeError(f"No se pudo generar {salida_png}")
@@ -386,6 +386,70 @@ def generar_y_subir_blog(datos, nombre_remoto):
             return subir_a_storage(jpg, nombre_remoto)
     except Exception as e:
         print(f"⚠️  Imagen blog falló ({nombre_remoto}): {e}")
+        return None
+
+
+# ── Portada apaisada de artículo (1200×630, estándar og:image) ─────────────────
+
+COVER_TEMPLATE_PATH = BASE_DIR / "social" / "blog-cover-template.svg"
+
+
+def _bloque_titulo_cover(titulo):
+    """Título del artículo para la portada apaisada: hasta 3 líneas, base en y≈500."""
+    titulo = (titulo or "Artículo").strip()
+    ancho_util = 1060
+    lineas, size = [], 42
+    for size in (74, 64, 56, 48, 42):
+        char_w = size * 0.56
+        max_chars = max(8, int(ancho_util / char_w))
+        lineas = _wrap_palabras(titulo, max_chars)
+        if len(lineas) <= 3:
+            break
+    if len(lineas) > 3:
+        lineas = lineas[:3]
+        cap = max(8, int(ancho_util / (42 * 0.56)))
+        if len(lineas[2]) > cap:
+            lineas[2] = lineas[2][:cap - 1].rstrip() + "…"
+
+    line_height = round(size * 1.16)
+    n = len(lineas)
+    base_inferior = 500                      # baseline de la última línea
+    y_primera = base_inferior - (n - 1) * line_height
+
+    tspans = []
+    for i, ln in enumerate(lineas):
+        dy = 0 if i == 0 else line_height
+        tspans.append(f'<tspan x="70" dy="{dy}">{_esc(ln)}</tspan>')
+    return size, y_primera, "".join(tspans)
+
+
+def rellenar_cover_template(datos):
+    """datos: {categoria, titulo} → SVG apaisado relleno (str)."""
+    svg = COVER_TEMPLATE_PATH.read_text(encoding="utf-8")
+    categoria = _esc((datos.get("categoria") or "Guía").strip().upper())
+    t_size, t_y, t_tspans = _bloque_titulo_cover(datos.get("titulo", ""))
+    for k, v in {
+        "{{CATEGORIA}}":     categoria,
+        "{{TITULO_SIZE}}":   str(t_size),
+        "{{TITULO_Y}}":      str(t_y),
+        "{{TITULO_TSPANS}}": t_tspans,
+    }.items():
+        svg = svg.replace(k, v)
+    return svg
+
+
+def generar_y_subir_cover(datos, nombre_remoto):
+    """Genera la portada apaisada 1200×630 y la sube a Supabase. Devuelve URL o None."""
+    try:
+        svg = rellenar_cover_template(datos)
+        with tempfile.TemporaryDirectory() as tmp:
+            png = Path(tmp) / "out.png"
+            render_png(svg, png, width=1200, height=630)
+            jpg = Path(tmp) / "out.jpg"
+            _a_jpeg(png, jpg)
+            return subir_a_storage(jpg, nombre_remoto)
+    except Exception as e:
+        print(f"⚠️  Portada de artículo falló ({nombre_remoto}): {e}")
         return None
 
 

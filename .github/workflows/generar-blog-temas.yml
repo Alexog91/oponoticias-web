@@ -1,0 +1,51 @@
+name: Generar Blog · Temas
+
+# Genera artículos temáticos (metodología/preparación) como borradores
+# programados. NO los publica: de eso se encarga publicar_programados.py
+# (job "Generar Blog IA", lunes y jueves), que recoge cualquier borrador vencido.
+on:
+  schedule:
+    - cron: '0 7 * * 3'   # Miércoles 09:00 CEST (UTC+2) = 7:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generar-temas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # rsvg-convert para SVG → PNG (portada del artículo).
+      - name: Instalar dependencias de render
+        continue-on-error: true
+        run: sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
+
+      - name: Instalar Pillow
+        continue-on-error: true
+        run: pip install pillow
+
+      - name: Generar artículos temáticos (borradores)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_STORAGE_BUCKET: social
+        run: python3 generar_blog_temas.py
+
+      - name: Subir borradores generados
+        run: |
+          git config user.name  "OpoNoticias Bot"
+          git config user.email "bot@oponoticias.com"
+          git add blog/ 2>/dev/null || true
+          if git diff --staged --quiet; then
+            echo "Sin cambios nuevos que subir."
+          else
+            git commit -m "Blog: nuevos artículos temáticos (borradores) [skip ci]"
+            git push
+          fi
