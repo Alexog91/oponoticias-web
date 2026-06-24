@@ -171,3 +171,6 @@ remotion/node_modules/
 remotion/out/
 remotion/props.json
 remotion/public/
+
+# Archivo temporal de migración de tokens (NO commitear)
+/tokens.json

@@ -10,7 +10,7 @@ Flujo:
   2. TikTok redirige a https://oponoticias.com/callback?code=XXXX
      (la página puede dar 404 — eso es normal).
   3. El usuario pega el código aquí → se intercambia por access_token + refresh_token.
-  4. Los tokens se guardan en Supabase Storage (social/tiktok/tokens.json).
+  4. Los tokens se guardan en Supabase Storage (bucket PRIVADO private/tiktok/tokens.json).
      De ahí los lee publicar_tiktok.py en cada ejecución diaria.
 """
 
@@ -27,7 +27,8 @@ SCOPE         = "user.info.basic,video.upload"
 
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
-STORAGE_BUCKET   = os.environ.get("SUPABASE_STORAGE_BUCKET", "social")
+# Bucket PRIVADO para los tokens (no el bucket público de imágenes).
+TOKENS_BUCKET    = os.environ.get("SUPABASE_TOKENS_BUCKET", "private")
 TOKENS_KEY       = "tiktok/tokens.json"
 
 
@@ -68,7 +69,7 @@ def save_tokens(tokens):
         return False
 
     payload = json.dumps(tokens, ensure_ascii=False).encode("utf-8")
-    url = f"{SUPABASE_URL}/storage/v1/object/{STORAGE_BUCKET}/{TOKENS_KEY}"
+    url = f"{SUPABASE_URL}/storage/v1/object/{TOKENS_BUCKET}/{TOKENS_KEY}"
     req = urllib.request.Request(
         url,
         data=payload,

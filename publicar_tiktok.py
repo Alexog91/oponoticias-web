@@ -8,7 +8,7 @@ en TikTok app → Perfil → Borradores → pulsa Publicar (5 segundos de trabaj
 Para publicación directa (sin intervención) hay que pasar la Content Posting
 API audit en el portal de desarrolladores de TikTok (1-2 semanas).
 
-Tokens almacenados en Supabase Storage: social/tiktok/tokens.json
+Tokens almacenados en Supabase Storage: bucket PRIVADO private/tiktok/tokens.json
 Se obtienen inicialmente con tiktok_oauth_setup.py y se renuevan solos en
 cada ejecución (access_token = 24h, refresh_token = 365d, ambos rotan).
 
@@ -29,6 +29,10 @@ import urllib.error
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 STORAGE_BUCKET   = os.environ.get("SUPABASE_STORAGE_BUCKET", "social")
+# Los tokens van en un bucket PRIVADO (nunca público): contienen el
+# access_token/refresh_token de TikTok. Se leen de forma autenticada con la
+# service_role key (SUPABASE_API_KEY), que ignora las políticas de Storage.
+TOKENS_BUCKET    = os.environ.get("SUPABASE_TOKENS_BUCKET", "private")
 CLIENT_KEY       = os.environ.get("TIKTOK_CLIENT_KEY", "")
 CLIENT_SECRET    = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 
@@ -39,12 +43,16 @@ TIKTOK_API = "https://open.tiktokapis.com/v2"
 # ── Supabase Storage ───────────────────────────────────────────────────────────
 
 def _leer_tokens():
-    """Lee tokens desde Supabase Storage (bucket público)."""
-    if not SUPABASE_URL:
+    """Lee tokens desde Supabase Storage (bucket privado, lectura autenticada)."""
+    if not (SUPABASE_URL and SUPABASE_API_KEY):
         return None
-    url = f"{SUPABASE_URL}/storage/v1/object/public/{STORAGE_BUCKET}/{TOKENS_KEY}"
+    url = f"{SUPABASE_URL}/storage/v1/object/{TOKENS_BUCKET}/{TOKENS_KEY}"
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {SUPABASE_API_KEY}",
+        "apikey": SUPABASE_API_KEY,
+    })
     try:
-        with urllib.request.urlopen(url, timeout=15) as r:
+        with urllib.request.urlopen(req, timeout=15) as r:
             return json.loads(r.read().decode("utf-8"))
     except Exception as e:
         print(f"⚠️  TikTok: no se pudieron leer tokens de Supabase ({e})")
@@ -56,7 +64,7 @@ def _guardar_tokens(tokens):
     if not SUPABASE_URL or not SUPABASE_API_KEY:
         return
     payload = json.dumps(tokens, ensure_ascii=False).encode("utf-8")
-    url = f"{SUPABASE_URL}/storage/v1/object/{STORAGE_BUCKET}/{TOKENS_KEY}"
+    url = f"{SUPABASE_URL}/storage/v1/object/{TOKENS_BUCKET}/{TOKENS_KEY}"
     req = urllib.request.Request(
         url,
         data=payload,
