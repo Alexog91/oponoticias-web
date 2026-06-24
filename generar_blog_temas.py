@@ -203,6 +203,56 @@ def _parsear_json(respuesta):
     return None
 
 
+def _contar_palabras(md):
+    return len(gb._strip_markdown(md or "").split())
+
+
+def _problemas(md):
+    """Lista de incumplimientos del formato (palabras, párrafos, negritas)."""
+    probs = []
+    n = _contar_palabras(md)
+    if n > 460:
+        probs.append(f"tiene {n} palabras: recórtalo por debajo de 450")
+    elif n < 320:
+        probs.append(f"tiene solo {n} palabras: amplíalo hasta unas 400")
+    cuerpo = re.split(r'##\s*Preguntas', md, flags=re.I)[0]
+    bloques = [b.strip() for b in cuerpo.split('\n\n')
+               if b.strip() and not b.lstrip().startswith('#')]
+    sin_negrita = [b for b in bloques if '**' not in b]
+    if sin_negrita:
+        probs.append(f"{len(sin_negrita)} párrafo(s) del cuerpo sin negrita de impacto")
+    if len(bloques) > 6:
+        probs.append(f"{len(bloques)} párrafos: únelos en 4-6 párrafos densos")
+    return probs
+
+
+def _refinar(art, tema):
+    """Una pasada de corrección si el artículo incumple el formato (1 reintento)."""
+    probs = _problemas(art.get("contenido", ""))
+    if not probs:
+        return art
+    print(f"  ✏️  Corrigiendo formato: {'; '.join(probs)}")
+    prompt = f"""Has redactado este artículo para el blog de OpoNoticias, pero NO cumple el formato exigido.
+
+CONTENIDO ACTUAL (markdown):
+{art['contenido']}
+
+DEFECTOS A CORREGIR: {'; '.join(probs)}.
+
+Reescríbelo respetando TODAS estas reglas a la vez:
+- Máximo 450 palabras EN TOTAL (cuéntalas de verdad; es un límite estricto).
+- Entre 4 y 6 párrafos densos de 5 a 7 líneas cada uno (no párrafos cortos sueltos).
+- En CADA párrafo del cuerpo, exactamente UNA frase o expresión en **negrita** de alto impacto.
+- Conserva el mismo tema, tono, los mismos enlaces markdown ya presentes, la sección "## Preguntas frecuentes" con una sola pregunta (###) y el cierre invitando al Telegram [OpoNoticias](https://t.me/OPONOTICIAS).
+
+DEVUELVE SOLO ESTE JSON (sin ``` ni texto alrededor):
+{{"titulo": "...", "resumen": "...", "contenido": "..."}}"""
+    nuevo = _parsear_json(gb.claude(prompt, max_tokens=2500))
+    if nuevo and nuevo.get("titulo") and nuevo.get("contenido"):
+        return nuevo
+    return art
+
+
 def generar_articulo_tema(tema):
     año = datetime.now().year
     nombre_pilar = gb.NOMBRE_CATEGORIA.get(tema["pilar"], "Administración")
@@ -242,7 +292,10 @@ DEVUELVE SOLO ESTE JSON (sin ```, sin texto antes ni después):
   "contenido": "Artículo completo en markdown ({año})"
 }}"""
 
-    return _parsear_json(gb.claude(prompt, max_tokens=2500))
+    art = _parsear_json(gb.claude(prompt, max_tokens=2500))
+    if not art or not art.get("contenido"):
+        return art
+    return _refinar(art, tema)
 
 
 # ── Guardado ─────────────────────────────────────────────────────────────────
