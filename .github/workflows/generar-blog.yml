@@ -61,5 +61,10 @@ jobs:
             echo "Sin cambios nuevos que subir."
           else
             git commit -m "Blog IA: nuevos artículos generados [skip ci]"
-            git push
+            # Reintenta integrando avances del remoto (evita carrera con otros pushes).
+            for intento in 1 2 3; do
+              git pull --rebase --autostash origin main || true
+              if git push; then echo "push OK"; break; fi
+              echo "push rechazado, reintento $intento"; sleep 3
+            done
           fi
