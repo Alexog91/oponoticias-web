@@ -36,13 +36,13 @@ def leer_boe_rss():
     print("🔄 Leyendo RSS del BOE...")
 
     headers = {'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'}
-    max_reintentos = 3
-    esperas = [3, 5, 10]  # segundos de espera entre reintentos
+    max_reintentos = 5
+    esperas = [5, 10, 20, 30]  # segundos de espera entre reintentos
 
     for intento in range(max_reintentos):
         try:
             req = urllib.request.Request(RSS_URL, headers=headers)
-            with urllib.request.urlopen(req, timeout=15) as response:
+            with urllib.request.urlopen(req, timeout=30) as response:
                 xml_data = response.read()
 
             root = ET.fromstring(xml_data)
