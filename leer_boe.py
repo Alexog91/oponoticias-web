@@ -429,8 +429,13 @@ def guardar_en_supabase(conv):
 
     try:
         url = f"{SUPABASE_URL}/rest/v1/convocatorias"
+        # Authorization: Bearer es OBLIGATORIO para que PostgREST autentique
+        # como service_role y el INSERT pueda saltarse las políticas RLS de la
+        # tabla. Sin esta cabecera el rol es 'anon' y el RLS (solo lectura)
+        # rechaza el alta con 401/42501 ("violates row-level security policy").
         headers = {
             'apikey': SUPABASE_API_KEY,
+            'Authorization': f'Bearer {SUPABASE_API_KEY}',
             'Content-Type': 'application/json',
             'Prefer': 'return=minimal'
         }
