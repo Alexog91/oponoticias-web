@@ -1,0 +1,76 @@
+name: Procesar hoy SIN redes (recuperación)
+
+# Reprocesa las convocatorias del BOE de hoy cuando YA se anunciaron en redes
+# (p. ej. tras un fallo de Supabase que impidió guardarlas). Hace:
+#   1. leer_boe.py con SKIP_SOCIAL=1 → guarda en Supabase + genera fichas HTML,
+#      SIN publicar en Telegram/Facebook/Instagram/X (evita duplicados).
+#   2. generar_ccaa.py + generar_categorias.py → actualiza páginas de la web.
+#   3. enviar_newsletter.py → envía la campaña de Brevo del día.
+# Ejecución manual únicamente.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  procesar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run leer_boe.py (SKIP_SOCIAL)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEB_REPO_PATH: '.'
+          SKIP_SOCIAL: '1'
+        run: python3 leer_boe.py
+
+      - name: Run generar_ccaa.py
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WEB_REPO_PATH: '.'
+        run: python3 generar_ccaa.py
+
+      - name: Run generar_categorias.py
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          WEB_REPO_PATH: '.'
+        run: python3 generar_categorias.py
+
+      - name: Commit y push páginas estáticas
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add convocatoria/ ccaa/ categoria/ sitemap.xml assets/style.css
+          git diff --staged --quiet || git commit -m "Recuperación: convocatorias de hoy + páginas estáticas [skip ci]"
+          git pull --no-edit --rebase origin main || true
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/Alexog91/oponoticias-web.git HEAD:main || true
+
+      - name: Run enviar_newsletter.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          BREVO_API_KEY: ${{ secrets.BREVO_API_KEY }}
+          BREVO_LIST_ID: ${{ secrets.BREVO_LIST_ID }}
+          BREVO_SENDER_EMAIL: info@oponoticias.com
+          BREVO_SENDER_NAME: OpoNoticias
+        run: python3 enviar_newsletter.py

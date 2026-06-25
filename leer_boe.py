@@ -1461,50 +1461,61 @@ if __name__ == "__main__":
             if slug:
                 slugs_generados.append(slug)
 
-    # ── 2) Telegram: enviar SOLO las que aún no se hayan enviado (retry-safe) ──
-    # Desacoplado del guardado: si un envío falla, el flag queda en false y se
-    # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
-    print("\n📤 Telegram + Facebook — enviando convocatorias pendientes…")
-    # X (Buffer) solo para las convocatorias con más plazas del día: el plan
-    # gratuito de Buffer se satura y X corta el token por spam si se publica
-    # demasiado. Telegram, web y Facebook reciben todas; X solo las destacadas.
-    MAX_X = 5
-    top_x = {c['enlace'] for c in sorted(convocatorias, key=_plazas_num, reverse=True)[:MAX_X]}
+    # ── 2) Redes sociales (Telegram, Facebook, Instagram, X, vídeo) ───────────
+    # SKIP_SOCIAL=1 → guarda en Supabase y genera HTML/web pero NO publica en
+    # redes. Sirve para reprocesar un día cuyas convocatorias YA se anunciaron
+    # (p. ej. tras un fallo de Supabase que impidió guardarlas) sin duplicar los
+    # posts. Además marca las del día como ya enviadas, para que una ejecución
+    # normal posterior tampoco las reenvíe.
     enviadas_tg = 0
-    enviadas_hoy = []
-    for conv in convocatorias:
-        if telegram_ya_enviado(conv['enlace']):
-            print(f"⏭️  Ya estaba en Telegram: {conv['titulo'][:50]}...")
-            continue
-        if enviar_a_telegram(conv):
+    if os.environ.get('SKIP_SOCIAL'):
+        print("\n⏭️  SKIP_SOCIAL activo: NO se publica en redes (solo Supabase + web).")
+        for conv in convocatorias:
             marcar_telegram_enviado(conv['enlace'])
-            # X (Buffer/Make) solo para las destacadas del día.
-            if conv['enlace'] in top_x:
-                enviar_tweet_x(conv)
-            enviadas_hoy.append(conv)
-            enviadas_tg += 1
-            time.sleep(2)
+    else:
+        # ── Telegram: enviar SOLO las que aún no se hayan enviado (retry-safe) ──
+        # Desacoplado del guardado: si un envío falla, el flag queda en false y se
+        # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
+        print("\n📤 Telegram + Facebook — enviando convocatorias pendientes…")
+        # X (Buffer) solo para las convocatorias con más plazas del día: el plan
+        # gratuito de Buffer se satura y X corta el token por spam si se publica
+        # demasiado. Telegram, web y Facebook reciben todas; X solo las destacadas.
+        MAX_X = 5
+        top_x = {c['enlace'] for c in sorted(convocatorias, key=_plazas_num, reverse=True)[:MAX_X]}
+        enviadas_hoy = []
+        for conv in convocatorias:
+            if telegram_ya_enviado(conv['enlace']):
+                print(f"⏭️  Ya estaba en Telegram: {conv['titulo'][:50]}...")
+                continue
+            if enviar_a_telegram(conv):
+                marcar_telegram_enviado(conv['enlace'])
+                # X (Buffer/Make) solo para las destacadas del día.
+                if conv['enlace'] in top_x:
+                    enviar_tweet_x(conv)
+                enviadas_hoy.append(conv)
+                enviadas_tg += 1
+                time.sleep(2)
 
-    # ── 2a bis) Facebook: posts AGRUPADOS (máx. 6/día) con TODAS las del día ──
-    # Reemplaza el antiguo 1-post-por-convocatoria (~32/día) que provocó el
-    # bloqueo de la cuenta de desarrollador por spam/automatización.
-    publicar_facebook_agrupado(enviadas_hoy)
+        # ── 2a bis) Facebook: posts AGRUPADOS (máx. 6/día) con TODAS las del día ──
+        # Reemplaza el antiguo 1-post-por-convocatoria (~32/día) que provocó el
+        # bloqueo de la cuenta de desarrollador por spam/automatización.
+        publicar_facebook_agrupado(enviadas_hoy)
 
-    # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
-    publicar_carrusel_instagram(enviadas_hoy)
+        # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
+        publicar_carrusel_instagram(enviadas_hoy)
 
-    # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
-    enviar_resumen_privado(enviadas_hoy)
+        # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
+        enviar_resumen_privado(enviadas_hoy)
 
-    # ── 2c bis) Tweet-resumen del día en X (mismo top que el de WhatsApp) ──────
-    publicar_tweet_resumen(enviadas_hoy)
+        # ── 2c bis) Tweet-resumen del día en X (mismo top que el de WhatsApp) ──────
+        publicar_tweet_resumen(enviadas_hoy)
 
-    # ── 2d) Vídeo diario para TikTok / IG Reels / FB Reels (best-effort) ──────
-    try:
-        import generar_video_diario as gvd
-        gvd.enviar_video_redes(enviadas_hoy)
-    except Exception as e:
-        print(f"⚠️  Vídeo diario: {e}")
+        # ── 2d) Vídeo diario para TikTok / IG Reels / FB Reels (best-effort) ──────
+        try:
+            import generar_video_diario as gvd
+            gvd.enviar_video_redes(enviadas_hoy)
+        except Exception as e:
+            print(f"⚠️  Vídeo diario: {e}")
 
     # ── 3) Sitemap + push a GitHub si hay HTML nuevos ─────────────────────────
     if slugs_generados:
