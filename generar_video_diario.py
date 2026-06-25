@@ -78,8 +78,9 @@ def _num_es(n, fem=True):
 
 def _limpiar_puesto_narr(puesto):
     """Elimina variantes de género (enfermero/a → enfermero) para que el TTS no diga 'barra'."""
-    # "palabra/a" o "palabra/as" → queda la forma masculina
-    return re.sub(r"/[aeo]s?\b", "", puesto).strip()
+    # "palabra/a" o "palabra/as" → queda la forma base. IGNORECASE porque los
+    # puestos suelen venir en MAYÚSCULAS (ENFERMERO/A) y antes no se limpiaban.
+    return re.sub(r"/[aeo]s?\b", "", puesto, flags=re.IGNORECASE).strip()
 
 
 def _icono(puesto):
@@ -139,8 +140,16 @@ def construir_guion(convocatorias, max_items=4):
         m = re.search(r"\d+", plazas)
         num_txt = m.group() if m else ""
         puesto_narr = _limpiar_puesto_narr(puesto)
-        narr = (f"{_num_es(num_txt)} plazas de {puesto_narr}, en {lugar}." if num_txt
-                else f"{puesto_narr}, en {lugar}.")
+        # Ámbito: "Nacional/Estatal" → "de ámbito nacional" (si no, el TTS lee la
+        # barra como "barra" y suena mal). El resto de comunidades → ", en {CA}".
+        es_nacional = lugar.strip().lower() in ("nacional/estatal", "nacional", "estatal")
+        lugar_frase = " de ámbito nacional" if es_nacional else f", en {lugar}"
+        if num_txt:
+            # Singular cuando es 1 plaza ("una plaza"), plural en el resto.
+            palabra = "plaza" if num_txt == "1" else "plazas"
+            narr = f"{_num_es(num_txt)} {palabra} de {puesto_narr}{lugar_frase}."
+        else:
+            narr = f"{puesto_narr}{lugar_frase}."
         escenas.append({
             "kind": "item",
             "narr": narr,
