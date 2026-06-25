@@ -231,5 +231,9 @@ if __name__ == "__main__":
     print(f"\n📧 Enviando newsletter de {HOY}…")
     convocatorias = obtener_convocatorias_hoy()
 
+    if not convocatorias:
+        print("  ℹ️  Sin convocatorias hoy — no se envía newsletter (evita email vacío).")
+        raise SystemExit(0)
+
     enviar_campana(convocatorias)
     print("✅ Newsletter enviada correctamente.")
