@@ -1,0 +1,57 @@
+name: Diagnóstico Telegram (resumen admin)
+
+# Comprueba por qué falla el resumen privado al admin SIN exponer el token.
+# 1) getMe → confirma el bot. 2) sendMessage en TEXTO PLANO a TELEGRAM_ADMIN_CHAT_ID
+# (aísla si el chat_id es válido, sin depender del parseo HTML). 3) getUpdates →
+# lista los chat_id que el bot ha visto (para localizar el chat_id correcto del admin).
+on:
+  workflow_dispatch:
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Probar Telegram admin
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, urllib.parse, urllib.error
+          tok = os.environ.get("TELEGRAM_TOKEN","")
+          admin = os.environ.get("TELEGRAM_ADMIN_CHAT_ID","")
+          print("ADMIN_CHAT_ID presente:", bool(admin), "· longitud:", len(admin))
+
+          def call(method, data=None):
+              url = f"https://api.telegram.org/bot{tok}/{method}"
+              body = urllib.parse.urlencode(data).encode() if data else None
+              req = urllib.request.Request(url, data=body)
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      return r.status, json.loads(r.read())
+              except urllib.error.HTTPError as e:
+                  return e.code, json.loads(e.read() or b"{}")
+
+          s, me = call("getMe")
+          print("getMe:", s, "·", me.get("result",{}).get("username"))
+
+          # Envío en TEXTO PLANO (sin parse_mode): aísla la validez del chat_id
+          s, resp = call("sendMessage", {
+              "chat_id": admin,
+              "text": "🔧 OpoNoticias · diagnóstico: si recibes esto, tu chat_id es correcto.",
+          })
+          print("sendMessage(texto plano) →", s, "·", json.dumps(resp, ensure_ascii=False)[:300])
+
+          # Chat ids que el bot ha visto recientemente (para encontrar el correcto)
+          s, upd = call("getUpdates")
+          vistos = set()
+          for u in upd.get("result", []):
+              for k in ("message","edited_message","channel_post"):
+                  c = (u.get(k) or {}).get("chat")
+                  if c:
+                      vistos.add(f"{c.get('id')} ({c.get('type')}, {c.get('title') or c.get('username') or c.get('first_name')})")
+          print("Chats vistos por el bot:", vistos or "ninguno (manda un mensaje al bot y reintenta)")
+          PY
