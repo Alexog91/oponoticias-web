@@ -604,7 +604,11 @@ def enviar_resumen_privado(convocatorias_enviadas):
         partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
         plazas = partes[0] if partes else "?"
         puesto  = partes[1] if len(partes) > 1 else limpiar_titulo(conv['titulo'])[:45]
-        lineas.append(f"• {plazas} — {puesto[:50]}")
+        # Escapar para parse_mode=HTML: un '&', '<' o '>' en el puesto rompía el
+        # envío con HTTP 400 (el envío al canal sí escapaba; este no).
+        plazas = html_lib.escape(plazas)
+        puesto = html_lib.escape(puesto[:50])
+        lineas.append(f"• {plazas} — {puesto}")
     n = len(convocatorias_enviadas)
     fecha_str = datetime.now().strftime("%d/%m/%Y")
     mensaje = (
@@ -634,6 +638,12 @@ def enviar_resumen_privado(convocatorias_enviadas):
         )
         urllib.request.urlopen(req, timeout=10).read()
         print("✅ Resumen diario enviado al admin por privado")
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:300]
+        print(f"⚠️  Resumen privado falló: HTTP {e.code} · {cuerpo}")
+        if e.code == 400 and "chat not found" in cuerpo:
+            print("    → TELEGRAM_ADMIN_CHAT_ID incorrecto o el admin no ha abierto "
+                  "@OPONOTICIAS_BOT (debe pulsar Start y usar su chat_id personal).")
     except Exception as e:
         print(f"⚠️  Resumen privado: {e}")
 
