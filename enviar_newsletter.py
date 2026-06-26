@@ -70,6 +70,35 @@ def brevo_post(path, body):
         return e.code, json.loads(e.read() or b"{}")
 
 
+def brevo_get(path):
+    url = f"https://api.brevo.com/v3/{path}"
+    headers = {"api-key": BREVO_API_KEY, "Accept": "application/json"}
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            return resp.status, json.loads(resp.read() or b"{}")
+    except urllib.request.HTTPError as e:
+        return e.code, json.loads(e.read() or b"{}")
+
+
+def campana_de_hoy_ya_existe():
+    """True si ya existe en Brevo una campaña 'Newsletter {HOY}'. Idempotencia:
+    evita que un segundo disparo del workflow el mismo día reenvíe el correo."""
+    nombre = f"Newsletter {HOY}"
+    status, data = brevo_get("emailCampaigns?type=classic&sort=desc&limit=100")
+    if status not in (200, 201):
+        # No se pudo comprobar. El cron ya es único (causa raíz resuelta), así
+        # que priorizamos no perder el envío diario y continuamos.
+        print(f"  ⚠️  No se pudo comprobar campañas existentes ({status}); continúo.")
+        return False
+    for c in (data.get("campaigns") or []):
+        if (c.get("name") or "") == nombre:
+            print(f"  ⏭️  Ya existe la campaña '{nombre}' (estado: {c.get('status')}). "
+                  f"No se reenvía (idempotencia).")
+            return True
+    return False
+
+
 def obtener_convocatorias_hoy():
     # `fecha` se guarda como string RFC ("Sat, 13 Jun 2026 00:00:00 +0200"),
     # no como ISO, así que no se puede filtrar con eq.{HOY}. Traemos las filas
@@ -233,6 +262,9 @@ if __name__ == "__main__":
 
     if not convocatorias:
         print("  ℹ️  Sin convocatorias hoy — no se envía newsletter (evita email vacío).")
+        raise SystemExit(0)
+
+    if campana_de_hoy_ya_existe():
         raise SystemExit(0)
 
     enviar_campana(convocatorias)

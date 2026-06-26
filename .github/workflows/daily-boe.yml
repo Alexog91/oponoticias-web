@@ -5,14 +5,12 @@ name: Daily BOE Check
 # Todo en un único repo: scripts + workflows + web juntos.
 on:
   schedule:
-    # Ejecución principal + 2 de respaldo. Si el BOE no responde a las 7:00
-    # (timeout transitorio del RSS), las de las 8:00/9:00 recogen las
-    # convocatorias automáticamente — sin intervención manual. NO duplica:
-    # el alta da 409 "ya existe" y telegram_ya_enviado evita reenviar a redes,
-    # así que una reejecución tras un día ya procesado es un no-op en redes.
+    # UNA sola ejecución diaria. NO añadir crons de respaldo: el newsletter se
+    # encadena con workflow_run a "Daily BOE Check", así que cada ejecución
+    # extra dispara OTRO correo de Brevo (el 26 jun 2026 hubo 3 ejecuciones →
+    # 3 correos + vídeos/posts duplicados). La resiliencia ante un timeout del
+    # BOE la dan los reintentos internos de leer_boe_rss() (5 intentos, ~3,5 min).
     - cron: '0 5 * * 1-6'  # 7:00 CEST (UTC+2) · lunes-sábado (el BOE no publica domingos)
-    - cron: '0 6 * * 1-6'  # 8:00 CEST · respaldo si la de las 7:00 falló
-    - cron: '0 7 * * 1-6'  # 9:00 CEST · segundo respaldo
   workflow_dispatch:        # Permite ejecución manual desde GitHub UI
 
 permissions:
