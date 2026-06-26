@@ -1501,26 +1501,37 @@ if __name__ == "__main__":
                 enviadas_tg += 1
                 time.sleep(2)
 
-        # ── 2a bis) Facebook: posts AGRUPADOS (máx. 6/día) con TODAS las del día ──
-        # Reemplaza el antiguo 1-post-por-convocatoria (~32/día) que provocó el
-        # bloqueo de la cuenta de desarrollador por spam/automatización.
-        publicar_facebook_agrupado(enviadas_hoy)
+        # ── Resúmenes diarios (una vez al día) ────────────────────────────────────
+        # Facebook agrupado, carrusel IG, resumen admin/WhatsApp, tweet-resumen y
+        # vídeo son publicaciones ÚNICAS del día. Solo se generan cuando hay
+        # convocatorias realmente nuevas (nuevas > 0); así, si el workflow se
+        # vuelve a ejecutar el mismo día (re-trigger manual), NO se duplican
+        # posts ni vídeos. El envío granular a Telegram (arriba) sí es retry-safe
+        # por convocatoria (flag telegram_enviado), independiente de este bloque.
+        if nuevas > 0:
+            # ── 2a bis) Facebook: posts AGRUPADOS (máx. 6/día) con TODAS las del día ──
+            # Reemplaza el antiguo 1-post-por-convocatoria (~32/día) que provocó el
+            # bloqueo de la cuenta de desarrollador por spam/automatización.
+            publicar_facebook_agrupado(enviadas_hoy)
 
-        # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
-        publicar_carrusel_instagram(enviadas_hoy)
+            # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
+            publicar_carrusel_instagram(enviadas_hoy)
 
-        # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
-        enviar_resumen_privado(enviadas_hoy)
+            # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
+            enviar_resumen_privado(enviadas_hoy)
 
-        # ── 2c bis) Tweet-resumen del día en X (mismo top que el de WhatsApp) ──────
-        publicar_tweet_resumen(enviadas_hoy)
+            # ── 2c bis) Tweet-resumen del día en X (mismo top que el de WhatsApp) ──────
+            publicar_tweet_resumen(enviadas_hoy)
 
-        # ── 2d) Vídeo diario para TikTok / IG Reels / FB Reels (best-effort) ──────
-        try:
-            import generar_video_diario as gvd
-            gvd.enviar_video_redes(enviadas_hoy)
-        except Exception as e:
-            print(f"⚠️  Vídeo diario: {e}")
+            # ── 2d) Vídeo diario para TikTok / IG Reels / FB Reels (best-effort) ──────
+            try:
+                import generar_video_diario as gvd
+                gvd.enviar_video_redes(enviadas_hoy)
+            except Exception as e:
+                print(f"⚠️  Vídeo diario: {e}")
+        else:
+            print("ℹ️  Sin convocatorias nuevas: se omiten resúmenes diarios "
+                  "(Facebook/Instagram/X/vídeo) para no duplicar.")
 
     # ── 3) Sitemap + push a GitHub si hay HTML nuevos ─────────────────────────
     if slugs_generados:
