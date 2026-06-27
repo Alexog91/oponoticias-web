@@ -1170,7 +1170,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="../assets/style.css?v=4">
+  <link rel="stylesheet" href="../assets/style.css?v=6">
 
   <script type="application/ld+json">
   {{
@@ -1334,7 +1334,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     </div>
   </footer>
 
-  <script src="../assets/script.js" defer></script>
+  <script src="../assets/script.js?v=5" defer></script>
 </body>
 </html>"""
 
