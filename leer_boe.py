@@ -1007,6 +1007,71 @@ def publicar_facebook_agrupado(convocatorias, max_posts=6):
           f"({len(convs)} convocatorias del día).")
 
 
+def publicar_facebook_boletin(convocatorias):
+    """Publica UN post-boletín diario en Facebook con enlace a la web (boe-hoy).
+
+    Sustituye a `publicar_facebook_agrupado` (6 posts de imagen): un único post de
+    ENLACE con el total del día + algunas convocatorias, que lleva tráfico a
+    oponoticias.com/boe-hoy (Facebook genera el preview clicable a partir del
+    og:image de la página). Como no adjunta tarjeta de imagen, el bug del "1 plaza"
+    desaparece. Best-effort: nunca bloquea el flujo principal.
+    """
+    import publicar_meta
+    if not convocatorias:
+        return False
+    if not publicar_meta.configurado():
+        print("📘 Facebook: API directa no configurada, se omite el boletín.")
+        return False
+
+    _MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio",
+                    "agosto", "septiembre", "octubre", "noviembre", "diciembre"]
+    hoy = datetime.now()
+    fecha = f"{hoy.day} de {_MESES_LARGO[hoy.month - 1]}"
+    n = len(convocatorias)
+
+    # Hasta 3 ejemplos, deduplicados por (puesto, lugar), de más a menos plazas.
+    vistas, ejemplos = set(), []
+    for conv in sorted(convocatorias, key=_plazas_num, reverse=True):
+        partes = [p.strip() for p in (conv.get('resumen_ia') or '').split(' - ')]
+        puesto = partes[1] if len(partes) > 1 and partes[1] else "Convocatoria"
+        lugar = conv.get('comunidad_autonoma') or "España"
+        clave = (puesto.lower(), lugar.lower())
+        if clave in vistas:
+            continue
+        vistas.add(clave)
+        num = _plazas_num(conv)
+        es_nac = (lugar or "").strip().lower() in ("nacional/estatal", "nacional", "estatal")
+        sitio = "Estatal" if es_nac else lugar
+        if num > 1:
+            num_fmt = f"{num:,}".replace(",", ".")
+            ejemplos.append(f"🎯 {puesto} · {sitio} · {num_fmt} plazas")
+        else:
+            ejemplos.append(f"🎯 {puesto} · {sitio}")
+        if len(ejemplos) == 3:
+            break
+
+    lineas = [
+        f"📋 El BOE de hoy · {fecha}",
+        f"{n} convocatoria{'s' if n != 1 else ''} nueva{'s' if n != 1 else ''} de empleo público.",
+    ]
+    if ejemplos:
+        lineas += ["", "Algunas de hoy:", *ejemplos]
+    lineas += [
+        "",
+        "👉 Todas, con enlace al BOE y filtro por tu comunidad:",
+        "🔗 oponoticias.com/boe-hoy",
+        "",
+        "📩 Y recíbelas en tu email + Calendario del Opositor 2026 gratis.",
+        "",
+        "#oposiciones #BOE #empleopublico #opositar",
+    ]
+    mensaje = "\n".join(lineas)
+
+    ok = publicar_meta.publicar_enlace_facebook(mensaje, link_url="https://oponoticias.com/boe-hoy")
+    print(f"📘 Facebook: boletín diario {'publicado' if ok else 'falló'} ({n} convocatorias).")
+    return ok
+
+
 def publicar_carrusel_instagram(convocatorias, max_slides=3):
     """Genera un carrusel diario (2-3 imágenes) y lo envía a Make.com → Instagram.
 
@@ -1669,10 +1734,12 @@ if __name__ == "__main__":
         # posts ni vídeos. El envío granular a Telegram (arriba) sí es retry-safe
         # por convocatoria (flag telegram_enviado), independiente de este bloque.
         if nuevas > 0:
-            # ── 2a bis) Facebook: posts AGRUPADOS (máx. 6/día) con TODAS las del día ──
-            # Reemplaza el antiguo 1-post-por-convocatoria (~32/día) que provocó el
-            # bloqueo de la cuenta de desarrollador por spam/automatización.
-            publicar_facebook_agrupado(enviadas_hoy)
+            # ── 2a bis) Facebook: UN boletín diario con enlace a la web (28 jun 2026) ──
+            # Sustituye los 6 posts agrupados de imagen por un único post de enlace a
+            # oponoticias.com/boe-hoy → lleva tráfico a la web (el fuerte de FB) y
+            # evita el bug del "1 plaza". `publicar_facebook_agrupado` se conserva
+            # (sin invocar) por si hay que volver atrás.
+            publicar_facebook_boletin(enviadas_hoy)
 
             # ── 2b) Instagram: el carrusel diario se ELIMINA (28 jun 2026) ────────────
             # Duplicaba el Reel diario (mismo contenido, top por plazas) y arrastraba
