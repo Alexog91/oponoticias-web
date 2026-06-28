@@ -78,13 +78,13 @@
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.onload = function () {
         btn.disabled    = false;
-        btn.textContent = 'Suscribirme →';
+        btn.textContent = 'Enviarme la guía →';
         var resp = {};
         try { resp = JSON.parse(xhr.responseText); } catch (_) {}
         if (xhr.status === 200 && resp.ok) {
           // Marca como suscrito para que el pop-up no le moleste después.
           try { localStorage.setItem('on_nl_popup', JSON.stringify({ status: 'subscribed', ts: Date.now() })); } catch (_) {}
-          nForm.innerHTML = '<p class="newsletter-msg ok" style="font-size:1.05rem;">✓ ¡Suscrito! Recibirás el primer boletín mañana.</p>';
+          nForm.innerHTML = '<p class="newsletter-msg ok" style="font-size:1.05rem;">✓ ¡Listo! Te hemos enviado el calendario a tu correo. Revisa tu bandeja (y la carpeta de spam por si acaso).</p>';
         } else {
           msgEl.textContent = 'Algo ha ido mal. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
           msgEl.className   = 'newsletter-msg err';
@@ -92,7 +92,7 @@
       };
       xhr.onerror = function () {
         btn.disabled    = false;
-        btn.textContent = 'Suscribirme →';
+        btn.textContent = 'Enviarme la guía →';
         msgEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
         msgEl.className   = 'newsletter-msg err';
       };
@@ -155,17 +155,17 @@
       overlay.innerHTML =
         '<div class="nl-pop">' +
           '<button type="button" class="nl-pop-close" aria-label="Cerrar">&times;</button>' +
-          '<span class="eyebrow">Boletín gratuito</span>' +
-          '<h2 id="nlPopTitle">Las oposiciones del día, en tu bandeja</h2>' +
-          '<p class="nl-pop-sub">Recibe cada mañana un resumen de las nuevas convocatorias del BOE. Sin spam, cancela cuando quieras.</p>' +
+          '<span class="eyebrow">Guía gratuita</span>' +
+          '<h2 id="nlPopTitle">Descárgate gratis el Calendario del Opositor 2026</h2>' +
+          '<p class="nl-pop-sub">Te lo enviamos al instante a tu correo. Y de regalo, cada mañana el resumen del BOE. Sin spam, cancela cuando quieras.</p>' +
           '<ul class="nl-pop-perks">' +
+            '<li>Calendario y Guía del Opositor 2026 (PDF)</li>' +
             '<li>Resumen diario de convocatorias nuevas</li>' +
-            '<li>Enlace directo a cada convocatoria</li>' +
             '<li>Gratis para siempre</li>' +
           '</ul>' +
           '<form id="nlPopForm" novalidate>' +
             '<input type="email" id="nlPopEmail" name="email" placeholder="tu@email.com" required autocomplete="email">' +
-            '<button type="submit" class="btn btn-primary">Suscribirme →</button>' +
+            '<button type="submit" class="btn btn-primary">Enviarme la guía →</button>' +
             '<p class="newsletter-legal">Al suscribirte aceptas nuestra <a href="' + privacyHref() + '">política de privacidad</a>. Sin spam.</p>' +
             '<div class="newsletter-msg" id="nlPopMsg" aria-live="polite"></div>' +
           '</form>' +
@@ -240,17 +240,17 @@
           remember('subscribed');
           var form = overlay.querySelector('#nlPopForm');
           if (form) {
-            form.outerHTML = '<p class="newsletter-msg ok" style="font-size:1.05rem;">✓ ¡Suscrito! Recibirás el primer boletín mañana.</p>';
+            form.outerHTML = '<p class="newsletter-msg ok" style="font-size:1.05rem;">✓ ¡Listo! Te hemos enviado el calendario a tu correo. Revisa tu bandeja (y spam).</p>';
           }
           setTimeout(function () { close(null); }, 2600);
         } else {
-          btn.disabled = false; btn.textContent = 'Suscribirme →';
+          btn.disabled = false; btn.textContent = 'Enviarme la guía →';
           msg.textContent = 'Algo ha ido mal. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
           msg.className = 'newsletter-msg err';
         }
       };
       xhr.onerror = function () {
-        btn.disabled = false; btn.textContent = 'Suscribirme →';
+        btn.disabled = false; btn.textContent = 'Enviarme la guía →';
         msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
         msg.className = 'newsletter-msg err';
       };

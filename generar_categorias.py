@@ -358,7 +358,7 @@ def generar_html(cat_nombre, slug, descripcion, convocatorias):
     </div>
   </footer>
 
-  <script src="../assets/script.js?v=5" defer></script>
+  <script src="../assets/script.js?v=6" defer></script>
 </body>
 </html>"""
 

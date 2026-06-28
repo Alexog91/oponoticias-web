@@ -149,6 +149,10 @@ TOKEN BOT TELEGRAM.rtf
 *.rtf
 proton-recovery-phrase.pdf
 recovery*.docx
+
+# Excepción: lead magnets públicos (deben desplegarse en la web)
+!descargas/
+!descargas/*.pdf
 api*key*
 
 # Python

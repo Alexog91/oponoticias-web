@@ -472,7 +472,7 @@ def plantilla_articulo(art):
     </div>
   </footer>
 
-  <script src="../assets/script.js?v=5" defer></script>
+  <script src="../assets/script.js?v=6" defer></script>
 </body>
 </html>
 """
@@ -616,7 +616,7 @@ def plantilla_indice(articulos):
     </div>
   </footer>
 
-  <script src="assets/script.js?v=5" defer></script>
+  <script src="assets/script.js?v=6" defer></script>
 </body>
 </html>
 """
