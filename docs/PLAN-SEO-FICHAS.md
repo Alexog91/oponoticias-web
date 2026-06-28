@@ -74,9 +74,15 @@ Resultado esperado: +1500-2500 caracteres de contenido variado y útil por ficha
       4. Regenerar también el sitemap (Fase 3 lo cubre).
       ⚠️ Verificar 2-3 fichas a mano tras regenerar antes de commitear las 519.
   </details>
-- [ ] **Fase 3 — Quitar el `noindex`** (línea ~1156: cambiar a `index, follow`) e
-      **incluir las fichas en el sitemap** (`regenerar_sitemap`, ~1372). Hacerlo solo
-      cuando el contenido esté ya enriquecido. Considerar rollout gradual.
+- [x] **Fase 3 — Quitar el `noindex` + sitemap** (hecho 28 jun): en `leer_boe.py` la
+      plantilla pasa a `index, follow` y `regenerar_sitemap()` ahora añade todas las
+      fichas de `WEB_CONVOCATORIA_DIR` (`<changefreq>monthly</changefreq>`, prioridad
+      0.6, lastmod = mtime). Regeneradas las 519 (0 noindex, 519 con index) y
+      reconstruido el sitemap: 552 URLs (13 base + 8 categoría incluidas en las 13 +
+      519 fichas + 20 CCAA), XML válido. `robots.txt` = Allow:/ y `vercel.json` sin
+      `X-Robots-Tag` → nada bloquea la indexación. Sitemap rebuild en local:
+      `WEB_REPO_PATH=. PYTHONPATH=.` → `leer_boe.regenerar_sitemap([])` y luego
+      `generar_ccaa.actualizar_sitemap([stems de ccaa/*.html])`.
 - [ ] **Fase 4 — Pedir reindexación** en Search Console y, semanas después con
       tráfico/contenido sólido, **reenviar AdSense a revisión**.
 
@@ -90,9 +96,12 @@ Resultado esperado: +1500-2500 caracteres de contenido variado y útil por ficha
 
 ## Estado actual
 
-**28 jun 2026:** Fases 0, 1 y 2 completas. `leer_boe.py` genera fichas enriquecidas y
-las 519 existentes ya están regeneradas en local (aún en `noindex`, pendiente de
-commit/deploy). **Próximo paso = Fase 3** (quitar `noindex` + incluir en sitemap).
+**28 jun 2026:** Fases 0-3 completas. Fase 2 desplegada (commit 358bb6d). Fase 3 hecha
+en local (noindex→index en las 519 + fichas en el sitemap), pendiente de commit/push.
+**Próximo paso = Fase 4 (manual del usuario):** en Google Search Console, reenviar el
+sitemap y pedir indexación; observar cobertura unas semanas; cuando haya tráfico/
+indexación sólida, **reenviar AdSense** a revisión. Vigilar que Google no marque las
+fichas como "duplicadas/sin valor" (riesgo del párrafo de categoría compartido).
 
 ⚠️ **Aviso honesto para la Fase 3:** las 499 fichas de "Administración" comparten el
 mismo párrafo de contexto de categoría (texto idéntico). La unicidad real por página

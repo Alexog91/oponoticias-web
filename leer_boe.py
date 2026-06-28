@@ -1294,7 +1294,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
   <title>{conv['titulo']} — Convocatoria | OpoNoticias</title>
   <meta name="description" content="{meta_desc}">
   <link rel="canonical" href="{canonical}">
-  <meta name="robots" content="noindex, follow">
+  <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5A5047">
   <script>document.documentElement.className += ' js';</script>
 
@@ -1514,10 +1514,15 @@ def regenerar_sitemap(slugs_nuevos):
             ("https://oponoticias.com/categoria/tecnica", hoy, "daily", "0.8"),
         ]
 
-        # Las fichas de convocatoria se sirven en noindex (contenido fino derivado
-        # del BOE): se mantienen para los usuarios pero NO van al sitemap, para que
-        # el sitio indexado sea el de páginas con valor (blog, categorías, CCAA).
-        # Las CCAA las añade generar_ccaa.actualizar_sitemap tras este paso.
+        # Fichas de convocatoria: desde la Fase 3 SEO (28 jun 2026) llevan contenido
+        # enriquecido (contexto, pasos, FAQ con schema) y ya se indexan, por lo que se
+        # incluyen en el sitemap. Las CCAA las añade generar_ccaa.actualizar_sitemap
+        # tras este paso.
+        if WEB_CONVOCATORIA_DIR.exists():
+            for f in sorted(WEB_CONVOCATORIA_DIR.glob("*.html")):
+                lastmod = datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d")
+                urls.append((f"https://oponoticias.com/convocatoria/{f.stem}",
+                             lastmod, "monthly", "0.6"))
 
         xml_lines = [
             '<?xml version="1.0" encoding="UTF-8"?>',
