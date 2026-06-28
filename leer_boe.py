@@ -1674,8 +1674,11 @@ if __name__ == "__main__":
             # bloqueo de la cuenta de desarrollador por spam/automatización.
             publicar_facebook_agrupado(enviadas_hoy)
 
-            # ── 2b) Instagram: un único carrusel diario con las de más plazas ─────────
-            publicar_carrusel_instagram(enviadas_hoy)
+            # ── 2b) Instagram: el carrusel diario se ELIMINA (28 jun 2026) ────────────
+            # Duplicaba el Reel diario (mismo contenido, top por plazas) y arrastraba
+            # el problema del "1 plaza". La pieza diaria de IG es ahora solo el Reel
+            # (ver paso 2d). La función publicar_carrusel_instagram() se conserva por si
+            # se reconvierte en el futuro, pero ya no se invoca.
 
             # ── 2c) Resumen privado al admin (para copiar al Canal de WhatsApp) ───────
             enviar_resumen_privado(enviadas_hoy)
