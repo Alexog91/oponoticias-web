@@ -115,7 +115,7 @@
     var COOLDOWN_DAYS = 30;
     var path = location.pathname.toLowerCase();
 
-    var SKIP = ['privacidad', 'cookies', 'aviso-legal', 'contacto'];
+    var SKIP = ['privacidad', 'cookies', 'aviso-legal', 'contacto', 'calendario'];
     if (SKIP.some(function (s) { return path.indexOf(s) !== -1; })) return;
 
     function blocked() {
