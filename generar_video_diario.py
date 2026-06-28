@@ -76,28 +76,27 @@ def _num_es(n, fem=True):
     return w
 
 
-def _limpiar_puesto_narr(puesto):
-    """Elimina variantes de género (enfermero/a → enfermero) para que el TTS no diga 'barra'."""
-    # "palabra/a" o "palabra/as" → queda la forma base. IGNORECASE porque los
-    # puestos suelen venir en MAYÚSCULAS (ENFERMERO/A) y antes no se limpiaban.
-    return re.sub(r"/[aeo]s?\b", "", puesto, flags=re.IGNORECASE).strip()
+# Categorías visuales: (clave de tema, emoji, palabras clave del puesto).
+# La clave de tema la usa Remotion para teñir la escena con un color propio,
+# así dos vídeos con contenido distinto se ven distintos sin tocar nada.
+CATEGORIAS = [
+    ("sanidad",   "🏥", ("enfermer", "medic", "sanitari", "salud", "farmac", "celador", "matron")),
+    ("educacion", "🎓", ("maestro", "profesor", "docent", "educa", "catedrá", "secundaria")),
+    ("seguridad", "🚓", ("policí", "guardia", "bombero", "militar", "segurid", "vigilan", "penitenciar")),
+    ("justicia",  "⚖️", ("justicia", "tramitaci", "procesal", "fiscal", "jurídic", "letrad")),
+    ("tech",      "💻", ("inform", "program", "sistemas", "digital", "tecnolog")),
+    ("ciencia",   "🔬", ("investiga", "científic", "laboratori", "técnico especialista")),
+    ("admin",     "🗂️", ("administrat", "auxiliar", "gestión", "gestor", "oficial", "ordenanza")),
+]
 
 
-def _icono(puesto):
+def _categoria(puesto):
+    """Devuelve (clave_tema, emoji) según el puesto. Fallback: ('general', '📋')."""
     p = (puesto or "").lower()
-    pares = [
-        ("🏥", ("enfermer", "medic", "sanitari", "salud", "farmac", "celador", "matron")),
-        ("🎓", ("maestro", "profesor", "docent", "educa", "catedrá", "secundaria")),
-        ("🚓", ("policí", "guardia", "bombero", "militar", "segurid", "vigilan", "penitenciar")),
-        ("⚖️", ("justicia", "tramitaci", "procesal", "fiscal", "jurídic", "letrad")),
-        ("💻", ("inform", "program", "sistemas", "digital", "tecnolog")),
-        ("🔬", ("investiga", "científic", "laboratori", "técnico especialista")),
-        ("🗂️", ("administrat", "auxiliar", "gestión", "gestor", "oficial", "ordenanza")),
-    ]
-    for emoji, claves in pares:
+    for clave, emoji, claves in CATEGORIAS:
         if any(k in p for k in claves):
-            return emoji
-    return "📋"
+            return clave, emoji
+    return "general", "📋"
 
 
 # ── 1) Guión (escenas estructuradas) ───────────────────────────────────────────
@@ -114,54 +113,102 @@ def _plazas_num(conv):
     return int(m.group()) if m else 0
 
 
-def construir_guion(convocatorias, max_items=4):
-    """Devuelve lista de escenas: cada una con narración (TTS) + datos (Remotion)."""
+# Nombre legible de cada categoría para la escena "Por sector".
+CAT_NOMBRE = {
+    "sanidad": "Sanidad",
+    "educacion": "Educación",
+    "seguridad": "Seguridad",
+    "justicia": "Justicia",
+    "tech": "Tecnología",
+    "ciencia": "Ciencia",
+    "admin": "Administración",
+    "general": "Administración local",
+}
+
+
+def _es_nacional(lugar):
+    return (lugar or "").strip().lower() in ("nacional/estatal", "nacional", "estatal")
+
+
+def construir_guion(convocatorias, max_destacadas=3):
+    """Guión EDITORIAL del día (mezcla total + sector + destacadas + newsletter).
+
+    No lee convocatoria a convocatoria (habría días de 60): resume el conjunto con
+    el total y un desglose por sector, y solo destaca 2-3. El filtrado por comunidad
+    se delega a la web (CTA final). Devuelve escenas con narración + datos Remotion.
+    """
+    from datetime import datetime as _dt
     n = len(convocatorias)
-    vistas, sel = set(), []
+    hoy = _dt.now()
+    fecha_larga = f"{hoy.day} de {_MESES[hoy.month - 1]}"
+
+    # Conteo por sector (sobre TODAS) y dedup ordenado por plazas para destacadas.
+    conteo, vistas, todas = {}, set(), []
     for conv in sorted(convocatorias, key=_plazas_num, reverse=True):
         plazas, puesto, lugar = _datos(conv)
+        cat = _categoria(puesto)[0]
+        conteo[cat] = conteo.get(cat, 0) + 1
         clave = (puesto.lower(), lugar.lower())
-        if clave in vistas:
-            continue
-        vistas.add(clave)
-        sel.append((plazas, puesto, lugar))
-        if len(sel) == max_items:
-            break
+        if clave not in vistas:
+            vistas.add(clave)
+            todas.append((plazas, puesto, lugar))
+
+    sectores = sorted(conteo.items(), key=lambda kv: kv[1], reverse=True)[:6]
+    items_sector = [{"label": CAT_NOMBRE.get(k, k.title()), "count": v} for k, v in sectores]
+
+    # Destacadas: las de más plazas (o ámbito nacional) — las que merecen foco.
+    destacadas = []
+    for plazas, puesto, lugar in todas[:max_destacadas]:
+        m = re.search(r"\d+", plazas)
+        num = m.group() if m else ""
+        num_fmt = f"{int(num):,}".replace(",", ".") if num else ""
+        if _es_nacional(lugar):
+            org = "Ámbito nacional"
+            tag = f"{num_fmt} plazas" if (num and num != "1") else "Estatal"
+        else:
+            org = lugar
+            tag = f"{num_fmt} plazas" if (num and num != "1") else "1 plaza"
+        destacadas.append({"puesto": puesto, "org": org, "tag": tag})
 
     escenas = []
+    # 1) Portada: el total del día.
     escenas.append({
-        "kind": "hook",
-        "narr": f"¡Atención, opositores! Hoy el BOE trae {_num_es(n)} convocatorias nuevas. "
-                f"Estas son las que más plazas ofrecen.",
-        "titulo": "HOY en el BOE",
-        "destacado": f"{n} oposiciones nuevas",
+        "kind": "portada",
+        "narr": f"Hoy el BOE trae {_num_es(n)} convocatorias nuevas de empleo público.",
+        "titulo": "El BOE de hoy",
+        "total": n,
+        "fecha": fecha_larga,
     })
-    for plazas, puesto, lugar in sel:
-        m = re.search(r"\d+", plazas)
-        num_txt = m.group() if m else ""
-        puesto_narr = _limpiar_puesto_narr(puesto)
-        # Ámbito: "Nacional/Estatal" → "de ámbito nacional" (si no, el TTS lee la
-        # barra como "barra" y suena mal). El resto de comunidades → ", en {CA}".
-        es_nacional = lugar.strip().lower() in ("nacional/estatal", "nacional", "estatal")
-        lugar_frase = " de ámbito nacional" if es_nacional else f", en {lugar}"
-        if num_txt:
-            # Singular cuando es 1 plaza ("una plaza"), plural en el resto.
-            palabra = "plaza" if num_txt == "1" else "plazas"
-            narr = f"{_num_es(num_txt)} {palabra} de {puesto_narr}{lugar_frase}."
-        else:
-            narr = f"{puesto_narr}{lugar_frase}."
-        escenas.append({
-            "kind": "item",
-            "narr": narr,
-            "plazas": num_txt or plazas,
-            "puesto": puesto,
-            "lugar": lugar,
-            "icon": _icono(puesto),
-        })
+    # 2) Por sector: resumen agregado de todas.
     escenas.append({
-        "kind": "cta",
-        "narr": "Síguenos para no perderte ninguna. Todo en oponoticias punto com.",
-        "lineas": ["Síguenos y no te", "pierdas ninguna"],
+        "kind": "sector",
+        "narr": "Estas son las áreas con más oferta hoy.",
+        "titulo": "Por sector",
+        "total": n,
+        "items": items_sector,
+    })
+    # 3) Destacadas: 2-3 notables.
+    if destacadas:
+        escenas.append({
+            "kind": "destacadas",
+            "narr": "Y estas son las más destacadas del día.",
+            "titulo": "Destacadas",
+            "items": destacadas,
+            "extra": max(0, n - len(destacadas)),
+        })
+    # 4) Newsletter: gancho con el lead magnet (Calendario del Opositor).
+    escenas.append({
+        "kind": "newsletter",
+        "narr": "Suscríbete gratis y llévate el Calendario del Opositor en tu correo.",
+        "regalo": "Calendario del Opositor 2026",
+        "cta": "oponoticias.com",
+    })
+    # 5) Cierre: filtrado por comunidad en la web + seguir.
+    escenas.append({
+        "kind": "cierre",
+        "narr": "¿Buscas las de tu comunidad? Encuéntralas en oponoticias punto com. Síguenos.",
+        "lineas": ["¿Buscas las de", "tu comunidad?"],
+        "cta": "Fíltralas en oponoticias.com",
     })
     return escenas
 
@@ -257,6 +304,18 @@ def sintetizar(escenas, tmp):
 
 # ── 3) Música + mezcla con ducking ─────────────────────────────────────────────
 def _music_bed():
+    """Pista del día. Rota de forma determinista sobre assets/music/*.{mp3,m4a,wav}
+    (índice = día del año % nº pistas → nunca repite en una semana). Si no hay
+    carpeta, cae al archivo único assets/music_bed.* y, en último término, a None
+    (música generada por _generar_musica)."""
+    carpeta = REPO / "assets" / "music"
+    if carpeta.is_dir():
+        pistas = sorted(p for p in carpeta.iterdir()
+                        if p.suffix.lower() in (".mp3", ".m4a", ".wav"))
+        if pistas:
+            idx = datetime.now().timetuple().tm_yday % len(pistas)
+            print(f"🎵 Música del día: {pistas[idx].name} ({idx + 1}/{len(pistas)})")
+            return str(pistas[idx])
     for nombre in ("assets/music_bed.mp3", "assets/music_bed.m4a", "assets/music_bed.wav"):
         if (REPO / nombre).exists():
             return str(REPO / nombre)
@@ -359,6 +418,8 @@ def generar(convocatorias, salida=None):
                 "fecha": f"{hoy.day} {_MESES[hoy.month - 1]}",
                 "audio": "audio.wav",
                 "captions": captions,
+                # Día del año → Remotion rota la paleta de fondo (variedad diaria).
+                "seed": hoy.timetuple().tm_yday,
             }
             _render_remotion(props, salida)
         print(f"🎬 Vídeo generado: {salida} ({total:.1f}s)")
@@ -410,11 +471,16 @@ def enviar_video_redes(convocatorias):
         return False
 
     hoy = datetime.now()
+    # Nota de licencia de música: si en assets/music/ hay pistas de Incompetech
+    # (Kevin MacLeod, CC BY) hay que mantener la atribución; las de Pixabay / YouTube
+    # Audio Library marcadas "sin atribución" no la requieren. Por defecto, sin crédito
+    # (usa fuentes sin atribución). Si añades Incompetech, pon VIDEO_MUSIC_CREDIT.
+    credito = os.environ.get("VIDEO_MUSIC_CREDIT", "").strip()
     caption = (
         f"🎯 Convocatorias del BOE · {hoy.day} {_MESES[hoy.month - 1]}\n\n"
         "👉 Toda la información y el enlace al BOE en oponoticias.com\n\n"
-        "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario #opositar\n\n"
-        "🎵 Música: Kevin MacLeod (incompetech.com) · CC BY 4.0"
+        "#oposiciones #empleopublico #BOE #oposicion2026 #funcionario #opositar"
+        + (f"\n\n🎵 {credito}" if credito else "")
     )
 
     ok = False
