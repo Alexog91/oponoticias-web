@@ -1107,6 +1107,143 @@ def generar_slug(titulo, ref_boe=""):
     return f"{slug}.html"
 
 
+# Contexto útil por categoría (2-3 frases reales). Sirve para des-thin-ear las
+# fichas: añade texto genuinamente informativo que varía según el área.
+CONTEXTO_CATEGORIA = {
+    "Administración": "Las oposiciones del área de Administración son la vía de acceso más común a la función pública en España. Engloban cuerpos como Auxiliar Administrativo, Administrativo o Gestión, presentes en ayuntamientos, diputaciones, comunidades autónomas y la Administración General del Estado. Suelen resolverse por concurso-oposición u oposición libre, con temarios que combinan derecho administrativo, organización del Estado y, a menudo, una prueba de ofimática.",
+    "Educación": "Las oposiciones de Educación dan acceso a los cuerpos docentes (Maestros, Profesores de Secundaria, Formación Profesional, EOI, etc.). El proceso combina una fase de oposición —con pruebas de conocimientos y la defensa de una programación didáctica— y una fase de concurso en la que se valoran méritos como la experiencia previa y la formación.",
+    "Sanidad": "Las oposiciones de Sanidad cubren plazas del sistema público de salud: personal facultativo, de enfermería, técnico y de gestión sanitaria. Las convocan habitualmente los servicios de salud autonómicos mediante concurso-oposición, y tienen gran demanda por la estabilidad y las condiciones del empleo público sanitario.",
+    "Justicia": "Las oposiciones de Justicia permiten acceder a los cuerpos al servicio de la Administración de Justicia: Tramitación Procesal, Auxilio Judicial y Gestión Procesal, además de carreras como Letrados o Fiscales. Los temarios giran en torno al derecho procesal y la organización judicial, y el acceso suele ser de ámbito estatal.",
+    "Seguridad": "Las oposiciones de Seguridad incluyen cuerpos como Policía Nacional, Guardia Civil y policías autonómicas y locales. Además de las pruebas teóricas, incorporan pruebas físicas, psicotécnicas y reconocimiento médico, por lo que requieren una preparación específica más allá del temario.",
+    "Hacienda": "Las oposiciones del área de Hacienda dan acceso a cuerpos vinculados a la gestión tributaria, la inspección y la administración económica del Estado. Son procesos con temarios técnicos de derecho financiero, tributario y contabilidad pública.",
+    "Correos": "Las convocatorias de Correos seleccionan personal para reparto, atención al cliente y clasificación. A diferencia de las oposiciones clásicas, el acceso suele basarse en una prueba tipo test y la valoración de méritos, sin un temario tan extenso, lo que las hace muy accesibles.",
+    "Técnica": "Las oposiciones de perfil técnico cubren plazas especializadas (ingeniería, arquitectura, informática, medio ambiente, etc.) en distintas administraciones. Combinan un temario común sobre la Administración con un temario específico de la especialidad y, con frecuencia, supuestos prácticos.",
+}
+
+_CCAA_SLUGS = {
+    "andalucia", "aragon", "asturias", "baleares", "canarias", "cantabria",
+    "castilla-la-mancha", "castilla-leon", "cataluna", "ceuta", "comunidad-valenciana",
+    "extremadura", "galicia", "la-rioja", "madrid", "melilla", "murcia", "nacional",
+    "navarra", "pais-vasco",
+}
+
+
+def _norm_slug(texto):
+    """Minúsculas, sin acentos, separadores a guion."""
+    s = unicodedata.normalize('NFKD', (texto or '').lower())
+    s = ''.join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r'[^a-z0-9]+', '-', s).strip('-')
+    return re.sub(r'-+', '-', s)
+
+
+def _slug_categoria(categoria):
+    """Mapa categoría visible -> archivo en categoria/. Fallback administracion."""
+    s = _norm_slug(categoria)
+    validas = {"administracion", "correos", "educacion", "hacienda",
+               "justicia", "sanidad", "seguridad", "tecnica"}
+    return s if s in validas else "administracion"
+
+
+def _slug_ccaa(comunidad):
+    """Mapa comunidad -> archivo en ccaa/. Fallback nacional."""
+    s = _norm_slug(comunidad)
+    alias = {
+        "valencia": "comunidad-valenciana", "c-valenciana": "comunidad-valenciana",
+        "comunidad-valenciana": "comunidad-valenciana", "valenciana": "comunidad-valenciana",
+        "islas-baleares": "baleares", "illes-balears": "baleares",
+        "islas-canarias": "canarias", "euskadi": "pais-vasco", "pais-vasco": "pais-vasco",
+        "rioja": "la-rioja", "castilla-y-leon": "castilla-leon",
+        "principado-de-asturias": "asturias", "region-de-murcia": "murcia",
+        "comunidad-de-madrid": "madrid", "nacional-estatal": "nacional",
+        "estatal": "nacional", "espana": "nacional", "": "nacional",
+    }
+    s = alias.get(s, s)
+    return s if s in _CCAA_SLUGS else "nacional"
+
+
+def _bloque_enriquecido(conv, categoria, puesto_t, organismo_t, ambito_t,
+                        plazas_t, fecha_str):
+    """Devuelve (html_bloque, faq_schema_json). Contenido único y útil por ficha,
+    sin coste de API: varía con categoría, puesto, organismo, ámbito, plazas y fecha.
+    Las entradas *_t llegan ya escapadas para HTML; para el schema se des-escapan."""
+    ref_boe = conv.get('ref_boe', 'BOE')
+    es_nacional = _norm_slug(ambito_t) in ("nacional", "nacional-estatal", "estatal", "")
+    ambito_frase = "de ámbito estatal" if es_nacional else f"en {ambito_t}"
+    contexto = CONTEXTO_CATEGORIA.get(categoria, CONTEXTO_CATEGORIA["Administración"])
+    cat_slug = _slug_categoria(categoria)
+    ccaa_slug = _slug_ccaa(ambito_t)
+
+    if _norm_slug(plazas_t) in ("varias", "", "-"):
+        plazas_faq = "La convocatoria oferta varias plazas; el número exacto y su distribución figuran en las bases publicadas en el BOE."
+    else:
+        plazas_faq = f"La convocatoria oferta {plazas_t} plazas. Consulta el detalle y su distribución en el texto oficial del BOE."
+
+    intro = (f"El organismo <strong>{organismo_t}</strong> ha publicado en el "
+             f"Boletín Oficial del Estado, con fecha {fecha_str}, una convocatoria "
+             f"relacionada con plazas de <strong>{puesto_t}</strong> {ambito_frase}. "
+             f"En esta página resumimos los datos principales y te explicamos cómo "
+             f"seguir el proceso paso a paso.")
+
+    # FAQ visible
+    faqs = [
+        ("¿Cuántas plazas se convocan?", plazas_faq),
+        ("¿Quién convoca esta oposición?",
+         f"El proceso selectivo lo convoca {organismo_t}, {ambito_frase}, dentro del área de {categoria}."),
+        ("¿Hasta cuándo puedo presentar la solicitud?",
+         f"El plazo habitual de presentación es de 20 días hábiles desde el día siguiente a la publicación en el BOE ({fecha_str}). El plazo definitivo es siempre el que indiquen las bases oficiales de la convocatoria."),
+        ("¿Dónde consulto las bases oficiales?",
+         f"En el texto publicado en el BOE con referencia {ref_boe}, accesible desde el enlace «Leer el texto oficial en el BOE» de esta página."),
+    ]
+    faq_items = "".join(
+        f'<details class="faq-item" style="background:var(--surface); border:1px solid var(--line); '
+        f'border-radius:10px; padding:12px 16px; margin-bottom:8px;">'
+        f'<summary style="cursor:pointer; font-weight:600; color:var(--ink);">{q}</summary>'
+        f'<p style="margin:10px 0 0; line-height:1.6; color:var(--gray);">{a}</p></details>'
+        for q, a in faqs
+    )
+
+    faq_schema = {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+            {"@type": "Question", "name": html_lib.unescape(q),
+             "acceptedAnswer": {"@type": "Answer", "text": html_lib.unescape(a)}}
+            for q, a in faqs
+        ],
+    }
+    faq_schema_json = json.dumps(faq_schema, ensure_ascii=False, indent=2)
+
+    ambito_link = "" if ccaa_slug == "nacional" and es_nacional else (
+        f'<a href="../ccaa/{ccaa_slug}.html" style="background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:8px 16px; text-decoration:none;">Oposiciones en {ambito_t} →</a>')
+
+    bloque = f"""
+            <section class="ficha-extra" style="margin-top:32px;">
+              <p style="line-height:1.65;">{intro}</p>
+
+              <h2 style="font-size:1.2rem; margin:28px 0 10px;">Sobre las oposiciones de {categoria}</h2>
+              <p style="line-height:1.65; color:var(--ink);">{contexto}</p>
+
+              <h2 style="font-size:1.2rem; margin:28px 0 10px;">Cómo presentarte a esta convocatoria</h2>
+              <ol style="line-height:1.7; padding-left:1.2em;">
+                <li>Lee el texto oficial en el BOE (enlace arriba) para conocer los requisitos, la titulación exigida y el baremo de méritos.</li>
+                <li>Comprueba el plazo de solicitudes. Suele ser de 20 días hábiles desde el día siguiente a la publicación en el BOE; en este caso, a partir del {fecha_str}. Confírmalo siempre en las bases.</li>
+                <li>Reúne la documentación (titulación, DNI y justificante de la tasa) y presenta la instancia por la sede electrónica del organismo o el registro que indiquen las bases.</li>
+                <li>Prepara el temario y acredita tus méritos. Si tienes experiencia o formación previa, asegúrate de justificarlos para sumar en la fase de concurso.</li>
+              </ol>
+
+              <h2 style="font-size:1.2rem; margin:28px 0 10px;">Preguntas frecuentes</h2>
+              <div class="faq-list">{faq_items}</div>
+
+              <div class="ficha-links" style="margin-top:28px; display:flex; flex-wrap:wrap; gap:10px; font-size:0.92rem; font-weight:600;">
+                <a href="../categoria/{cat_slug}.html" style="background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:8px 16px; text-decoration:none;">Más convocatorias de {categoria} →</a>
+                {ambito_link}
+                <a href="../index.html#ultimas" style="background:var(--surface); border:1px solid var(--line); border-radius:999px; padding:8px 16px; text-decoration:none;">Ver todas las convocatorias →</a>
+              </div>
+            </section>
+"""
+    return bloque, faq_schema_json
+
+
 def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="", slug_forzado=""):
     """Genera un archivo HTML por convocatoria"""
 
@@ -1144,6 +1281,10 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     plazas_t = html_lib.escape(plazas_t)
     puesto_t = html_lib.escape(puesto_t)
     titular_corto = f"{puesto_t} — {organismo_t}"
+
+    # Bloque de contenido enriquecido (texto útil y único por ficha) + schema FAQ
+    bloque_extra, faq_schema_json = _bloque_enriquecido(
+        conv, categoria, puesto_t, organismo_t, ambito_t, plazas_t, fecha_str)
 
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
@@ -1186,6 +1327,9 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     "industry": "Administración pública - {categoria}",
     "url": "{canonical}"
   }}
+  </script>
+  <script type="application/ld+json">
+  {faq_schema_json}
   </script>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
 </head>
@@ -1268,6 +1412,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
             </a>
 
             <p style="margin-top:24px; color:var(--gray); font-size:0.9rem;">Este resumen tiene carácter informativo. La información válida y vinculante es siempre la publicada en el Boletín Oficial del Estado.</p>
+{bloque_extra}
 {relacionadas_html}
           </div>
         </article>
