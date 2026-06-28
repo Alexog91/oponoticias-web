@@ -1707,11 +1707,10 @@ if __name__ == "__main__":
         # Desacoplado del guardado: si un envío falla, el flag queda en false y se
         # reintenta en la siguiente ejecución sin duplicar las ya publicadas.
         print("\n📤 Telegram + Facebook — enviando convocatorias pendientes…")
-        # X (Buffer) solo para las convocatorias con más plazas del día: el plan
-        # gratuito de Buffer se satura y X corta el token por spam si se publica
-        # demasiado. Telegram, web y Facebook reciben todas; X solo las destacadas.
-        MAX_X = 5
-        top_x = {c['enlace'] for c in sorted(convocatorias, key=_plazas_num, reverse=True)[:MAX_X]}
+        # X (Buffer): ya NO se postean tweets individuales por convocatoria
+        # (28 jun 2026). X recibe SOLO el tweet-resumen diario (más abajo), igual
+        # que el resumen de WhatsApp → menos volumen, sin saturar Buffer ni que X
+        # corte el token por spam. Telegram, web y Facebook siguen recibiendo todas.
         enviadas_hoy = []
         for conv in convocatorias:
             if telegram_ya_enviado(conv['enlace']):
@@ -1719,9 +1718,6 @@ if __name__ == "__main__":
                 continue
             if enviar_a_telegram(conv):
                 marcar_telegram_enviado(conv['enlace'])
-                # X (Buffer/Make) solo para las destacadas del día.
-                if conv['enlace'] in top_x:
-                    enviar_tweet_x(conv)
                 enviadas_hoy.append(conv)
                 enviadas_tg += 1
                 time.sleep(2)
