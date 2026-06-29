@@ -703,7 +703,7 @@ def _strip_markdown(texto):
 
 
 def _publicar_en_redes(art):
-    """Publica el artículo en Facebook (texto+enlace) e Instagram (screenshot del HTML).
+    """Publica el artículo en Facebook (foto nativa + enlace en comentario) e Instagram (screenshot).
 
     Best-effort: cualquier fallo se reporta sin interrumpir el flujo.
     Requiere FB_PAGE_TOKEN, FB_PAGE_ID, FB_IG_ID y Supabase configurados.
@@ -722,7 +722,12 @@ def _publicar_en_redes(art):
     url_articulo = f"{BASE_URL}/{BLOG_DIR}/{art['slug']}.html"
     hashtags = f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
 
-    # ── Facebook: texto del artículo + enlace ──────────────────────────────
+    # ── Screenshot del HTML del artículo (FB foto nativa + IG) ──────────────
+    html_path = os.path.join(BLOG_DIR, f"{art['slug']}.html")
+    slug_corto = art["slug"][:40]
+    nombre_remoto = f"blog/ig-{datetime.now().strftime('%Y%m')}-{slug_corto}.jpg"
+    img_url = gii.screenshot_blog_html(html_path, nombre_remoto)
+
     contenido_limpio = _strip_markdown(art.get("contenido", ""))
     # Recorta al primer párrafo natural o a 2 500 chars para no saturar el post
     parrafos = [p.strip() for p in contenido_limpio.split("\n\n") if p.strip()]
@@ -731,19 +736,29 @@ def _publicar_en_redes(art):
         if len(extracto) + len(p) + 2 > 2500:
             break
         extracto = (extracto + "\n\n" + p).strip()
-    msg_fb = (
-        f"📚 {art['titulo']}\n\n"
-        f"{extracto}\n\n"
-        f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
-        f"{hashtags}"
-    )
-    publicar_meta.publicar_enlace_facebook(msg_fb)
 
-    # ── Instagram: screenshot del HTML del artículo ─────────────────────────
-    html_path = os.path.join(BLOG_DIR, f"{art['slug']}.html")
-    slug_corto = art["slug"][:40]
-    nombre_remoto = f"blog/ig-{datetime.now().strftime('%Y%m')}-{slug_corto}.jpg"
-    img_url = gii.screenshot_blog_html(html_path, nombre_remoto)
+    # ── Facebook: foto NATIVA + enlace en primer comentario ─────────────────
+    # FB penaliza el alcance de los posts con enlace en el cuerpo; la imagen va
+    # nativa y el enlace al artículo queda como primer comentario. Sin
+    # screenshot se cae al post de texto+enlace.
+    if img_url:
+        msg_fb = (
+            f"📚 {art['titulo']}\n\n"
+            f"{extracto}\n\n"
+            f"📖 Artículo completo en el primer comentario 👇\n\n"
+            f"{hashtags}"
+        )
+        publicar_meta.publicar_foto_facebook_enlace(img_url, msg_fb, url_articulo)
+    else:
+        msg_fb = (
+            f"📚 {art['titulo']}\n\n"
+            f"{extracto}\n\n"
+            f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
+            f"{hashtags}"
+        )
+        publicar_meta.publicar_enlace_facebook(msg_fb)
+
+    # ── Instagram: misma imagen del artículo ────────────────────────────────
     if img_url:
         caption_ig = (
             f"📚 {art['titulo']}\n\n"

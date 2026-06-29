@@ -110,6 +110,10 @@ def publicar_foto_facebook(image_url, mensaje):
 
     Equivale al post de imagen que hacía Make. La foto se sube por URL y el
     `mensaje` (con enlace y hashtags) queda como texto del post.
+
+    Devuelve el ID del post (str, truthy) si se publica, o False si falla. El
+    ID permite luego comentar el post (p.ej. para poner el enlace). Los callers
+    que solo comprueban `if ok:` siguen funcionando igual.
     """
     if not configurado():
         return False
@@ -119,14 +123,56 @@ def publicar_foto_facebook(image_url, mensaje):
             "caption": mensaje,
             "access_token": _page_token(),
         })
-        if r.get("id") or r.get("post_id"):
-            print(f"📘 Facebook (API directa): post {r.get('post_id') or r.get('id')}")
-            return True
+        pid = r.get("post_id") or r.get("id")
+        if pid:
+            print(f"📘 Facebook (API directa): post {pid}")
+            return pid
         print(f"⚠️  Facebook: respuesta inesperada {r}")
         return False
     except Exception as e:
         print(f"⚠️  Error Facebook API (no bloquea): {e}")
         return False
+
+
+def comentar_facebook(post_id, mensaje):
+    """Añade un comentario a un post/foto de la página.
+
+    Se usa para poner el ENLACE como primer comentario en lugar de en el cuerpo
+    del post: Facebook penaliza el alcance orgánico de los posts que llevan un
+    enlace externo en el texto, así que la imagen va nativa y el enlace debajo.
+    Best-effort: devuelve True/False sin romper el flujo.
+    """
+    if not configurado() or not post_id:
+        return False
+    try:
+        r = _post(f"{post_id}/comments", {
+            "message": mensaje,
+            "access_token": _page_token(),
+        })
+        if r.get("id"):
+            print(f"💬 Facebook: comentario {r['id']}")
+            return True
+        print(f"⚠️  Facebook comentario: respuesta inesperada {r}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error comentario Facebook (no bloquea): {e}")
+        return False
+
+
+def publicar_foto_facebook_enlace(image_url, mensaje, link_url):
+    """Post de FOTO NATIVA + enlace como PRIMER COMENTARIO.
+
+    Patrón de máximo alcance orgánico en Facebook: la página penaliza los posts
+    con enlace en el cuerpo, así que se sube la imagen como contenido nativo y el
+    enlace se añade como primer comentario nada más publicar. Devuelve True si la
+    foto se publicó (el comentario es best-effort: si falla, el post sigue ahí).
+    """
+    pid = publicar_foto_facebook(image_url, mensaje)
+    if not pid:
+        return False
+    if link_url:
+        comentar_facebook(pid, f"👉 Aquí lo tienes: {link_url}")
+    return True
 
 
 def publicar_enlace_facebook(mensaje, link_url=None):

@@ -109,8 +109,13 @@ def compartir_articulo(art):
         f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
     )
 
-    # ── Facebook: texto del artículo + enlace ──────────────────────────────
-    print("  📝 Construyendo post de Facebook…")
+    # ── Screenshot del HTML del artículo (sirve para FB foto nativa + IG) ────
+    print("  📸 Generando screenshot del artículo…")
+    slug_corto    = art["slug"][:40]
+    nombre_remoto = f"blog/ig-{datetime.now(timezone.utc).strftime('%Y%m')}-{slug_corto}.jpg"
+    html_path     = BLOG_DIR / f"{art['slug']}.html"
+    img_url       = gii.screenshot_blog_html(str(html_path), nombre_remoto)
+
     contenido_limpio = _strip_markdown(art.get("contenido", ""))
     parrafos = [p.strip() for p in contenido_limpio.split("\n\n") if p.strip()]
     extracto = ""
@@ -118,21 +123,31 @@ def compartir_articulo(art):
         if len(extracto) + len(p) + 2 > 2500:
             break
         extracto = (extracto + "\n\n" + p).strip()
-    msg_fb = (
-        f"📚 {art['titulo']}\n\n"
-        f"{extracto}\n\n"
-        f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
-        f"{hashtags}"
-    )
-    ok_fb = publicar_meta.publicar_enlace_facebook(msg_fb)
 
-    # ── Instagram: screenshot del HTML del artículo ─────────────────────────
-    print("  📸 Generando screenshot del artículo para Instagram…")
-    slug_corto    = art["slug"][:40]
-    nombre_remoto = f"blog/ig-{datetime.now(timezone.utc).strftime('%Y%m')}-{slug_corto}.jpg"
-    html_path     = BLOG_DIR / f"{art['slug']}.html"
-    img_url       = gii.screenshot_blog_html(str(html_path), nombre_remoto)
+    # ── Facebook: foto NATIVA + enlace en primer comentario ─────────────────
+    # FB penaliza el alcance de los posts con enlace en el cuerpo, así que la
+    # imagen va nativa y el enlace al artículo queda como primer comentario.
+    # Si no hay screenshot, se cae al post de texto+enlace de toda la vida.
+    print("  📝 Publicando en Facebook…")
+    if img_url:
+        msg_fb = (
+            f"📚 {art['titulo']}\n\n"
+            f"{extracto}\n\n"
+            f"📖 Artículo completo en el primer comentario 👇\n\n"
+            f"{hashtags}"
+        )
+        ok_fb = publicar_meta.publicar_foto_facebook_enlace(img_url, msg_fb, url_articulo)
+    else:
+        print("  ⚠️  Sin screenshot: post de texto+enlace (alcance menor).")
+        msg_fb = (
+            f"📚 {art['titulo']}\n\n"
+            f"{extracto}\n\n"
+            f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
+            f"{hashtags}"
+        )
+        ok_fb = publicar_meta.publicar_enlace_facebook(msg_fb)
 
+    # ── Instagram: misma imagen del artículo ────────────────────────────────
     ok_ig = False
     if img_url:
         caption_ig = (
