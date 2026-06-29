@@ -5,7 +5,44 @@
 
 const https = require('https');
 
-const PDF_URL = 'https://oponoticias.com/descargas/calendario-opositor-2026.pdf';
+const BASE = 'https://oponoticias.com/descargas';
+
+// Catálogo de materiales descargables. La clave es el `slug` que envía el
+// front-end; cada uno define el nombre y el archivo a entregar por email.
+// Si no llega `material` (formulario de la home / pop-up), se usa el calendario.
+const MATERIALES = {
+  'calendario-opositor-2026': {
+    nombre: 'Calendario y Guía del Opositor 2026',
+    desc: 'cómo funciona el calendario de las oposiciones, los grandes procesos del año, qué hacer cuando encuentras tu oposición y cómo no perderte ninguna convocatoria',
+    url: `${BASE}/calendario-opositor-2026.pdf`,
+  },
+  'guia-como-leer-el-boe': {
+    nombre: 'Guía: Cómo leer el BOE',
+    desc: 'cómo interpretar el BOE para no perderte ninguna convocatoria, con la fuente oficial paso a paso',
+    url: `${BASE}/guia-como-leer-el-boe.pdf`,
+  },
+  'guia-el-dia-del-examen': {
+    nombre: 'Guía: El día del examen',
+    desc: 'tu checklist imprimible para llegar sin sustos al examen y dar lo mejor de ti',
+    url: `${BASE}/guia-el-dia-del-examen.pdf`,
+  },
+  'guia-instancia-y-tasas': {
+    nombre: 'Guía: La instancia y las tasas',
+    desc: 'cómo presentar tu solicitud y pagar las tasas sin quedarte fuera (modelo 790 e inscripción electrónica)',
+    url: `${BASE}/guia-instancia-y-tasas.pdf`,
+  },
+  'kit-del-opositor': {
+    nombre: 'Kit del Opositor (Excel)',
+    desc: 'tu agenda para preparar la oposición: retroplanning, repaso espaciado (1, 7 y 30 días) y tracker de tests que detecta tus temas flojos',
+    url: `${BASE}/kit-del-opositor.xlsx`,
+  },
+  'kit-del-opositor-guia': {
+    nombre: 'Kit del Opositor (guía de uso, PDF)',
+    desc: 'cómo sacarle el máximo partido al Kit del Opositor paso a paso',
+    url: `${BASE}/kit-del-opositor.pdf`,
+  },
+};
+const MATERIAL_DEFECTO = 'calendario-opositor-2026';
 
 // Llama a la API de Brevo y resuelve siempre (sin lanzar) con {status, data}.
 function brevoRequest(path, apiKey, payload) {
@@ -39,7 +76,7 @@ function brevoRequest(path, apiKey, payload) {
   });
 }
 
-function emailBienvenidaHtml() {
+function emailBienvenidaHtml(material) {
   return `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f8f6f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -48,22 +85,21 @@ function emailBienvenidaHtml() {
   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:linear-gradient(135deg,#5a5047,#c4a574);border-radius:14px 14px 0 0;">
   <tr><td style="padding:32px;">
     <div style="color:#fff;font-size:22px;font-family:'Georgia',serif;font-weight:700;">OpoNoticias</div>
-    <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:4px;">Tu regalo de bienvenida</div>
+    <div style="color:rgba(255,255,255,0.85);font-size:13px;margin-top:4px;">Tu descarga gratuita</div>
   </td></tr>
   </table>
 
   <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-left:1px solid #e7e0d5;border-right:1px solid #e7e0d5;">
   <tr><td style="padding:28px 32px;">
-    <h1 style="margin:0 0 12px;font-family:'Georgia',serif;font-size:22px;color:#2b2622;">¡Bienvenido/a a OpoNoticias! 📅</h1>
+    <h1 style="margin:0 0 12px;font-family:'Georgia',serif;font-size:22px;color:#2b2622;">¡Aquí tienes tu material! 📥</h1>
     <p style="margin:0 0 16px;color:#4a4540;font-size:15px;line-height:1.6;">
-      Gracias por suscribirte. Aquí tienes tu <strong>Calendario y Guía del Opositor 2026</strong>:
-      cómo funciona el calendario de las oposiciones, los grandes procesos del año, qué hacer cuando
-      encuentras tu oposición y cómo no perderte ninguna convocatoria.
+      Gracias por suscribirte. Aquí tienes tu <strong>${material.nombre}</strong>:
+      ${material.desc}.
     </p>
     <p style="text-align:center;margin:24px 0;">
-      <a href="${PDF_URL}" target="_blank" rel="noopener"
+      <a href="${material.url}" target="_blank" rel="noopener"
          style="display:inline-block;background:#5a5047;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:15px;font-weight:600;">
-        📥 Descargar el calendario (PDF)
+        📥 Descargar ${material.nombre}
       </a>
     </p>
     <p style="margin:0 0 8px;color:#4a4540;font-size:15px;line-height:1.6;">
@@ -89,7 +125,7 @@ function emailBienvenidaHtml() {
 
     <p style="margin:16px 0 0;color:#8b8b7a;font-size:13px;line-height:1.6;">
       ¿No ves el botón? Copia este enlace en tu navegador:<br>
-      <a href="${PDF_URL}" style="color:#c4a574;">${PDF_URL}</a>
+      <a href="${material.url}" style="color:#c4a574;">${material.url}</a>
     </p>
   </td></tr>
   </table>
@@ -115,12 +151,15 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email } = req.body || {};
+  const { email, material } = req.body || {};
 
   // Validación básica
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Email inválido' });
   }
+
+  // Material a entregar (por slug). Si no llega o es desconocido → calendario.
+  const mat = MATERIALES[material] || MATERIALES[MATERIAL_DEFECTO];
 
   const apiKey      = process.env.BREVO_API_KEY;
   const listId      = parseInt(process.env.BREVO_LIST_ID, 10);
@@ -152,8 +191,8 @@ export default async function handler(req, res) {
   const correo = await brevoRequest('smtp/email', apiKey, {
     sender: { name: senderName, email: senderEmail },
     to: [{ email }],
-    subject: 'Tu Calendario del Opositor 2026 (gratis) 📅',
-    htmlContent: emailBienvenidaHtml(),
+    subject: `Tu descarga: ${mat.nombre} (gratis) 📥`,
+    htmlContent: emailBienvenidaHtml(mat),
   });
   if (![200, 201].includes(correo.status)) {
     console.error('Brevo email bienvenida error (no bloquea):', correo.status, JSON.stringify(correo.data));
