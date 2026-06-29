@@ -20,8 +20,16 @@ export type Caption =
       start: number;
       end: number;
       titulo: string; // "Destacadas"
-      items: { puesto: string; org: string; tag: string }[];
+      items: { puesto: string; org: string; tag: string; tema?: string }[];
       extra?: number; // cuántas más hay en la web
+    }
+  | {
+      kind: "listado";
+      start: number;
+      end: number;
+      titulo: string; // "Todas las de hoy"
+      items: { puesto: string; lugar: string; tag: string; tema?: string }[];
+      extra?: number; // cuántas más (no caben en el listado)
     }
   | {
       kind: "newsletter";
@@ -49,7 +57,7 @@ export type VideoProps = {
 
 export const DEFAULT_PROPS: VideoProps = {
   fps: 30,
-  total: 21,
+  total: 26.5,
   fecha: "28 junio",
   audio: null,
   seed: 179,
@@ -62,12 +70,11 @@ export const DEFAULT_PROPS: VideoProps = {
       titulo: "Por sector",
       total: 47,
       items: [
-        { label: "Administración local", count: 28 },
+        { label: "Administración", count: 30 },
         { label: "Sanidad", count: 6 },
         { label: "Justicia", count: 5 },
         { label: "Educación", count: 4 },
         { label: "Seguridad", count: 2 },
-        { label: "Tecnología", count: 2 },
       ],
     },
     {
@@ -76,23 +83,40 @@ export const DEFAULT_PROPS: VideoProps = {
       end: 13,
       titulo: "Destacadas",
       items: [
-        { puesto: "Auxiliar Administrativo", org: "Administración del Estado · Nacional", tag: "1.500 plazas" },
-        { puesto: "Enfermero/a", org: "Servicio Andaluz de Salud · Andalucía", tag: "320 plazas" },
-        { puesto: "Tramitación Procesal", org: "Ministerio de Justicia · Estatal", tag: "Estatal" },
+        { puesto: "Auxiliar Administrativo", org: "Administración del Estado · Nacional", tag: "1.500 plazas", tema: "admin" },
+        { puesto: "Enfermero/a", org: "Servicio Andaluz de Salud · Andalucía", tag: "320 plazas", tema: "sanidad" },
+        { puesto: "Tramitación Procesal", org: "Ministerio de Justicia · Estatal", tag: "Estatal", tema: "justicia" },
       ],
       extra: 44,
     },
     {
-      kind: "newsletter",
+      kind: "listado",
       start: 13,
-      end: 17,
+      end: 18.5,
+      titulo: "Todas las de hoy",
+      items: [
+        { puesto: "Auxiliar Administrativo", lugar: "Estatal", tag: "1.500 plazas", tema: "admin" },
+        { puesto: "Enfermero/a", lugar: "Andalucía", tag: "320 plazas", tema: "sanidad" },
+        { puesto: "Tramitación Procesal", lugar: "Estatal", tag: "", tema: "justicia" },
+        { puesto: "Maestro de Primaria", lugar: "Galicia", tag: "30 plazas", tema: "educacion" },
+        { puesto: "Policía Local", lugar: "C. Valenciana", tag: "40 plazas", tema: "seguridad" },
+        { puesto: "Técnico Informático", lugar: "Madrid", tag: "12 plazas", tema: "tech" },
+        { puesto: "Bombero", lugar: "Cataluña", tag: "8 plazas", tema: "seguridad" },
+        { puesto: "Auxiliar de Biblioteca", lugar: "Castilla y León", tag: "", tema: "general" },
+      ],
+      extra: 39,
+    },
+    {
+      kind: "newsletter",
+      start: 18.5,
+      end: 22.5,
       regalo: "Calendario del Opositor 2026",
       cta: "oponoticias.com",
     },
     {
       kind: "cierre",
-      start: 17,
-      end: 21,
+      start: 22.5,
+      end: 26.5,
       lineas: ["¿Buscas las de", "tu comunidad?"],
       cta: "Fíltralas en oponoticias.com",
     },

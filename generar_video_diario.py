@@ -153,6 +153,12 @@ def construir_guion(convocatorias, max_destacadas=3):
             vistas.add(clave)
             todas.append((plazas, puesto, lugar))
 
+    # Fusiona el cajón "general" (catch-all) con "admin": se mostraban como
+    # "Administración" y "Administración local" → dos barras casi idénticas y
+    # confusas. La mayoría del catch-all es administración municipal/general.
+    if "general" in conteo:
+        conteo["admin"] = conteo.get("admin", 0) + conteo.pop("general")
+
     sectores = sorted(conteo.items(), key=lambda kv: kv[1], reverse=True)[:6]
     items_sector = [{"label": CAT_NOMBRE.get(k, k.title()), "count": v} for k, v in sectores]
 
@@ -168,7 +174,23 @@ def construir_guion(convocatorias, max_destacadas=3):
         else:
             org = lugar
             tag = f"{num_fmt} plazas" if (num and num != "1") else "1 plaza"
-        destacadas.append({"puesto": puesto, "org": org, "tag": tag})
+        destacadas.append({"puesto": puesto, "org": org, "tag": tag,
+                           "tema": _categoria(puesto)[0]})
+
+    # Listado completo del día (resumen estilo WhatsApp): todas, compactas, con
+    # icono por categoría. Se cap­a a MAX_LISTADO para no saturar el scroll.
+    MAX_LISTADO = 30
+    listado = []
+    for plazas, puesto, lugar in todas[:MAX_LISTADO]:
+        m = re.search(r"\d+", plazas)
+        num = m.group() if m else ""
+        sitio = "Estatal" if _es_nacional(lugar) else lugar
+        if num and num != "1":
+            tag = f"{int(num):,}".replace(",", ".") + " plazas"
+        else:
+            tag = ""
+        listado.append({"puesto": puesto, "lugar": sitio, "tag": tag,
+                        "tema": _categoria(puesto)[0]})
 
     escenas = []
     # 1) Portada: el total del día.
@@ -196,14 +218,23 @@ def construir_guion(convocatorias, max_destacadas=3):
             "items": destacadas,
             "extra": max(0, n - len(destacadas)),
         })
-    # 4) Newsletter: gancho con el lead magnet (Calendario del Opositor).
+    # 4) Listado completo: todas las del día de un vistazo (scroll si hay muchas).
+    if listado:
+        escenas.append({
+            "kind": "listado",
+            "narr": "Y este es el resumen del día al completo: toda la oferta de hoy, de un vistazo.",
+            "titulo": "Todas las de hoy",
+            "items": listado,
+            "extra": max(0, len(todas) - len(listado)),
+        })
+    # 5) Newsletter: gancho con el lead magnet (Calendario del Opositor).
     escenas.append({
         "kind": "newsletter",
         "narr": "Suscríbete gratis y llévate el Calendario del Opositor en tu correo.",
         "regalo": "Calendario del Opositor 2026",
         "cta": "oponoticias.com",
     })
-    # 5) Cierre: filtrado por comunidad en la web + seguir.
+    # 6) Cierre: filtrado por comunidad en la web + seguir.
     escenas.append({
         "kind": "cierre",
         "narr": "¿Buscas las de tu comunidad? Encuéntralas en oponoticias punto com. Síguenos.",
