@@ -2,9 +2,21 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oponoticias.com/blog</loc>
-    <lastmod>2026-06-25</lastmod>
+    <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-tecnicas-2026-plazas-convocadas-y-requisitos-202606</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/academia-presencial-online-o-autopreparacion</loc>
+    <lastmod>2026-06-26</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://oponoticias.com/blog/plan-de-estudio-realista-para-oposiciones</loc>
