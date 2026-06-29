@@ -70,6 +70,23 @@ function emailBienvenidaHtml() {
       A partir de mañana recibirás cada día laborable un resumen de las nuevas convocatorias del BOE,
       en lenguaje claro y organizadas por categoría y comunidad autónoma.
     </p>
+
+    <!-- Bloque de bienvenida: cómo usarlo + síguenos (todo en este único email) -->
+    <div style="margin:22px 0 6px;padding:20px 22px;background:#f8f6f2;border-radius:10px;">
+      <p style="margin:0 0 12px;color:#2b2622;font-size:16px;font-weight:700;font-family:'Georgia',serif;">Para empezar</p>
+      <p style="margin:0 0 10px;color:#4a4540;font-size:14px;line-height:1.6;">
+        🔎 <strong>Busca las de tu comunidad:</strong> en la web puedes filtrar todas las convocatorias
+        por comunidad autónoma y categoría, con enlace directo al BOE.
+        <a href="https://oponoticias.com/boe-hoy" style="color:#c4a574;text-decoration:none;font-weight:600;">Verlas ahora&nbsp;→</a>
+      </p>
+      <p style="margin:0;color:#4a4540;font-size:14px;line-height:1.6;">
+        📲 <strong>Síguenos también</strong> para no perderte nada al instante:
+        <a href="https://t.me/OPONOTICIAS" style="color:#c4a574;text-decoration:none;font-weight:600;">Telegram</a>
+        &nbsp;·&nbsp;
+        <a href="https://instagram.com/oponoticiason" style="color:#c4a574;text-decoration:none;font-weight:600;">Instagram</a>
+      </p>
+    </div>
+
     <p style="margin:16px 0 0;color:#8b8b7a;font-size:13px;line-height:1.6;">
       ¿No ves el botón? Copia este enlace en tu navegador:<br>
       <a href="${PDF_URL}" style="color:#c4a574;">${PDF_URL}</a>
