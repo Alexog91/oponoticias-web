@@ -1244,6 +1244,27 @@ def _titulo_seo(puesto, ambito, plazas, anio):
     return titulo
 
 
+# Trámites administrativos que NO son convocatorias buscables (no merecen índice).
+_RE_TRAMITE = re.compile(
+    r'(?i)correcci[oó]n|errata|modificaci[oó]n|lista de admit|'
+    r'relaci[oó]n .*aprob|adjudicaci|nombramiento|jubilaci|baja ')
+
+
+def _ficha_indexable(plazas, titulo_oficial):
+    """Decide si la ficha entra en el índice de Google (anti index bloat).
+    Poda agresiva (decidida 30 jun 2026): fuera las de 1 sola plaza (demanda
+    ~nula; es la firma del fallback del extractor) y los trámites
+    administrativos (correcciones, modificaciones, adjudicaciones,
+    nombramientos...). Se siguen indexando los procesos con varias plazas.
+    Las podadas quedan noindex,follow: vivas para usuarios y pasan autoridad
+    a los hubs, pero fuera del índice y del sitemap."""
+    if re.sub(r'[^\d]', '', plazas or '') == "1":
+        return False
+    if _RE_TRAMITE.search(titulo_oficial or ''):
+        return False
+    return True
+
+
 def _bloque_enriquecido(conv, categoria, puesto_t, organismo_t, ambito_t,
                         plazas_t, fecha_str):
     """Devuelve (html_bloque, faq_schema_json). Contenido único y útil por ficha,
@@ -1375,6 +1396,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     og_title = _seo or conv['titulo'][:100]
     cat_slug = _slug_categoria(categoria)
     ccaa_slug = _slug_ccaa(ambito_t)
+    robots = "index, follow" if _ficha_indexable(plazas_t, conv['titulo']) else "noindex, follow"
 
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
@@ -1384,7 +1406,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
   <title>{title_tag}</title>
   <meta name="description" content="{meta_desc}">
   <link rel="canonical" href="{canonical}">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="{robots}">
   <meta name="theme-color" content="#5A5047">
   <script>document.documentElement.className += ' js';</script>
 
@@ -1604,12 +1626,19 @@ def regenerar_sitemap(slugs_nuevos):
             ("https://oponoticias.com/categoria/tecnica", hoy, "daily", "0.8"),
         ]
 
-        # Fichas de convocatoria: desde la Fase 3 SEO (28 jun 2026) llevan contenido
-        # enriquecido (contexto, pasos, FAQ con schema) y ya se indexan, por lo que se
-        # incluyen en el sitemap. Las CCAA las añade generar_ccaa.actualizar_sitemap
-        # tras este paso.
+        # Fichas de convocatoria: solo las indexables (index bloat, 30 jun 2026).
+        # La etiqueta robots de cada ficha es la fuente de verdad: las marcadas
+        # noindex (1 plaza / trámites, ver _ficha_indexable) se excluyen del
+        # sitemap para concentrar el rastreo en las que valen. Las CCAA las añade
+        # generar_ccaa.actualizar_sitemap tras este paso.
         if WEB_CONVOCATORIA_DIR.exists():
             for f in sorted(WEB_CONVOCATORIA_DIR.glob("*.html")):
+                try:
+                    cabecera = f.read_text(encoding="utf-8")[:2500]
+                except Exception:
+                    continue
+                if 'content="noindex' in cabecera:
+                    continue
                 lastmod = datetime.fromtimestamp(f.stat().st_mtime).strftime("%Y-%m-%d")
                 urls.append((f"https://oponoticias.com/convocatoria/{f.stem}",
                              lastmod, "monthly", "0.6"))
