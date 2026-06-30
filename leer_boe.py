@@ -1226,6 +1226,24 @@ def _slug_ccaa(comunidad):
     return s if s in _CCAA_SLUGS else "nacional"
 
 
+def _titulo_seo(puesto, ambito, plazas, anio):
+    """Título SEO con la keyword por delante: 'Oposiciones {puesto} en {lugar} {año}'.
+    Recibe strings ya escapados para HTML. Devuelve "" cuando el puesto es genérico
+    (en ese caso se conserva el título oficial del BOE, que ya es único)."""
+    puesto = (puesto or "").strip()
+    if puesto.lower() in ("", "-", "—", "convocatoria", "convocatorias", "varias"):
+        return ""
+    es_nacional = _norm_slug(ambito) in ("nacional", "nacional-estatal", "estatal", "")
+    lugar = "" if es_nacional else f" en {ambito}"
+    cuerpo = puesto if puesto.lower().startswith("oposicion") else f"Oposiciones {puesto}"
+    titulo = f"{cuerpo}{lugar} {anio}"
+    pl = _norm_slug(plazas)
+    if pl and pl not in ("varias", "", "-") and any(c.isdigit() for c in plazas):
+        unidad = "plaza" if re.sub(r"[^\d]", "", plazas) == "1" else "plazas"
+        titulo += f" · {plazas} {unidad}"
+    return titulo
+
+
 def _bloque_enriquecido(conv, categoria, puesto_t, organismo_t, ambito_t,
                         plazas_t, fecha_str):
     """Devuelve (html_bloque, faq_schema_json). Contenido único y útil por ficha,
@@ -1351,12 +1369,19 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     bloque_extra, faq_schema_json = _bloque_enriquecido(
         conv, categoria, puesto_t, organismo_t, ambito_t, plazas_t, fecha_str)
 
+    # Título SEO (keyword al frente) + enlaces internos a los hubs
+    _seo = _titulo_seo(puesto_t, ambito_t, plazas_t, fecha_schema[:4])
+    title_tag = f"{_seo} | OpoNoticias" if _seo else f"{conv['titulo']} — Convocatoria | OpoNoticias"
+    og_title = _seo or conv['titulo'][:100]
+    cat_slug = _slug_categoria(categoria)
+    ccaa_slug = _slug_ccaa(ambito_t)
+
     html_content = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{conv['titulo']} — Convocatoria | OpoNoticias</title>
+  <title>{title_tag}</title>
   <meta name="description" content="{meta_desc}">
   <link rel="canonical" href="{canonical}">
   <meta name="robots" content="index, follow">
@@ -1365,7 +1390,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
 
   <meta property="og:type" content="article">
   <meta property="og:site_name" content="OpoNoticias">
-  <meta property="og:title" content="{conv['titulo'][:100]}">
+  <meta property="og:title" content="{og_title}">
   <meta property="og:description" content="{desc[:160]}">
   <meta property="og:url" content="{canonical}">
   <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
@@ -1431,7 +1456,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
       <nav class="breadcrumb" aria-label="Migas de pan">
         <a href="../index.html">Inicio</a>
         <span class="sep">/</span>
-        <a href="../index.html#categorias">{categoria}</a>
+        <a href="../categoria/{cat_slug}.html">{categoria}</a>
         <span class="sep">/</span>
         <span aria-current="page">{titular_corto}</span>
       </nav>
@@ -1462,7 +1487,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
                 </div>
                 <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
                   <div style="font-size:0.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--gray); margin-bottom:4px;">Ámbito</div>
-                  <div style="font-size:1.05rem; font-weight:600; color:var(--ink);">{ambito_t}</div>
+                  <div style="font-size:1.05rem; font-weight:600; color:var(--ink);"><a href="../ccaa/{ccaa_slug}.html" style="color:inherit; text-decoration:none; border-bottom:1px solid var(--line);">{ambito_t}</a></div>
                 </div>
               </div>
               <div style="background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px;">
