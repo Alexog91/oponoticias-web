@@ -387,20 +387,26 @@ def _generar_musica(tmp, destino):
 
 
 def mezclar_audio(voice, musica, total, destino):
-    """Voz + música con DUCKING (sidechain) y loudnorm -16 LUFS → WAV final."""
-    norm = (f"loudnorm=I=-16:TP=-1.5:LRA=11,"
-            f"afade=t=out:st={max(0.0, total - 0.6):.2f}:d=0.6")
+    """Voz + música → WAV final, con la VOZ siempre por delante.
+
+    Clave: se normaliza cada fuente por separado a un nivel fijo —voz a -16 LUFS,
+    música ~14 dB por debajo (-30 LUFS)— en vez de normalizar la mezcla entera.
+    Así el balance voz:música no depende de lo alta que venga la pista (los MP3
+    comerciales rondan -12 LUFS). Además, ducking sidechain que baja la música
+    durante la locución. Salida global ≈ -16 LUFS (igual que antes)."""
+    fade = f"afade=t=out:st={max(0.0, total - 0.6):.2f}:d=0.6"
     if musica:
         cmd = [FFMPEG, "-y", "-i", str(voice), "-stream_loop", "-1", "-i", str(musica),
                "-filter_complex",
-               "[1:a]volume=1.8[m];"
-               "[0:a]volume=1.0,asplit=2[vmix][vkey];"
-               "[m][vkey]sidechaincompress=threshold=0.06:ratio=4:attack=20:release=400[mduck];"
-               "[vmix][mduck]amix=inputs=2:duration=longest:dropout_transition=0[premix];"
-               f"[premix]{norm}[a]",
+               "[0:a]loudnorm=I=-16:TP=-1.5:LRA=11,asplit=2[vmix][vkey];"
+               "[1:a]loudnorm=I=-30:TP=-3:LRA=11[m];"
+               "[m][vkey]sidechaincompress=threshold=0.04:ratio=6:attack=5:release=350[mduck];"
+               "[vmix][mduck]amix=inputs=2:duration=longest:dropout_transition=0[mix];"
+               f"[mix]loudnorm=I=-16:TP=-1.5:LRA=11,{fade},alimiter=limit=0.95[a]",
                "-map", "[a]", "-t", f"{total:.2f}", "-ar", "44100", "-ac", "2", str(destino)]
     else:
-        cmd = [FFMPEG, "-y", "-i", str(voice), "-af", norm,
+        cmd = [FFMPEG, "-y", "-i", str(voice), "-af",
+               f"loudnorm=I=-16:TP=-1.5:LRA=11,{fade}",
                "-t", f"{total:.2f}", "-ar", "44100", "-ac", "2", str(destino)]
     subprocess.run(cmd, check=True, capture_output=True)
 
