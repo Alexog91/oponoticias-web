@@ -33,6 +33,7 @@ import sys
 import json
 import time
 import random
+from web_utils import limpiar_hrefs
 import urllib.parse
 from datetime import datetime, timezone, timedelta
 
@@ -387,7 +388,7 @@ def guardar_borrador(art, tema, fecha_pub, imagen, overwrite=False):
     os.makedirs(BLOG_DIR, exist_ok=True)
     ruta = os.path.join(BLOG_DIR, f"{tema['slug']}.html")
     with open(ruta, "w", encoding="utf-8") as f:
-        f.write(gb.plantilla_articulo(art))
+        f.write(limpiar_hrefs(gb.plantilla_articulo(art)))
     return True
 
 

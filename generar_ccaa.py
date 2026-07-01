@@ -15,6 +15,7 @@ import html as html_lib
 import re
 import unicodedata
 import urllib.request
+from web_utils import limpiar_hrefs
 import urllib.parse
 from pathlib import Path
 from datetime import datetime
@@ -422,7 +423,7 @@ if __name__ == "__main__":
 
         html = generar_html(ccaa_nombre, slug, convocatorias)
         path = CCAA_DIR / f"{slug}.html"
-        path.write_text(html, encoding='utf-8')
+        path.write_text(limpiar_hrefs(html), encoding='utf-8')
         slugs_generados.append(slug)
         print(f"   ✓ Generada: ccaa/{slug}.html")
 

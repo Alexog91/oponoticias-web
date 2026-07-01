@@ -20,6 +20,7 @@ import html
 import json
 import time
 import random
+from web_utils import limpiar_hrefs
 import urllib.request
 import urllib.parse
 import urllib.error
@@ -669,7 +670,7 @@ def guardar_articulo(art, categoria):
     os.makedirs(BLOG_DIR, exist_ok=True)
     ruta = os.path.join(BLOG_DIR, f"{slug}.html")
     with open(ruta, "w", encoding="utf-8") as f:
-        f.write(plantilla_articulo(art))
+        f.write(limpiar_hrefs(plantilla_articulo(art)))
     print(f"  ✅  Guardado en Supabase + página: {ruta}")
     return True
 
@@ -682,7 +683,7 @@ def regenerar_indice_y_sitemap():
     })
     articulos = supabase_get("articulos_blog", params)
     with open("blog.html", "w", encoding="utf-8") as f:
-        f.write(plantilla_indice(articulos))
+        f.write(limpiar_hrefs(plantilla_indice(articulos)))
     with open("sitemap-blog.xml", "w", encoding="utf-8") as f:
         f.write(generar_sitemap_blog(articulos))
     print(f"  🔄  Índice y sitemap regenerados ({len(articulos)} artículos)")

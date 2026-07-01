@@ -4,6 +4,7 @@ import urllib.error
 import xml.etree.ElementTree as ET
 import json
 import os
+from web_utils import limpiar_hrefs
 import time
 import re
 import subprocess
@@ -1598,7 +1599,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     try:
         WEB_CONVOCATORIA_DIR.mkdir(parents=True, exist_ok=True)
         with open(html_path, 'w', encoding='utf-8') as f:
-            f.write(html_content)
+            f.write(limpiar_hrefs(html_content))
         print(f"✅ Generado HTML: {slug}")
         return slug
     except Exception as e:
