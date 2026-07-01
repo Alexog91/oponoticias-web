@@ -523,7 +523,7 @@ async function cargarBlog() {
     art.className = 'blog-item';
     const cat = CAT_NOMBRE[a.categoria] || 'Blog';
     art.innerHTML = `
-      <a href="blog/${a.slug}.html" class="blog-link">
+      <a href="/blog/${a.slug}" class="blog-link">
         <span class="blog-tag">${cat}</span>
         <h4>${a.titulo}</h4>
         <span class="blog-read">Leer artículo →</span>
@@ -533,7 +533,7 @@ async function cargarBlog() {
   });
 
   // El enlace "Ver todo el blog" apunta al índice
-  if (more) more.setAttribute('href', 'blog.html');
+  if (more) more.setAttribute('href', '/blog');
 }
 
 /* ── COMUNIDAD AUTÓNOMA: inferencia desde el texto ──────────────────────── */
