@@ -154,9 +154,12 @@ TEMAS = [
 ]
 
 SECCIONES_WEB = [
-    ("últimas convocatorias", "/index.html#ultimas"),
-    ("todas las categorías", "/index.html#categorias"),
-    ("el blog del opositor", "/blog.html"),
+    ("las últimas convocatorias", "/#ultimas"),
+    ("todas las categorías", "/#categorias"),
+    ("las oposiciones por comunidad", "/#comunidades"),
+    ("el blog del opositor", "/blog"),
+    ("el BOE de hoy", "/boe-hoy"),
+    ("los recursos gratis para opositores", "/recursos"),
 ]
 
 
@@ -277,8 +280,8 @@ DEVUELVE SOLO ESTE JSON (sin ``` ni texto alrededor):
 def generar_articulo_tema(tema):
     año = datetime.now().year
     nombre_pilar = gb.NOMBRE_CATEGORIA.get(tema["pilar"], "Administración")
-    url_pilar = f"/categoria/{tema['pilar']}.html"
-    seccion_label, seccion_url = random.choice(SECCIONES_WEB)
+    url_pilar = f"/categoria/{tema['pilar']}"
+    seccs = random.sample(SECCIONES_WEB, 2)
     fuente = random.choice(gb.FUENTES_REFERENCIA)
 
     prompt = f"""Eres un redactor experto en oposiciones y empleo público en España, con conocimiento técnico real del acceso a la función pública (cuerpos y escalas, grupos de clasificación, sistemas selectivos y bases de convocatoria). Escribes con autoridad profesional pero de forma cercana, como alguien que conoce de primera mano lo que vive un opositor. Escribe para el blog de OpoNoticias un artículo BREVE y muy bien posicionado en buscadores sobre:
@@ -296,9 +299,9 @@ CÓMO ESCRIBIR (lo más importante):
 - Varía la longitud de las frases. PROHIBIDO usar muletillas de IA: "En resumen", "En definitiva", "Cabe destacar", "Es fundamental", "el mundo de las oposiciones", "embarcarte en", "abre las puertas a", "no es tarea fácil", ni listas de tres adjetivos.
 - No inventes cifras, fechas, plazas ni denominaciones oficiales que no conozcas con certeza; si no tienes el dato exacto, exprésalo en términos generales.
 
-ENLACES (obligatorios, integrados de forma natural dentro de frases, en formato markdown):
-- DOS enlaces a la guía de referencia del área, con textos ancla distintos: [oposiciones de {nombre_pilar}]({url_pilar}) y una segunda mención con otro texto ancla hacia {url_pilar}.
-- UN enlace a esta sección real de la web: [{seccion_label}]({seccion_url}).
+ENLACES (obligatorios, integrados de forma natural dentro de frases, en formato markdown; usa las URL EXACTAS que se indican, sin añadir ".html"):
+- UN enlace a la guía de referencia del área: [oposiciones de {nombre_pilar}]({url_pilar}).
+- DOS enlaces a estas secciones reales de la web, cada uno en un párrafo distinto y con el texto ancla natural indicado: [{seccs[0][0]}]({seccs[0][1]}) y [{seccs[1][0]}]({seccs[1][1]}).
 - UN enlace externo de autoridad: [{fuente['nombre']}]({fuente['url']}).
 
 ESTRUCTURA Y SEO:

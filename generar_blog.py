@@ -266,7 +266,7 @@ ESTRUCTURA Y SEO:
 - Entre 900 y 1300 palabras de contenido real.
 - Usa ## para H2 y ### para H3. Que los subtítulos contengan lo que la gente busca ("Requisitos", "Plazas convocadas", "Fechas y plazos", "Cómo prepararte").
 - Pon en **negrita** los términos clave de forma natural (1-3 por sección).
-- Incluye 3 enlaces internos dentro de frases, eligiendo entre: [oposiciones de Educación](/categoria/educacion.html), [Sanidad](/categoria/sanidad.html), [Administración](/categoria/administracion.html), [Justicia](/categoria/justicia.html), [Seguridad](/categoria/seguridad.html), [Hacienda](/categoria/hacienda.html), [Correos](/categoria/correos.html).
+- Incluye 3 enlaces internos dentro de frases, con URL EXACTAS (sin ".html"), eligiendo entre: [oposiciones de Educación](/categoria/educacion), [Sanidad](/categoria/sanidad), [Administración](/categoria/administracion), [Justicia](/categoria/justicia), [Seguridad](/categoria/seguridad), [Hacienda](/categoria/hacienda), [Correos](/categoria/correos), [el BOE de hoy](/boe-hoy) o [recursos gratis para opositores](/recursos). No repitas dos veces el mismo destino.
 - Incluye 1 enlace externo natural a {fuente['nombre']}: [{fuente['nombre']}]({fuente['url']}).
 - Añade al final "## Preguntas frecuentes" con 3 preguntas reales (cada una con ### y respuesta de 2-3 frases). Ayuda a aparecer en resultados destacados de Google.
 - Cierra con un párrafo breve y honesto invitando a seguir las novedades en el canal de Telegram [OpoNoticias](https://t.me/OPONOTICIAS), sin sonar a anuncio.
