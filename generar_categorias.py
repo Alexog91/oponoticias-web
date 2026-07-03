@@ -288,6 +288,8 @@ def generar_html(cat_nombre, slug, descripcion, convocatorias):
           <a href="../index.html#comunidades">Comunidades</a>
           <a href="../index.html#categorias">Categorías</a>
           <a href="../index.html#ultimas">Últimas</a>
+          <a href="../blog.html">Blog</a>
+          <a href="../recursos.html">Recursos</a>
           <a href="../index.html#como-funciona">Cómo funciona</a>
         </div>
         <div class="nav-cta">

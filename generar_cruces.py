@@ -232,6 +232,7 @@ def generar_html(cat_nombre, cat_slug, ccaa_nombre, ccaa_slug, convocatorias, n_
           <a href="../../index.html#categorias">Categorías</a>
           <a href="../../boe-hoy">El BOE de hoy</a>
           <a href="../../blog">Blog</a>
+          <a href="../../recursos">Recursos</a>
           <a href="../../index.html#como-funciona">Cómo funciona</a>
         </div>
         <div class="nav-cta">

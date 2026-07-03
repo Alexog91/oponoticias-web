@@ -1489,6 +1489,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
           <a href="../index.html#categorias">Categorías</a>
           <a href="../boe-hoy.html">El BOE de hoy</a>
           <a href="../blog.html">Blog</a>
+          <a href="../recursos.html">Recursos</a>
           <a href="../index.html#como-funciona">Cómo funciona</a>
         </div>
         <div class="nav-cta">
