@@ -29,6 +29,7 @@ ADSENSE_CLIENT   = "ca-pub-4832095429696459"
 CCAA_DIR         = WEB_REPO_PATH / "ccaa"
 SITEMAP_PATH     = WEB_REPO_PATH / "sitemap.xml"
 CONVOCATORIA_DIR = WEB_REPO_PATH / "convocatoria"
+CATEGORIA_DIR    = WEB_REPO_PATH / "categoria"
 
 HOY = datetime.now().strftime("%Y-%m-%d")
 AÑO = datetime.now().year
@@ -62,6 +63,13 @@ CCAA = [
 ]
 
 SLUG_A_NOMBRE = {slug: nombre for nombre, slug in CCAA}
+
+# Duplicado deliberado (evita import circular con generar_categorias.py).
+_CATEGORIA_NOMBRES = {
+    "educacion": "Educación", "sanidad": "Sanidad", "justicia": "Justicia",
+    "seguridad": "Seguridad", "administracion": "Administración",
+    "hacienda": "Hacienda", "correos": "Correos", "tecnica": "Técnica",
+}
 
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
@@ -185,6 +193,20 @@ def links_otras_ccaa(slug_actual):
     return '\n          '.join(partes)
 
 
+def links_cruces_categoria(ccaa_slug):
+    """Pills a las landing pages categoría×CCAA que existan para esta
+    comunidad (generar_cruces.py solo las crea si hay contenido suficiente)."""
+    if not CATEGORIA_DIR.is_dir():
+        return ""
+    partes = []
+    for f in sorted(CATEGORIA_DIR.glob(f"*/{ccaa_slug}.html")):
+        cat_slug = f.parent.name
+        nombre = _CATEGORIA_NOMBRES.get(cat_slug)
+        if nombre:
+            partes.append(f'<a href="../categoria/{cat_slug}/{ccaa_slug}" class="ccaa-pill">{nombre}</a>')
+    return '\n          '.join(partes)
+
+
 # ── Generador HTML ────────────────────────────────────────────────────────────
 
 def generar_html(ccaa_nombre, slug, convocatorias):
@@ -192,6 +214,14 @@ def generar_html(ccaa_nombre, slug, convocatorias):
     meta_desc = (f"Convocatorias de oposiciones en {ccaa_nombre} {AÑO} publicadas en el BOE. "
                  f"{n} plazas de empleo público actualizadas diariamente por OpoNoticias.")
     canonical = f"https://oponoticias.com/ccaa/{slug}"
+    cruces_html = links_cruces_categoria(slug)
+    seccion_cruces = f"""
+        <div class="ccaa-otras">
+          <h3>Oposiciones en {ccaa_nombre} por categoría</h3>
+          <div class="ccaa-pills">
+          {cruces_html}
+          </div>
+        </div>""" if cruces_html else ""
 
     # Tarjetas de convocatorias
     tarjetas = []
@@ -325,6 +355,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
           {links_otras_ccaa(slug)}
           </div>
         </div>
+{seccion_cruces}
 
       </article>
     </div>

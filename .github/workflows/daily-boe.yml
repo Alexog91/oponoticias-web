@@ -95,6 +95,14 @@ jobs:
           WEB_REPO_PATH: '.'
         run: python3 leer_boe.py
 
+      - name: Run generar_cruces.py
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          WEB_REPO_PATH: '.'
+        run: python3 generar_cruces.py
+
       - name: Run generar_ccaa.py
         continue-on-error: true
         env:

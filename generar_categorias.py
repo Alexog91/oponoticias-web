@@ -50,6 +50,19 @@ CATEGORIAS = [
 
 SLUG_A_NOMBRE = {slug: nombre for nombre, slug, _ in CATEGORIAS}
 
+# Duplicado deliberado (evita import circular con generar_ccaa.py, que a su
+# vez necesita el nombre de las categorías para sus propios cruces).
+_CCAA_NOMBRES = {
+    "andalucia": "Andalucía", "aragon": "Aragón", "asturias": "Asturias",
+    "baleares": "Baleares", "canarias": "Canarias", "cantabria": "Cantabria",
+    "castilla-la-mancha": "Castilla-La Mancha", "castilla-leon": "Castilla y León",
+    "cataluna": "Cataluña", "comunidad-valenciana": "Comunidad Valenciana",
+    "extremadura": "Extremadura", "galicia": "Galicia", "la-rioja": "La Rioja",
+    "madrid": "Madrid", "murcia": "Murcia", "navarra": "Navarra",
+    "pais-vasco": "País Vasco", "ceuta": "Ceuta", "melilla": "Melilla",
+    "nacional": "Nacional/Estatal",
+}
+
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
 
@@ -167,10 +180,33 @@ def links_otras_categorias(slug_actual):
     return '\n          '.join(partes)
 
 
+def links_cruces_ccaa(cat_slug):
+    """Pills a las landing pages categoría×CCAA que existan de verdad
+    (generar_cruces.py solo las crea si hay contenido suficiente)."""
+    cat_dir = CATEGORIA_DIR / cat_slug
+    if not cat_dir.is_dir():
+        return ""
+    partes = []
+    for f in sorted(cat_dir.glob("*.html")):
+        ccaa_slug = f.stem
+        nombre = _CCAA_NOMBRES.get(ccaa_slug)
+        if nombre:
+            partes.append(f'<a href="{cat_slug}/{ccaa_slug}" class="ccaa-pill">{nombre}</a>')
+    return '\n          '.join(partes)
+
+
 # ── Generador HTML ────────────────────────────────────────────────────────────
 
 def generar_html(cat_nombre, slug, descripcion, convocatorias):
     n = len(convocatorias)
+    cruces_html = links_cruces_ccaa(slug)
+    seccion_cruces = f"""
+        <div class="ccaa-otras">
+          <h3>Oposiciones de {cat_nombre} por comunidad autónoma</h3>
+          <div class="ccaa-pills">
+          {cruces_html}
+          </div>
+        </div>""" if cruces_html else ""
     meta_desc = (f"Convocatorias de oposiciones de {cat_nombre} {AÑO} publicadas en el BOE. "
                  f"{n} plazas actualizadas diariamente por OpoNoticias.")
     canonical = f"https://oponoticias.com/categoria/{slug}"
@@ -305,6 +341,7 @@ def generar_html(cat_nombre, slug, descripcion, convocatorias):
           {links_otras_categorias(slug)}
           </div>
         </div>
+{seccion_cruces}
 
       </article>
     </div>

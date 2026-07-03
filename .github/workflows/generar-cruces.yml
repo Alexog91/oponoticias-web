@@ -1,0 +1,58 @@
+name: Generar Cruces Categoría×CCAA (manual)
+
+# Ejecución manual desde GitHub UI → Actions → "Generar Cruces Categoría×CCAA".
+# Genera las landing pages "Oposiciones de {categoría} en {CCAA}" SOLO donde
+# hay suficiente contenido real (ver MIN_SUSTANCIALES en generar_cruces.py).
+# Luego regenera categoria/ y ccaa/ para que enlacen a las páginas nuevas.
+# También corre a diario dentro de daily-boe.yml, antes de generar_ccaa.py.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cruces:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run generar_cruces.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          WEB_REPO_PATH: '.'
+        run: python3 generar_cruces.py
+
+      - name: Run generar_ccaa.py (refresca pills)
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          WEB_REPO_PATH: '.'
+        run: python3 generar_ccaa.py
+
+      - name: Run generar_categorias.py (refresca pills)
+        continue-on-error: true
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          WEB_REPO_PATH: '.'
+        run: python3 generar_categorias.py
+
+      - name: Commit y push
+        run: |
+          git config user.name  "OpoNoticias Bot"
+          git config user.email "bot@oponoticias.com"
+          git add categoria/ ccaa/ sitemap.xml
+          if git diff --staged --quiet; then
+            echo "Sin páginas nuevas que subir."
+          else
+            git commit -m "Cruces: nuevas landing pages categoría×CCAA [skip ci]"
+            git pull --no-edit --rebase origin main || true
+            git push
+          fi
