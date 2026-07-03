@@ -1,8 +1,8 @@
-name: Test TikTok (borrador sandbox)
+name: Test TikTok (borrador producción)
 
 # Prueba el pipeline de subida a TikTok: genera un vídeo corto, lo sube a
 # Supabase y lo manda como borrador. Requiere haber corrido antes el OAuth
-# (tiktok-oauth.yml) para tener los tokens en Supabase.
+# (tiktok-oauth.yml) para tener los tokens de producción en Supabase.
 on:
   workflow_dispatch:
 
@@ -21,8 +21,8 @@ jobs:
 
       - name: Subir vídeo de prueba a TikTok (borrador)
         env:
-          TIKTOK_CLIENT_KEY: sbawre9qt8j0j0hvvm   # client key del sandbox
-          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_SANDBOX_CLIENT_SECRET }}
+          TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
           SUPABASE_STORAGE_BUCKET: social
