@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de nota de examen de oposición (con penalización) | OpoNoticias</title>
+  <meta name="description" content="Calcula tu nota de un examen tipo test de oposición al instante: introduce aciertos, fallos y la penalización por error. Presets para las oposiciones más habituales. Gratis y sin registro.">
+  <link rel="canonical" href="https://oponoticias.com/calculadora-nota">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#5A5047">
+  <script>document.documentElement.className += ' js';</script>
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpoNoticias">
+  <meta property="og:title" content="Calculadora de nota de examen de oposición">
+  <meta property="og:description" content="Introduce aciertos, fallos y la penalización y calcula tu nota al instante. Gratis, para cualquier oposición.">
+  <meta property="og:url" content="https://oponoticias.com/calculadora-nota">
+  <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
+  <meta property="og:locale" content="es_ES">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=6">
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "Calculadora de nota de examen de oposición",
+    "url": "https://oponoticias.com/calculadora-nota",
+    "applicationCategory": "EducationalApplication",
+    "operatingSystem": "Web",
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+    "description": "Calcula la nota de un examen tipo test de oposición a partir de aciertos, fallos y la penalización por respuesta incorrecta.",
+    "publisher": {"@type": "Organization", "name": "OpoNoticias", "url": "https://oponoticias.com"}
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {"@type": "Question", "name": "¿Qué nota necesito para aprobar la oposición?",
+       "acceptedAnswer": {"@type": "Answer", "text": "Depende de cada convocatoria, pero lo más común es necesitar un 5 sobre 10 para superar la fase de oposición. Aprobar no garantiza plaza; para eso hay que quedar por encima de la nota de corte, que depende del resto de aspirantes."}},
+      {"@type": "Question", "name": "¿Conviene responder al azar si no sé la respuesta?",
+       "acceptedAnswer": {"@type": "Answer", "text": "Con penalización, responder totalmente al azar tiende a restar. Pero si puedes descartar una o dos opciones, la probabilidad juega a tu favor y suele compensar arriesgar."}},
+      {"@type": "Question", "name": "¿Las preguntas en blanco restan?",
+       "acceptedAnswer": {"@type": "Answer", "text": "No. En el sistema habitual las respuestas en blanco ni suman ni restan; solo penalizan los fallos."}}
+    ]
+  }
+  </script>
+
+  <style>
+    .cal-wrap{ max-width:820px; margin:0 auto; padding:44px 24px 72px; }
+    .cal-head{ text-align:center; max-width:660px; margin:0 auto 32px; }
+    .cal-head h1{ font-size:clamp(1.8rem,4vw,2.6rem); letter-spacing:-0.5px; line-height:1.12; margin:12px 0 14px; }
+    .cal-head .lead{ color:var(--gray); font-size:1.08rem; }
+
+    .cal-card{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:26px 24px; box-shadow:var(--shadow); }
+    .cal-field{ margin-bottom:16px; }
+    .cal-field label{ display:block; font-family:var(--sans); font-size:0.86rem; font-weight:700; color:var(--ink); margin-bottom:6px; }
+    .cal-field .hint{ font-weight:500; color:var(--gray); font-size:0.8rem; }
+    .cal-input, .cal-select{ width:100%; font-family:var(--sans); font-size:1rem; padding:12px 14px; border:1.5px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); }
+    .cal-input:focus, .cal-select:focus{ outline:none; border-color:var(--secondary,#c4a574); }
+    .cal-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; }
+    .cal-row2{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+
+    .cal-result{ margin-top:22px; padding:22px; border-radius:14px; text-align:center; background:linear-gradient(180deg,#faf7f1,#f3ede1); border:1px solid var(--line); }
+    .cal-nota{ font-family:var(--serif); font-weight:900; font-size:3.6rem; line-height:1; color:var(--ink); }
+    .cal-nota small{ font-size:1.4rem; color:var(--gray); font-weight:400; }
+    .cal-estado{ display:inline-block; margin-top:10px; font-family:var(--sans); font-weight:800; font-size:0.9rem; letter-spacing:0.4px; text-transform:uppercase; padding:6px 16px; border-radius:100px; }
+    .cal-estado.apto{ background:#e3efe1; color:#2f6b32; }
+    .cal-estado.noapto{ background:#f3e2e2; color:#a23c3c; }
+    .cal-desglose{ margin-top:14px; font-family:var(--sans); font-size:0.9rem; color:var(--gray); line-height:1.6; }
+    .cal-desglose b{ color:var(--ink); }
+    .cal-error{ color:#a23c3c; font-weight:600; font-size:0.92rem; margin-top:6px; }
+
+    .cal-share{ display:flex; align-items:center; flex-wrap:wrap; gap:8px; margin-top:18px; justify-content:center; }
+    .cal-share span{ font-family:var(--sans); font-size:0.86rem; font-weight:600; color:var(--gray); }
+    .cal-share a, .cal-share button{ display:inline-flex; align-items:center; justify-content:center; gap:6px; height:38px; padding:0 14px; border-radius:9px; background:#fff; border:1px solid var(--line); color:var(--ink); font-family:var(--sans); font-size:0.85rem; font-weight:600; cursor:pointer; text-decoration:none; }
+
+    .cal-disc{ font-family:var(--sans); font-size:0.82rem; color:var(--gray); margin-top:14px; line-height:1.5; }
+    .cal-prose{ max-width:720px; margin:48px auto 0; }
+    .cal-prose h2{ font-size:1.35rem; margin:32px 0 10px; }
+    .cal-prose p, .cal-prose li{ line-height:1.7; color:var(--ink); }
+    .cal-prose .formula{ display:block; background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; font-family:ui-monospace,Menlo,monospace; font-size:0.95rem; margin:12px 0; color:var(--ink); }
+    .cal-faq details{ background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:12px 16px; margin-bottom:8px; }
+    .cal-faq summary{ cursor:pointer; font-weight:600; color:var(--ink); }
+    .cal-faq p{ margin:10px 0 0; color:var(--gray); }
+    @media (max-width:520px){ .cal-row{ grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Principal">
+        <a href="/" aria-label="OpoNoticias - Inicio"><img src="assets/logo.svg" alt="OpoNoticias" class="nav-logo"></a>
+        <div class="nav-links">
+          <a href="/#comunidades">Comunidades</a>
+          <a href="/#categorias">Categorías</a>
+          <a href="/boe-hoy">El BOE de hoy</a>
+          <a href="/blog">Blog</a>
+          <a href="/recursos">Recursos</a>
+        </div>
+        <div class="nav-cta">
+          <a href="/" class="btn btn-ghost">← Volver a la web</a>
+        </div>
+        <button class="nav-toggle" aria-label="Abrir menú" aria-expanded="false"><span></span><span></span><span></span></button>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="cal-wrap">
+      <div class="cal-head">
+        <span class="eyebrow">Herramienta gratis · sin registro</span>
+        <h1>Calculadora de nota de examen de oposición</h1>
+        <p class="lead">Introduce tus aciertos, fallos y la penalización por error y calcula tu nota al instante. Vale para cualquier examen tipo test.</p>
+      </div>
+
+      <div class="cal-card">
+        <div class="cal-field">
+          <label for="preset">Elige tu oposición <span class="hint">(opcional — rellena el formato; puedes ajustarlo)</span></label>
+          <select id="preset" class="cal-select">
+            <option value="">Personalizado</option>
+            <option value="60|0.3333">Auxiliar Administrativo del Estado (AGE)</option>
+            <option value="60|0.3333">Administrativo del Estado (C1)</option>
+            <option value="90|0.3333">Correos</option>
+            <option value="100|0.3333">Policía Nacional (Escala Básica)</option>
+            <option value="100|0.3333">Guardia Civil</option>
+            <option value="100|0.3333">Tramitación Procesal (Justicia)</option>
+            <option value="100|0.3333">Gestión Procesal (Justicia)</option>
+            <option value="100|0.3333">Auxilio Judicial (Justicia)</option>
+            <option value="100|0.3333">Enfermería / SAS (test)</option>
+          </select>
+        </div>
+
+        <div class="cal-field">
+          <label for="total">Nº total de preguntas del examen</label>
+          <input id="total" class="cal-input" type="number" inputmode="numeric" min="1" value="100">
+        </div>
+
+        <div class="cal-field">
+          <label for="penal">Penalización por respuesta incorrecta <span class="hint">(mírala en tus bases)</span></label>
+          <select id="penal" class="cal-select">
+            <option value="0">No penaliza (los errores no restan)</option>
+            <option value="0.25">Restan 1/4 (4 errores = 1 acierto)</option>
+            <option value="0.3333" selected>Restan 1/3 (3 errores = 1 acierto)</option>
+            <option value="0.5">Restan 1/2 (2 errores = 1 acierto)</option>
+            <option value="1">Cada error resta como un acierto</option>
+          </select>
+        </div>
+
+        <div class="cal-row">
+          <div class="cal-field" style="margin-bottom:0;">
+            <label for="aciertos">Aciertos</label>
+            <input id="aciertos" class="cal-input" type="number" inputmode="numeric" min="0" value="0">
+          </div>
+          <div class="cal-field" style="margin-bottom:0;">
+            <label for="fallos">Fallos</label>
+            <input id="fallos" class="cal-input" type="number" inputmode="numeric" min="0" value="0">
+          </div>
+          <div class="cal-field" style="margin-bottom:0;">
+            <label for="blancos">En blanco</label>
+            <input id="blancos" class="cal-input" type="number" inputmode="numeric" min="0" value="0" readonly title="Se calcula solo">
+          </div>
+        </div>
+
+        <div class="cal-row2" style="margin-top:16px;">
+          <div class="cal-field" style="margin-bottom:0;">
+            <label for="notamax">Nota máxima</label>
+            <input id="notamax" class="cal-input" type="number" inputmode="decimal" min="1" value="10">
+          </div>
+          <div class="cal-field" style="margin-bottom:0;">
+            <label for="aprobado">Nota para aprobar</label>
+            <input id="aprobado" class="cal-input" type="number" inputmode="decimal" min="0" value="5">
+          </div>
+        </div>
+
+        <div id="err" class="cal-error" hidden></div>
+
+        <div class="cal-result" id="result">
+          <div class="cal-nota"><span id="nota">0,00</span><small> / <span id="notamax2">10</span></small></div>
+          <div><span id="estado" class="cal-estado noapto">Introduce tus datos</span></div>
+          <div class="cal-desglose" id="desglose"></div>
+          <div class="cal-share">
+            <span>Compártela:</span>
+            <a id="sh-wa" href="#" target="_blank" rel="noopener" title="WhatsApp">WhatsApp</a>
+            <a id="sh-tg" href="#" target="_blank" rel="noopener" title="Telegram">Telegram</a>
+            <button type="button" id="sh-copy" title="Copiar enlace">🔗 Copiar</button>
+          </div>
+        </div>
+
+        <p class="cal-disc">⚠️ Los presets por oposición son <strong>orientativos</strong>: cada convocatoria fija en sus bases oficiales el número de preguntas y la fórmula de penalización exactos. Confírmalo siempre y ajusta los campos si difieren. Esta calculadora no predice la nota de corte (ver más abajo).</p>
+      </div>
+
+      <div class="cal-prose">
+        <h2>Cómo se calcula la nota de un examen tipo test</h2>
+        <p>En la mayoría de oposiciones el primer ejercicio es un test con penalización por error, para desincentivar responder al azar. La fórmula habitual es:</p>
+        <span class="formula">nota = (aciertos − fallos × penalización) ÷ total de preguntas × nota máxima</span>
+        <p>La <strong>penalización</strong> es la fracción de acierto que resta cada fallo. Si tu convocatoria dice «cada tres respuestas incorrectas restan una correcta», la penalización es 1/3 (0,3333). Las respuestas <strong>en blanco</strong> ni suman ni restan. Esta calculadora aplica esa fórmula y te da la nota sobre la escala que indiques (normalmente sobre 10).</p>
+
+        <h2>La penalización por respuestas incorrectas</h2>
+        <p>No todas las oposiciones penalizan igual: las hay que restan 1/3, otras 1/4, algunas 1/2 y unas pocas no penalizan. El dato exacto <strong>siempre está en las bases de tu convocatoria</strong> (publicadas en el BOE o en el boletín autonómico correspondiente). Por eso la calculadora te deja elegir la penalización: úsala para simular distintos escenarios y decidir tu estrategia de respuesta.</p>
+
+        <h2>¿Y la nota de corte? Por qué no la calculamos</h2>
+        <p>La «nota de corte» es la puntuación del último aspirante que consigue plaza, y <strong>solo se conoce cuando termina el proceso</strong>: depende de cuánta gente se presente, de lo difícil que sea el examen ese año y del número de plazas. No hay ninguna fórmula que la prediga de antemano, y cualquier herramienta que diga calcularla te está dando un número inventado. Lo honesto es calcular tu nota real y usarla para saber si superas el mínimo para aprobar y avanzar de fase.</p>
+
+        <h2>Preguntas frecuentes</h2>
+        <div class="cal-faq">
+          <details>
+            <summary>¿Qué nota necesito para aprobar la oposición?</summary>
+            <p>Depende de cada convocatoria, pero lo más común es necesitar un 5 sobre 10 para superar la fase de oposición. Ojo: aprobar no garantiza plaza; para eso hay que quedar por encima de la nota de corte, que depende del resto de aspirantes.</p>
+          </details>
+          <details>
+            <summary>¿Conviene responder al azar si no sé la respuesta?</summary>
+            <p>Con penalización, responder totalmente al azar tiende a restar. Pero si puedes descartar una o dos opciones, la probabilidad juega a tu favor y suele compensar arriesgar. Usa la calculadora para simular tu caso concreto según la penalización de tu examen.</p>
+          </details>
+          <details>
+            <summary>¿Las preguntas en blanco restan?</summary>
+            <p>No. En el sistema habitual, las respuestas en blanco ni suman ni restan; solo penalizan los fallos. Por eso esta calculadora las tiene en cuenta pero no las descuenta.</p>
+          </details>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2026 OpoNoticias · oponoticias.com</span>
+        <span><a href="/recursos">Recursos gratis</a> · <a href="/boe-hoy">El BOE de hoy</a> · <a href="/blog">Blog</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    var $ = function(id){ return document.getElementById(id); };
+    var els = ['total','penal','aciertos','fallos','notamax','aprobado'].map($);
+    var preset = $('preset');
+
+    preset.addEventListener('change', function(){
+      if(!preset.value) return;
+      var p = preset.value.split('|');
+      $('total').value = p[0];
+      $('penal').value = p[1];
+      calc();
+    });
+
+    function fmt(n){ return n.toFixed(2).replace('.', ','); }
+
+    function calc(){
+      var total = parseInt($('total').value, 10) || 0;
+      var pen   = parseFloat($('penal').value) || 0;
+      var ac    = parseInt($('aciertos').value, 10) || 0;
+      var fa    = parseInt($('fallos').value, 10) || 0;
+      var nmax  = parseFloat($('notamax').value) || 10;
+      var apr   = parseFloat($('aprobado').value) || 0;
+      var err = $('err');
+
+      $('notamax2').textContent = (Number.isInteger(nmax) ? nmax : fmt(nmax));
+
+      if(total <= 0){ err.hidden = false; err.textContent = 'Indica el número total de preguntas.'; return; }
+      if(ac + fa > total){
+        err.hidden = false;
+        err.textContent = 'Aciertos + fallos (' + (ac+fa) + ') no puede superar el total de preguntas (' + total + ').';
+        $('blancos').value = 0;
+        return;
+      }
+      err.hidden = true;
+      var blancos = total - ac - fa;
+      $('blancos').value = blancos;
+
+      var netos = ac - fa * pen;
+      var nota = netos / total * nmax;
+      if(nota < 0) nota = 0;
+
+      $('nota').textContent = fmt(nota);
+      var apto = nota >= apr;
+      var estado = $('estado');
+      estado.textContent = apto ? '✓ Apto (≥ ' + fmt(apr) + ')' : '✗ No apto (< ' + fmt(apr) + ')';
+      estado.className = 'cal-estado ' + (apto ? 'apto' : 'noapto');
+
+      $('desglose').innerHTML =
+        '<b>' + ac + '</b> aciertos · <b>' + fa + '</b> fallos · <b>' + blancos + '</b> en blanco<br>' +
+        'Puntuación neta: <b>' + fmt(netos) + '</b> de ' + total;
+
+      // Enlaces de compartir con el resultado
+      var msg = 'He sacado un ' + fmt(nota) + '/' + (Number.isInteger(nmax)?nmax:fmt(nmax)) +
+                ' en la calculadora de nota de OpoNoticias 📝 Calcula la tuya:';
+      var url = 'https://oponoticias.com/calculadora-nota';
+      $('sh-wa').href = 'https://wa.me/?text=' + encodeURIComponent(msg + ' ' + url);
+      $('sh-tg').href = 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(msg);
+    }
+
+    els.forEach(function(el){ el.addEventListener('input', calc); el.addEventListener('change', calc); });
+
+    $('sh-copy').addEventListener('click', function(){
+      var b = this, u = 'https://oponoticias.com/calculadora-nota';
+      function ok(){ var o = b.innerHTML; b.innerHTML = '✓ Copiado'; setTimeout(function(){ b.innerHTML = o; }, 1800); }
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(u).then(ok).catch(function(){}); }
+    });
+
+    calc();
+  })();
+  </script>
+</body>
+</html>

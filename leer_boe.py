@@ -1648,6 +1648,8 @@ def regenerar_sitemap(slugs_nuevos):
             ("https://oponoticias.com/", hoy, "daily", "1.0"),
             ("https://oponoticias.com/boe-hoy", hoy, "daily", "0.9"),
             ("https://oponoticias.com/blog", hoy, "weekly", "0.8"),
+            ("https://oponoticias.com/recursos", hoy, "weekly", "0.7"),
+            ("https://oponoticias.com/calculadora-nota", hoy, "monthly", "0.7"),
             ("https://oponoticias.com/sobre-nosotros", hoy, "monthly", "0.5"),
             ("https://oponoticias.com/contacto", hoy, "monthly", "0.5"),
             ("https://oponoticias.com/categoria/educacion", hoy, "daily", "0.8"),
