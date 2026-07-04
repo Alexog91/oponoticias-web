@@ -1625,7 +1625,7 @@ def generar_html_convocatoria(conv, categoria, forzar=False, relacionadas_html="
     </div>
   </footer>
 
-  <script src="../assets/script.js?v=6" defer></script>
+  <script src="../assets/script.js?v=7" defer></script>
 </body>
 </html>"""
 
