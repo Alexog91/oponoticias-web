@@ -14,6 +14,7 @@ Variables de entorno requeridas:
 """
 
 import os
+import re
 import json
 import html as html_lib
 import urllib.request
@@ -134,25 +135,34 @@ def tarjeta_html(c):
     ccaa_raw = (c.get("comunidad_autonoma") or "").strip()
     ccaa     = html_lib.escape(ccaa_raw)
 
-    rc = c.get("resumen_claude") or {}
-    if isinstance(rc, str):
-        try:
-            rc = json.loads(rc)
-        except Exception:
-            rc = {}
-    plazas  = str(rc.get("plazas", "") or "")
-    puesto  = html_lib.escape(rc.get("puesto", "") or "")
-    resumen = html_lib.escape(rc.get("resumen", "") or "")
+    # `resumen_claude` en Supabase es un STRING "N PLAZAS - PUESTO - LUGAR"
+    # (no un JSON), igual que usan las fichas/categorías/CCAA. Se parsea aquí
+    # con el mismo criterio (antes se intentaba json.loads y salía vacío → bug:
+    # las tarjetas del email no mostraban plazas ni puesto).
+    plazas_txt = ""
+    puesto = ""
+    rc = c.get("resumen_claude")
+    if rc:
+        limpio = re.sub(r'\*\*', '', str(rc))
+        limpio = re.sub(r'#+\s', '', limpio).strip()
+        partes = [p.strip() for p in limpio.split(' - ') if p.strip()]
+        if partes:
+            m = re.search(r'\d[\d.]*', partes[0])
+            if m:
+                num = m.group()
+                plazas_txt = f"{num} plaza" + ("" if num == "1" else "s")
+            elif partes[0]:
+                plazas_txt = partes[0].capitalize()  # "Varias", etc.
+        if len(partes) > 1:
+            puesto = html_lib.escape(partes[1].capitalize())
 
     badge_cat  = f'<span style="background:#efe9e0;color:#5a5047;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;margin-right:6px;">{cat}</span>' if cat else ""
     badge_ccaa = f'<span style="background:#f0f4ee;color:#7a8b6e;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:600;">{ccaa}</span>' if ccaa else ""
-    badge_plazas = f'<span style="background:#f8f6f2;color:#5a5047;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;margin-left:8px;">{plazas} plazas</span>' if plazas else ""
+    badge_plazas = f'<span style="background:#f8f6f2;color:#5a5047;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:700;margin-left:8px;">{html_lib.escape(plazas_txt)}</span>' if plazas_txt else ""
 
     detalle_html = ""
     if puesto:
-        detalle_html += f'<p style="margin:4px 0 0;color:#8b8b7a;font-size:13px;">{puesto}</p>'
-    if resumen:
-        detalle_html += f'<p style="margin:6px 0 0;color:#4a4540;font-size:13px;line-height:1.5;">{resumen}</p>'
+        detalle_html += f'<p style="margin:4px 0 0;color:#5a5047;font-size:14px;font-weight:600;">{puesto}</p>'
 
     card = f"""
     <tr>
@@ -223,8 +233,11 @@ def construir_html(convocatorias):
     <div style="background:#f8f6f2;border-radius:10px;padding:14px 18px;">
       <p style="margin:0;color:#4a4540;font-size:14px;line-height:1.6;">
         {{% if contact.COMUNIDAD %}}
-        📍 <strong>Estás viendo solo las de {{{{ contact.COMUNIDAD }}}}</strong> (y las de ámbito estatal).
-        <a href="https://oponoticias.com/preferencias?e={{{{ contact.EMAIL }}}}" style="color:#c4a574;text-decoration:none;font-weight:600;">Cambiar o ver todas&nbsp;→</a>
+        📍 <strong>Estás viendo solo las de {{{{ contact.COMUNIDAD }}}}</strong> y las de ámbito estatal.
+        Hoy se han publicado <strong>{n}</strong> convocatoria{'s' if n != 1 else ''} en total en el BOE.
+        <a href="https://oponoticias.com/boe-hoy" style="color:#c4a574;text-decoration:none;font-weight:600;">Ver todas&nbsp;→</a>
+        &nbsp;·&nbsp;
+        <a href="https://oponoticias.com/preferencias?e={{{{ contact.EMAIL }}}}" style="color:#c4a574;text-decoration:none;font-weight:600;">cambiar comunidad</a>
         {{% else %}}
         📍 <strong>¿Solo te interesan las de tu comunidad?</strong>
         <a href="https://oponoticias.com/preferencias?e={{{{ contact.EMAIL }}}}" style="color:#c4a574;text-decoration:none;font-weight:600;">Elígela aquí&nbsp;→</a>
