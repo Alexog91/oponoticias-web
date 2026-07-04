@@ -120,11 +120,19 @@ def obtener_convocatorias_hoy():
     return de_hoy
 
 
+# Comunidades cuyo ámbito es estatal/nacional (o sin dato): las ve TODO el
+# mundo, sin condición. El resto se filtran por el atributo COMUNIDAD de Brevo.
+# Los nombres específicos coinciden 1:1 con Supabase y con el <select> de
+# /preferencias, así que no hace falta normalizar.
+_ESTATAL = {"", "nacional", "nacional/estatal", "estatal", "espana", "españa"}
+
+
 def tarjeta_html(c):
     titulo   = html_lib.escape(c.get("titulo", ""))
     enlace   = html_lib.escape(c.get("enlace", "#"))
     cat      = html_lib.escape(c.get("categoria", "") or "")
-    ccaa     = html_lib.escape(c.get("comunidad_autonoma", "") or "")
+    ccaa_raw = (c.get("comunidad_autonoma") or "").strip()
+    ccaa     = html_lib.escape(ccaa_raw)
 
     rc = c.get("resumen_claude") or {}
     if isinstance(rc, str):
@@ -146,7 +154,7 @@ def tarjeta_html(c):
     if resumen:
         detalle_html += f'<p style="margin:6px 0 0;color:#4a4540;font-size:13px;line-height:1.5;">{resumen}</p>'
 
-    return f"""
+    card = f"""
     <tr>
       <td style="padding:16px 24px;border-bottom:1px solid #e7e0d5;">
         <div style="margin-bottom:6px;">{badge_cat}{badge_ccaa}{badge_plazas}</div>
@@ -160,6 +168,16 @@ def tarjeta_html(c):
         </p>
       </td>
     </tr>"""
+
+    # Segmentación (Fase 2): si la convocatoria es de una comunidad concreta,
+    # se envuelve en una condición de Brevo. La ve quien NO eligió comunidad
+    # (COMUNIDAD vacío) y quien eligió justo esa. Las estatales van sin condición
+    # (las ve todo el mundo). Se construye con strings normales (no f-string)
+    # para no tener que escapar las llaves {% %} de la plantilla Brevo.
+    if ccaa_raw.lower() in _ESTATAL:
+        return card
+    condicion = '{% if not contact.COMUNIDAD or contact.COMUNIDAD == "' + ccaa_raw + '" %}'
+    return condicion + card + "{% endif %}"
 
 
 def construir_html(convocatorias):
@@ -204,9 +222,14 @@ def construir_html(convocatorias):
   <tr><td style="padding:4px 24px 20px;">
     <div style="background:#f8f6f2;border-radius:10px;padding:14px 18px;">
       <p style="margin:0;color:#4a4540;font-size:14px;line-height:1.6;">
+        {{% if contact.COMUNIDAD %}}
+        📍 <strong>Estás viendo solo las de {{{{ contact.COMUNIDAD }}}}</strong> (y las de ámbito estatal).
+        <a href="https://oponoticias.com/preferencias?e={{{{ contact.EMAIL }}}}" style="color:#c4a574;text-decoration:none;font-weight:600;">Cambiar o ver todas&nbsp;→</a>
+        {{% else %}}
         📍 <strong>¿Solo te interesan las de tu comunidad?</strong>
         <a href="https://oponoticias.com/preferencias?e={{{{ contact.EMAIL }}}}" style="color:#c4a574;text-decoration:none;font-weight:600;">Elígela aquí&nbsp;→</a>
         y recibirás cada mañana solo las convocatorias de tu zona (más las de ámbito estatal).
+        {{% endif %}}
       </p>
     </div>
   </td></tr>
