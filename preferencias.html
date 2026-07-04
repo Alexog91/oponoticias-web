@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Elige tu comunidad — OpoNoticias</title>
+  <meta name="description" content="Elige tu comunidad autónoma para recibir en el correo diario solo las convocatorias de oposiciones que te interesan.">
+  <link rel="canonical" href="https://oponoticias.com/preferencias">
+  <meta name="robots" content="noindex, follow">
+  <meta name="theme-color" content="#5A5047">
+  <script>document.documentElement.className += ' js';</script>
+
+  <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/style.css?v=6">
+
+  <style>
+    .pref-wrap{ max-width:560px; margin:0 auto; padding:56px 24px 80px; }
+    .pref-head{ text-align:center; margin-bottom:28px; }
+    .pref-head h1{ font-size:clamp(1.7rem,4vw,2.3rem); letter-spacing:-0.5px; line-height:1.15; margin:12px 0 12px; }
+    .pref-head .lead{ color:var(--gray); font-size:1.05rem; line-height:1.55; }
+    .pref-card{ background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:28px 26px; box-shadow:var(--shadow); }
+    .pref-field{ margin-bottom:18px; }
+    .pref-field label{ display:block; font-family:var(--sans); font-size:0.86rem; font-weight:700; color:var(--ink); margin-bottom:6px; }
+    .pref-input, .pref-select{ width:100%; font-family:var(--sans); font-size:1rem; padding:13px 14px; border:1.5px solid var(--line); border-radius:10px; background:#fff; color:var(--ink); }
+    .pref-input:focus, .pref-select:focus{ outline:none; border-color:var(--secondary,#c4a574); }
+    .pref-btn{ width:100%; cursor:pointer; }
+    .pref-msg{ margin-top:14px; font-family:var(--sans); font-size:0.95rem; line-height:1.5; text-align:center; }
+    .pref-msg.ok{ color:#2f6b32; font-weight:600; }
+    .pref-msg.err{ color:#a23c3c; font-weight:600; }
+    .pref-note{ margin-top:16px; font-family:var(--sans); font-size:0.82rem; color:var(--gray); line-height:1.5; text-align:center; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <nav class="nav" aria-label="Principal">
+        <a href="/" aria-label="OpoNoticias - Inicio"><img src="assets/logo.svg" alt="OpoNoticias" class="nav-logo"></a>
+        <div class="nav-cta">
+          <a href="/" class="btn btn-ghost">← Volver a la web</a>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="pref-wrap">
+      <div class="pref-head">
+        <span class="eyebrow">Tu correo diario, a tu medida</span>
+        <h1>Elige tu comunidad</h1>
+        <p class="lead">Dinos de qué comunidad autónoma quieres recibir las convocatorias y ajustaremos tu correo diario. Puedes cambiarlo cuando quieras.</p>
+      </div>
+
+      <div class="pref-card">
+        <form id="prefForm" novalidate>
+          <div class="pref-field" id="emailField" hidden>
+            <label for="prefEmail">Tu correo</label>
+            <input id="prefEmail" class="pref-input" type="email" placeholder="tu@email.com" autocomplete="email">
+          </div>
+
+          <div class="pref-field">
+            <label for="prefCom">Comunidad autónoma</label>
+            <select id="prefCom" class="pref-select">
+              <option value="">Todas (recibir todas las convocatorias)</option>
+              <option>Andalucía</option>
+              <option>Aragón</option>
+              <option>Asturias</option>
+              <option>Baleares</option>
+              <option>Canarias</option>
+              <option>Cantabria</option>
+              <option>Castilla-La Mancha</option>
+              <option>Castilla y León</option>
+              <option>Cataluña</option>
+              <option>Comunidad Valenciana</option>
+              <option>Extremadura</option>
+              <option>Galicia</option>
+              <option>La Rioja</option>
+              <option>Madrid</option>
+              <option>Murcia</option>
+              <option>Navarra</option>
+              <option>País Vasco</option>
+              <option>Ceuta</option>
+              <option>Melilla</option>
+              <option>Nacional/Estatal</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary pref-btn" id="prefSubmit">Guardar mi preferencia</button>
+          <p class="pref-msg" id="prefMsg" role="status"></p>
+        </form>
+
+        <p class="pref-note">💡 Elegir una comunidad no te hace perder nada: seguirás recibiendo también las oposiciones de ámbito estatal, que valen para toda España.</p>
+      </div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-bottom">
+        <span>© 2026 OpoNoticias · oponoticias.com</span>
+        <span><a href="/recursos">Recursos</a> · <a href="/boe-hoy">El BOE de hoy</a></span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+  (function(){
+    function qp(name){
+      var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
+      return m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
+    }
+    var email = qp('e').trim();
+    var emailField = document.getElementById('emailField');
+    var emailInput = document.getElementById('prefEmail');
+    var form = document.getElementById('prefForm');
+    var msg  = document.getElementById('prefMsg');
+    var btn  = document.getElementById('prefSubmit');
+
+    // Si el enlace no trae el correo (?e=), lo pedimos.
+    if (!email) { emailField.hidden = false; }
+
+    form.addEventListener('submit', function(ev){
+      ev.preventDefault();
+      var mail = email || (emailInput.value || '').trim();
+      var com  = document.getElementById('prefCom').value;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
+        emailField.hidden = false;
+        msg.textContent = 'Escribe un correo válido.'; msg.className = 'pref-msg err';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Guardando…'; msg.textContent = '';
+
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/preferencias');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.onload = function(){
+        var r = {}; try { r = JSON.parse(xhr.responseText); } catch(_){}
+        if (xhr.status === 200 && r.ok) {
+          var etiqueta = com || 'todas las comunidades';
+          msg.textContent = '✓ Listo. A partir de ahora recibirás las convocatorias de ' + etiqueta + '.';
+          msg.className = 'pref-msg ok';
+          btn.textContent = 'Preferencia guardada';
+        } else {
+          btn.disabled = false; btn.textContent = 'Guardar mi preferencia';
+          msg.textContent = 'No se ha podido guardar. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
+          msg.className = 'pref-msg err';
+        }
+      };
+      xhr.onerror = function(){
+        btn.disabled = false; btn.textContent = 'Guardar mi preferencia';
+        msg.textContent = 'Error de conexión. Inténtalo de nuevo.'; msg.className = 'pref-msg err';
+      };
+      xhr.send(JSON.stringify({ email: mail, comunidad: com }));
+    });
+  })();
+  </script>
+</body>
+</html>

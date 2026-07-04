@@ -207,7 +207,11 @@
           '<p class="nl-pop-sub">Déjanos tu correo y te lo enviamos al instante. De regalo, cada mañana el resumen del BOE. Sin spam, cancela cuando quieras.</p>' +
           '<form id="recPopForm" novalidate>' +
             '<input type="email" id="recPopEmail" name="email" placeholder="tu@email.com" required autocomplete="email">' +
-            '<button type="submit" class="btn btn-primary">Enviármelo →</button>' +
+            '<select id="recPopCom" name="comunidad" style="width:100%;margin-top:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:var(--sans);font-size:0.95rem;">' +
+              '<option value="">Tu comunidad (opcional) — recibir todas</option>' +
+              ['Andalucía','Aragón','Asturias','Baleares','Canarias','Cantabria','Castilla-La Mancha','Castilla y León','Cataluña','Comunidad Valenciana','Extremadura','Galicia','La Rioja','Madrid','Murcia','Navarra','País Vasco','Ceuta','Melilla','Nacional/Estatal'].map(function(c){ return '<option>' + c + '</option>'; }).join('') +
+            '</select>' +
+            '<button type="submit" class="btn btn-primary" style="margin-top:10px;">Enviármelo →</button>' +
             '<p class="newsletter-legal">Al suscribirte aceptas nuestra <a href="/privacidad">política de privacidad</a>. Sin spam.</p>' +
             '<div class="newsletter-msg" id="recPopMsg" aria-live="polite"></div>' +
           '</form>' +
@@ -240,9 +244,11 @@
     function submit(e, slug, nombre, file) {
       e.preventDefault();
       var input = overlay.querySelector('#recPopEmail');
+      var comSel = overlay.querySelector('#recPopCom');
       var msg   = overlay.querySelector('#recPopMsg');
       var btn   = overlay.querySelector('button[type="submit"]');
       var email = (input.value || '').trim();
+      var comunidad = comSel ? comSel.value : '';
       if (!email) return;
 
       btn.disabled = true; btn.textContent = 'Enviando…';
@@ -268,7 +274,7 @@
         msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
         msg.className = 'newsletter-msg err';
       };
-      xhr.send(JSON.stringify({ email: email, material: slug }));
+      xhr.send(JSON.stringify({ email: email, material: slug, comunidad: comunidad }));
     }
 
     document.querySelectorAll('.rec-dl').forEach(function (btn) {

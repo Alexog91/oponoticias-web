@@ -201,6 +201,15 @@ def construir_html(convocatorias):
       Ver todas las oposiciones →
     </a>
   </td></tr>
+  <tr><td style="padding:4px 24px 20px;">
+    <div style="background:#f8f6f2;border-radius:10px;padding:14px 18px;">
+      <p style="margin:0;color:#4a4540;font-size:14px;line-height:1.6;">
+        📍 <strong>¿Solo te interesan las de tu comunidad?</strong>
+        <a href="https://oponoticias.com/preferencias?e={{{{ contact.EMAIL }}}}" style="color:#c4a574;text-decoration:none;font-weight:600;">Elígela aquí&nbsp;→</a>
+        y recibirás cada mañana solo las convocatorias de tu zona (más las de ámbito estatal).
+      </p>
+    </div>
+  </td></tr>
   </table>
 
   <!-- Pie -->

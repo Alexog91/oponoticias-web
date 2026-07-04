@@ -76,7 +76,8 @@ function brevoRequest(path, apiKey, payload) {
   });
 }
 
-function emailBienvenidaHtml(material) {
+function emailBienvenidaHtml(material, email) {
+  const prefUrl = `https://oponoticias.com/preferencias?e=${encodeURIComponent(email || '')}`;
   return `<!DOCTYPE html>
 <html lang="es"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f8f6f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
@@ -115,6 +116,11 @@ function emailBienvenidaHtml(material) {
         por comunidad autónoma y categoría, con enlace directo al BOE.
         <a href="https://oponoticias.com/boe-hoy" style="color:#c4a574;text-decoration:none;font-weight:600;">Verlas ahora&nbsp;→</a>
       </p>
+      <p style="margin:0 0 10px;color:#4a4540;font-size:14px;line-height:1.6;">
+        📍 <strong>Recibe solo lo de tu zona:</strong> elige tu comunidad y el correo diario te traerá solo
+        tus convocatorias (más las de ámbito estatal).
+        <a href="${prefUrl}" style="color:#c4a574;text-decoration:none;font-weight:600;">Elegir comunidad&nbsp;→</a>
+      </p>
       <p style="margin:0;color:#4a4540;font-size:14px;line-height:1.6;">
         📲 <strong>Síguenos también</strong> para no perderte nada al instante:
         <a href="https://t.me/OPONOTICIAS" style="color:#c4a574;text-decoration:none;font-weight:600;">Telegram</a>
@@ -151,12 +157,14 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, material } = req.body || {};
+  const { email, material, comunidad } = req.body || {};
 
   // Validación básica
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Email inválido' });
   }
+  // Comunidad opcional (viene de un <select> controlado; validación laxa).
+  const com = typeof comunidad === 'string' ? comunidad.trim().slice(0, 40) : '';
 
   // Material a entregar (por slug). Si no llega o es desconocido → calendario.
   const mat = MATERIALES[material] || MATERIALES[MATERIAL_DEFECTO];
@@ -171,11 +179,17 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Configuración incompleta' });
   }
 
-  // 1) Alta del contacto en la lista
+  // Si el alta trae comunidad, asegura el atributo COMUNIDAD en Brevo.
+  if (com) {
+    await brevoRequest('contacts/attributes/normal/COMUNIDAD', apiKey, { type: 'text' });
+  }
+
+  // 1) Alta del contacto en la lista (+ comunidad si viene)
   const contacto = await brevoRequest('contacts', apiKey, {
     email,
     listIds: [listId],
     updateEnabled: true,
+    ...(com ? { attributes: { COMUNIDAD: com } } : {}),
   });
   // 201 = creado, 204 = actualizado, duplicate_parameter = ya estaba suscrito
   const altaOk = [200, 201, 204].includes(contacto.status)
@@ -192,7 +206,7 @@ export default async function handler(req, res) {
     sender: { name: senderName, email: senderEmail },
     to: [{ email }],
     subject: `Tu descarga: ${mat.nombre} (gratis) 📥`,
-    htmlContent: emailBienvenidaHtml(mat),
+    htmlContent: emailBienvenidaHtml(mat, email),
   });
   if (![200, 201].includes(correo.status)) {
     console.error('Brevo email bienvenida error (no bloquea):', correo.status, JSON.stringify(correo.data));
