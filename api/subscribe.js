@@ -167,7 +167,8 @@ export default async function handler(req, res) {
   const com = typeof comunidad === 'string' ? comunidad.trim().slice(0, 40) : '';
 
   // Material a entregar (por slug). Si no llega o es desconocido → calendario.
-  const mat = MATERIALES[material] || MATERIALES[MATERIAL_DEFECTO];
+  const matSlug = MATERIALES[material] ? material : MATERIAL_DEFECTO;
+  const mat = MATERIALES[matSlug];
 
   const apiKey      = process.env.BREVO_API_KEY;
   const listId      = parseInt(process.env.BREVO_LIST_ID, 10);
@@ -207,6 +208,9 @@ export default async function handler(req, res) {
     to: [{ email }],
     subject: `Tu descarga: ${mat.nombre} (gratis) 📥`,
     htmlContent: emailBienvenidaHtml(mat, email),
+    // Etiqueta por material: permite ver en Brevo (Transaccional > Estadísticas)
+    // cuántos envíos hay por recurso, y así saber cuál se pide más.
+    tags: [`material-${matSlug}`],
   });
   if (![200, 201].includes(correo.status)) {
     console.error('Brevo email bienvenida error (no bloquea):', correo.status, JSON.stringify(correo.data));
