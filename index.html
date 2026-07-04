@@ -450,11 +450,15 @@
             </ul>
           </div>
           <div class="newsletter-form-wrap">
-            <form class="newsletter-form" id="newsletterForm" novalidate>
+            <form class="newsletter-form" id="newsletterFormHome" novalidate>
               <div class="newsletter-input-row">
                 <input type="email" id="newsletterEmail" name="email" placeholder="tu@email.com" required autocomplete="email">
                 <button type="submit" class="btn btn-primary">Enviarme la guía →</button>
               </div>
+              <select id="newsletterComunidad" name="comunidad" aria-label="Tu comunidad autónoma (opcional)" style="width:100%;margin-top:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:var(--sans);font-size:0.95rem;">
+                <option value="">Tu comunidad (opcional) — recibir todas</option>
+                <option>Andalucía</option><option>Aragón</option><option>Asturias</option><option>Baleares</option><option>Canarias</option><option>Cantabria</option><option>Castilla-La Mancha</option><option>Castilla y León</option><option>Cataluña</option><option>Comunidad Valenciana</option><option>Extremadura</option><option>Galicia</option><option>La Rioja</option><option>Madrid</option><option>Murcia</option><option>Navarra</option><option>País Vasco</option><option>Ceuta</option><option>Melilla</option><option>Nacional/Estatal</option>
+              </select>
               <p class="newsletter-legal">Al suscribirte aceptas nuestra <a href="/privacidad">política de privacidad</a>. Sin spam.</p>
               <div class="newsletter-msg" id="newsletterMsg" aria-live="polite"></div>
             </form>
@@ -546,6 +550,45 @@
       var meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
       var d = new Date();
       el.textContent = dias[d.getDay()] + ', ' + d.getDate() + ' de ' + meses[d.getMonth()] + ' de ' + d.getFullYear();
+    })();
+  </script>
+  <script>
+    // Formulario de newsletter de la home (con comunidad). Gestionado aquí en vez
+    // de en script.js para no forzar un bump de caché en todas las páginas.
+    (function () {
+      var f = document.getElementById('newsletterFormHome');
+      if (!f) return;
+      f.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = (document.getElementById('newsletterEmail').value || '').trim();
+        var comSel = document.getElementById('newsletterComunidad');
+        var comunidad = comSel ? comSel.value : '';
+        var msgEl = document.getElementById('newsletterMsg');
+        var btn = f.querySelector('button[type="submit"]');
+        if (!email) return;
+        btn.disabled = true; btn.textContent = 'Enviando…';
+        msgEl.textContent = ''; msgEl.className = 'newsletter-msg';
+        var xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/subscribe');
+        xhr.setRequestHeader('Content-Type', 'application/json');
+        xhr.onload = function () {
+          btn.disabled = false; btn.textContent = 'Enviarme la guía →';
+          var resp = {}; try { resp = JSON.parse(xhr.responseText); } catch (_) {}
+          if (xhr.status === 200 && resp.ok) {
+            try { localStorage.setItem('on_nl_popup', JSON.stringify({ status: 'subscribed', ts: Date.now() })); } catch (_) {}
+            f.innerHTML = '<p class="newsletter-msg ok" style="font-size:1.05rem;">✓ ¡Listo! Te hemos enviado el calendario a tu correo. Revisa tu bandeja (y la carpeta de spam por si acaso).</p>';
+          } else {
+            msgEl.textContent = 'Algo ha ido mal. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
+            msgEl.className = 'newsletter-msg err';
+          }
+        };
+        xhr.onerror = function () {
+          btn.disabled = false; btn.textContent = 'Enviarme la guía →';
+          msgEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
+          msgEl.className = 'newsletter-msg err';
+        };
+        xhr.send(JSON.stringify({ email: email, comunidad: comunidad }));
+      });
     })();
   </script>
 </body>
