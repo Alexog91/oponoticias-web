@@ -432,7 +432,7 @@ def generar(convocatorias, salida=None):
     """Genera el MP4 con Remotion y devuelve su ruta (o None si falla)."""
     if not convocatorias:
         return None
-    salida = salida or f"/tmp/video_{datetime.now():%Y-%m-%d}.mp4"
+    salida = salida or f"/tmp/video_{datetime.now():%Y-%m-%d}_{os.getpid()}.mp4"
     try:
         escenas = construir_guion(convocatorias)
         with tempfile.TemporaryDirectory() as tmp:
@@ -498,7 +498,7 @@ def enviar_video_redes(convocatorias):
         print("🎬 Vídeo: sin API directa ni VIDEO_WEBHOOK_URL, se omite.")
         return False
     fecha_slug = datetime.now().strftime("%Y-%m-%d")
-    salida = f"/tmp/video_{fecha_slug}.mp4"
+    salida = f"/tmp/video_{fecha_slug}_{os.getpid()}.mp4"
     if not generar(convocatorias, salida):
         return False
     try:
