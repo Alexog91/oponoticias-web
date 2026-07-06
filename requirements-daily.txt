@@ -1,0 +1,4 @@
+pillow
+piper-tts
+edge-tts
+num2words

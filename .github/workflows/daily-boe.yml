@@ -27,6 +27,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements-daily.txt
 
       # Renderizador SVG principal del carrusel de Instagram: rsvg-convert
       # (librsvg). Determinista, sin navegador. Chrome queda como respaldo.
@@ -39,7 +41,7 @@ jobs:
       # descarga bajo demanda). num2words: números a palabras. edge-tts: voz alt.
       - name: Instalar Pillow, piper-tts, edge-tts y num2words
         continue-on-error: true
-        run: pip install pillow piper-tts edge-tts num2words
+        run: pip install -r requirements-daily.txt
 
       # Chrome headless como respaldo del renderizador de imágenes.
       # continue-on-error: si falla, el flujo principal (BOE/Telegram) sigue.

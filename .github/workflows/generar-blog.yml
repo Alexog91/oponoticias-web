@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       # rsvg-convert para SVG → PNG; Chrome para screenshot del artículo.
       - name: Instalar dependencias
@@ -27,7 +29,7 @@ jobs:
       # Pillow convierte PNG → JPEG para Instagram/Facebook.
       - name: Instalar Pillow
         continue-on-error: true
-        run: pip install pillow
+        run: pip install -r requirements.txt
 
       # Publica primero los borradores cuya fecha ha llegado, luego genera nuevos.
       - name: Publicar borradores programados

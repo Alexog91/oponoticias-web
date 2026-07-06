@@ -24,13 +24,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: requirements.txt
 
       # rsvg-convert (tarjetas) + Pillow (PNG→JPEG)
       - name: Instalar librsvg, fuentes y Pillow
         continue-on-error: true
         run: |
           sudo apt-get update && sudo apt-get install -y librsvg2-bin fonts-dejavu-core
-          pip install pillow
+          pip install -r requirements.txt
 
       # Fuentes de marca para que las tarjetas coincidan con el diseño
       - name: Instalar fuentes de marca
