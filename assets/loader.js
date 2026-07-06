@@ -34,6 +34,19 @@ function truncar(texto, max) {
   return texto.length > max ? texto.slice(0, max).trimEnd() + '…' : texto;
 }
 
+/** Escapa texto antes de insertarlo vía innerHTML (los datos vienen de
+ *  Supabase — título, resumen, etc. — y aunque no hay ruta de escritura
+ *  anónima, es buena higiene no confiar en el contenido). */
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function tiempoRelativo(str) {
   const d = parseFecha(str);
   if (!d) return '';
@@ -289,8 +302,8 @@ async function cargarPortada() {
     if (h3El)   h3El.textContent   = parsedHero ? parsedHero.puesto : extraerTipo(featured.resumen);
     if (metaEl && parsedHero) {
       metaEl.innerHTML = `
-        <span>Plazas: <b>${parsedHero.plazas}</b></span>
-        <span>Organismo: <b>${truncar(organismoH, 30)}</b></span>`;
+        <span>Plazas: <b>${escapeHtml(parsedHero.plazas)}</b></span>
+        <span>Organismo: <b>${escapeHtml(truncar(organismoH, 30))}</b></span>`;
     }
   }
 
@@ -315,10 +328,10 @@ async function cargarPortada() {
         || orgUp.includes(parsed.lugar.split(' ')[0])
         || parsed.lugar.toUpperCase().includes(orgUp.split(' ')[0]);
       p.innerHTML = `
-        <span style="display:block;font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:12px;">${parsed.puesto}</span>
+        <span style="display:block;font-size:1.15rem;font-weight:700;color:var(--primary);margin-bottom:12px;">${escapeHtml(parsed.puesto)}</span>
         <span style="display:flex;flex-wrap:wrap;gap:18px;font-size:0.92rem;color:var(--gray);">
-          <span>🔢 ${parsed.plazas}</span>
-          ${!lugarRedundante ? `<span>📍 ${truncar(parsed.lugar, 50)}</span>` : ''}
+          <span>🔢 ${escapeHtml(parsed.plazas)}</span>
+          ${!lugarRedundante ? `<span>📍 ${escapeHtml(truncar(parsed.lugar, 50))}</span>` : ''}
         </span>`;
     } else if (p) {
       p.textContent = extraerTipo(featured.resumen) || '';
@@ -342,11 +355,11 @@ async function cargarPortada() {
       art.innerHTML = `
         <div class="conv-card-strip"></div>
         <div class="conv-card-body">
-          <span class="conv-tag">${c.categoria}</span>
-          <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
-          <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.9rem;letter-spacing:0.02em;">${desc}</p>
+          <span class="conv-tag">${escapeHtml(c.categoria)}</span>
+          <h3><a href="${escapeHtml(c.enlace)}" target="_blank" rel="noopener">${escapeHtml(organismo)}</a></h3>
+          <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.9rem;letter-spacing:0.02em;">${escapeHtml(desc)}</p>
           <div class="conv-meta">
-            <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
+            <span class="src">${escapeHtml(parsed ? parsed.plazas : 'BOE')}</span>
             <span>${fmtCorto(c.fecha)}</span>
           </div>
         </div>`;
@@ -363,7 +376,7 @@ async function cargarPortada() {
       .slice(0, 12)
       .map(c => {
         const p = parsearResumen(c.resumen_claude);
-        return `<span>${c.categoria} — ${p.plazas} · ${p.puesto}</span>`;
+        return `<span>${escapeHtml(c.categoria)} — ${escapeHtml(p.plazas)} · ${escapeHtml(p.puesto)}</span>`;
       });
 
     if (tickerItems.length) {
@@ -443,11 +456,11 @@ async function cargarBoeHoy() {
     art.innerHTML = `
       <div class="conv-card-strip"></div>
       <div class="conv-card-body">
-        <span class="conv-tag">${c.categoria}</span>
-        <h3><a href="${c.enlace}" target="_blank" rel="noopener">${organismo}</a></h3>
-        <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.86rem;letter-spacing:0.02em;">${desc}</p>
+        <span class="conv-tag">${escapeHtml(c.categoria)}</span>
+        <h3><a href="${escapeHtml(c.enlace)}" target="_blank" rel="noopener">${escapeHtml(organismo)}</a></h3>
+        <p style="font-weight:600;color:var(--primary);text-transform:uppercase;font-size:0.86rem;letter-spacing:0.02em;">${escapeHtml(desc)}</p>
         <div class="conv-meta">
-          <span class="src">${parsed ? parsed.plazas : 'BOE'}</span>
+          <span class="src">${escapeHtml(parsed ? parsed.plazas : 'BOE')}</span>
           <span>${fmtCorto(c.fecha)}</span>
         </div>
       </div>`;
@@ -480,10 +493,10 @@ async function cargarNoticias() {
     const art = document.createElement('article');
     art.className = 'news-item';
     art.innerHTML = `
-      <a href="${n.enlace}" class="news-link" target="_blank" rel="noopener">
-        <h4>${n.titulo}</h4>
+      <a href="${escapeHtml(n.enlace)}" class="news-link" target="_blank" rel="noopener">
+        <h4>${escapeHtml(n.titulo)}</h4>
         <div class="news-meta">
-          <span class="news-src">${n.fuente || '20minutos'}</span>
+          <span class="news-src">${escapeHtml(n.fuente || '20minutos')}</span>
           <span>${tiempoRelativo(n.fecha_pub)}</span>
         </div>
       </a>`;
@@ -523,9 +536,9 @@ async function cargarBlog() {
     art.className = 'blog-item';
     const cat = CAT_NOMBRE[a.categoria] || 'Blog';
     art.innerHTML = `
-      <a href="/blog/${a.slug}" class="blog-link">
-        <span class="blog-tag">${cat}</span>
-        <h4>${a.titulo}</h4>
+      <a href="/blog/${encodeURIComponent(a.slug)}" class="blog-link">
+        <span class="blog-tag">${escapeHtml(cat)}</span>
+        <h4>${escapeHtml(a.titulo)}</h4>
         <span class="blog-read">Leer artículo →</span>
       </a>`;
     if (more) col.insertBefore(art, more);
@@ -708,12 +721,12 @@ async function cargarCategoria(categoria) {
         <div class="d">${dia}</div>
         <div class="m">${mes}</div>
       </div>
-      <a href="${c.enlace}" target="_blank" rel="noopener" class="list-main">
-        <h3>${organismo}</h3>
-        ${puesto ? `<p style="margin:3px 0 6px;font-weight:600;font-size:0.92rem;color:var(--primary);text-transform:uppercase;letter-spacing:0.02em;">${puesto}</p>` : ''}
+      <a href="${escapeHtml(c.enlace)}" target="_blank" rel="noopener" class="list-main">
+        <h3>${escapeHtml(organismo)}</h3>
+        ${puesto ? `<p style="margin:3px 0 6px;font-weight:600;font-size:0.92rem;color:var(--primary);text-transform:uppercase;letter-spacing:0.02em;">${escapeHtml(puesto)}</p>` : ''}
         <div class="list-tags">
-          ${plazas ? `<span>${plazas}</span>` : ''}
-          ${c._ca ? `<span>🗺️ ${c._ca}</span>` : (!lugarRedundante ? `<span>📍 ${truncar(lugar, 35)}</span>` : '')}
+          ${plazas ? `<span>${escapeHtml(plazas)}</span>` : ''}
+          ${c._ca ? `<span>🗺️ ${escapeHtml(c._ca)}</span>` : (!lugarRedundante ? `<span>📍 ${escapeHtml(truncar(lugar, 35))}</span>` : '')}
         </div>
       </a>
       <span class="list-cta">Ver en BOE →</span>`;
