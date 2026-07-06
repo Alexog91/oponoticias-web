@@ -1734,12 +1734,28 @@ def commit_a_github(mensaje, archivos):
         )
 
         url_repo = f"https://x-access-token:{GITHUB_TOKEN}@github.com/{GITHUB_REPO}.git"
-        subprocess.run(
-            ["git", "-C", WEB_REPO_PATH, "push", url_repo, "HEAD:main"],
-            check=True,
-            capture_output=True,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"}
-        )
+        env_git = {**os.environ, "GIT_TERMINAL_PROMPT": "0"}
+
+        # rebase antes de empujar: si `main` avanzó desde el checkout (otro
+        # workflow o un push manual mientras corría este), un push directo sin
+        # esto falla con "non-fast-forward" y el HTML generado hoy se pierde en
+        # silencio (el runner se destruye al terminar el job). Con 1 reintento
+        # tras el rebase basta para el volumen de commits reales de este repo.
+        for intento in range(2):
+            try:
+                subprocess.run(
+                    ["git", "-C", WEB_REPO_PATH, "push", url_repo, "HEAD:main"],
+                    check=True, capture_output=True, env=env_git,
+                )
+                break
+            except subprocess.CalledProcessError:
+                if intento == 1:
+                    raise
+                print("  ⚠️  Push rechazado (main avanzó) — rebase y reintento…")
+                subprocess.run(
+                    ["git", "-C", WEB_REPO_PATH, "pull", "--rebase", url_repo, "main"],
+                    check=True, capture_output=True, env=env_git,
+                )
 
         print(f"✅ Commit y push a GitHub: {mensaje}")
         return True
