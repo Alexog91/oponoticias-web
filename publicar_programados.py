@@ -89,9 +89,18 @@ def main():
         if not marcar_publicado(art["id"]):
             continue
 
-        gb._publicar_en_redes(art)
+        # La publicación en la web (publicado=True) ya está hecha; un fallo al
+        # publicar en redes es secundario y NO debe abortar el resto del lote
+        # ni impedir la regeneración de índice/sitemap de abajo (antes, una
+        # excepción sin capturar aquí paraba el script entero a mitad,
+        # dejando también sin regenerar el índice de los artículos ya
+        # publicados en iteraciones anteriores).
+        try:
+            gb._publicar_en_redes(art)
+            print(f"  ✅ Publicado en web + redes\n")
+        except Exception as e:
+            print(f"  ⚠️  Publicado en la web, pero falló la publicación en redes: {e}\n")
         publicados += 1
-        print(f"  ✅ Publicado en web + redes\n")
 
     if publicados:
         gb.regenerar_indice_y_sitemap()

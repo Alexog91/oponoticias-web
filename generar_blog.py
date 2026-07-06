@@ -814,7 +814,16 @@ def main():
         print(f"  📝 {art['titulo'][:60]}…")
         if guardar_articulo(art, categoria):
             generados += 1
-            _publicar_en_redes(art)
+            # El artículo ya está guardado (Supabase + HTML); un fallo al
+            # publicarlo en redes es secundario y NO debe abortar el resto
+            # del bucle ni saltarse regenerar_indice_y_sitemap() de abajo
+            # (antes, una excepción sin capturar aquí dejaba sin procesar las
+            # categorías restantes y sin actualizar blog.html/sitemap-blog.xml
+            # pese a tener ya artículos nuevos guardados).
+            try:
+                _publicar_en_redes(art)
+            except Exception as e:
+                print(f"  ⚠️  Guardado, pero falló la publicación en redes: {e}")
         time.sleep(3)
 
     if generados:

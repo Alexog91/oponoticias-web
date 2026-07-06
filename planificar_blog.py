@@ -164,14 +164,12 @@ def main():
     print("   Publicación manual: python3 publicar_programados.py")
     print("=" * 62)
 
-    # Commit de los HTML generados
-    if plan:
-        os.system(
-            'git add blog/ && '
-            'git diff --staged --quiet || '
-            'git commit -m "Blog: borradores programados [skip ci]" && '
-            'git push'
-        )
+    # El commit/push del HTML generado lo hace el propio workflow
+    # (planificar-blog.yml → paso "Subir páginas HTML de borradores"), que ya
+    # usa las credenciales persistidas de actions/checkout correctamente. Antes
+    # había aquí un os.system() redundante con `git push` sin pull/rebase
+    # previo ni comprobación de resultado (mismo patrón de bug arreglado hoy en
+    # leer_boe.py); se retira en vez de duplicar la lógica en dos sitios.
 
 
 if __name__ == "__main__":

@@ -61,11 +61,23 @@ def exchange_code(code):
         return json.loads(r.read().decode("utf-8"))
 
 
+def _tokens_para_imprimir(tokens):
+    """Representación de los tokens para consola: en GitHub Actions (log persistente
+    y visible para cualquiera con acceso al repo) se redactan; en una terminal local
+    se muestran completos, porque ahí es donde alguien los necesita para copiarlos
+    a mano tras un fallo de guardado en Supabase."""
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        redactado = {k: (f"{v[:8]}…(redactado en CI)" if isinstance(v, str) and len(v) > 8 else v)
+                     for k, v in tokens.items()}
+        return json.dumps(redactado, indent=2)
+    return json.dumps(tokens, indent=2)
+
+
 def save_tokens(tokens):
     """Guarda los tokens en Supabase Storage para que publicar_tiktok.py los lea."""
     if not SUPABASE_URL or not SUPABASE_API_KEY:
         print("⚠️  SUPABASE_URL / SUPABASE_API_KEY no configurados — tokens:")
-        print(json.dumps(tokens, indent=2))
+        print(_tokens_para_imprimir(tokens))
         return False
 
     payload = json.dumps(tokens, ensure_ascii=False).encode("utf-8")
@@ -87,7 +99,7 @@ def save_tokens(tokens):
         return True
     except Exception as e:
         print(f"⚠️  No se pudo guardar en Supabase ({e}). Tokens manuales:")
-        print(json.dumps(tokens, indent=2))
+        print(_tokens_para_imprimir(tokens))
         return False
 
 
