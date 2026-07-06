@@ -54,27 +54,50 @@ CCAA_CRUCE = [(nombre, slug) for nombre, slug in CCAA if slug != "nacional"]
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
 
-def consultar_convocatorias(cat_nombre, ccaa_nombre, limite=30):
-    params = urllib.parse.urlencode({
-        'categoria': f'eq.{cat_nombre}',
-        'comunidad_autonoma': f'eq.{ccaa_nombre}',
-        'order': 'fecha.desc',
-        'limit': str(limite),
-        'select': 'titulo,fecha,enlace,resumen_claude,cuerpo',
-    })
-    url = f"{SUPABASE_URL}/rest/v1/convocatorias?{params}"
-    headers = {
-        'apikey': SUPABASE_API_KEY,
-        'Authorization': f'Bearer {SUPABASE_API_KEY}',
-        'Accept': 'application/json',
-    }
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())
-    except Exception as e:
-        print(f"  ❌ Error consultando {cat_nombre} × {ccaa_nombre}: {e}")
-        return []
+def consultar_convocatorias_categoria(cat_nombre, page_size=1000):
+    """Trae TODAS las convocatorias de una categoría en una sola pasada
+    (paginado vía Range), en vez de una consulta por cada CCAA (hasta 19
+    peticiones). Se pagina con Range en lugar de confiar en un `limit` alto
+    porque Supabase/PostgREST puede tener un tope de filas por petición
+    (típicamente 1000) que truncaría silenciosamente categorías grandes como
+    Administración (1165 convocatorias a fecha 6/7/2026)."""
+    todas = []
+    offset = 0
+    while True:
+        params = urllib.parse.urlencode({
+            'categoria': f'eq.{cat_nombre}',
+            'order': 'fecha.desc',
+            'select': 'titulo,fecha,enlace,resumen_claude,comunidad_autonoma',
+        })
+        url = f"{SUPABASE_URL}/rest/v1/convocatorias?{params}"
+        headers = {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': f'Bearer {SUPABASE_API_KEY}',
+            'Accept': 'application/json',
+            'Range-Unit': 'items',
+            'Range': f'{offset}-{offset + page_size - 1}',
+        }
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                pagina = json.loads(resp.read())
+        except Exception as e:
+            print(f"  ❌ Error consultando categoría {cat_nombre} (offset {offset}): {e}")
+            break
+        todas.extend(pagina)
+        if len(pagina) < page_size:
+            break
+        offset += page_size
+    return todas
+
+
+def _agrupar_por_ccaa(convocatorias):
+    """Agrupa por comunidad_autonoma preservando el orden (fecha desc) de la
+    consulta original, para poder recortar top-30 por CCAA en memoria."""
+    por_ccaa = {}
+    for c in convocatorias:
+        por_ccaa.setdefault(c.get('comunidad_autonoma'), []).append(c)
+    return por_ccaa
 
 
 def _n_sustanciales(convocatorias):
@@ -375,8 +398,9 @@ if __name__ == "__main__":
 
     for cat_nombre, cat_slug, _desc in CATEGORIAS:
         cat_dir = CATEGORIA_DIR / cat_slug
+        por_ccaa = _agrupar_por_ccaa(consultar_convocatorias_categoria(cat_nombre))
         for ccaa_nombre, ccaa_slug in CCAA_CRUCE:
-            convocatorias = consultar_convocatorias(cat_nombre, ccaa_nombre)
+            convocatorias = por_ccaa.get(ccaa_nombre, [])[:30]
             n_sust = _n_sustanciales(convocatorias)
             if n_sust < MIN_SUSTANCIALES:
                 saltadas += 1
