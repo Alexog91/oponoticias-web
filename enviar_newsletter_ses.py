@@ -48,6 +48,8 @@ from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime, formataddr
 from datetime import datetime, date
 
+import newsletter_utils
+
 SUPABASE_URL     = os.environ["SUPABASE_URL"]
 SUPABASE_API_KEY = os.environ["SUPABASE_API_KEY"]
 
@@ -68,34 +70,17 @@ DRY_RUN        = os.environ.get("DRY_RUN") == "1"
 SEND_INTERVAL  = float(os.environ.get("SEND_INTERVAL", "0.3"))
 
 HOY = date.today().isoformat()
-MESES = ['enero','febrero','marzo','abril','mayo','junio',
-         'julio','agosto','septiembre','octubre','noviembre','diciembre']
 
 # Comunidades de ámbito estatal/nacional (o sin dato): las ve TODO el mundo.
 # Idéntico a enviar_newsletter.py para no divergir el criterio de segmentación.
 _ESTATAL = {"", "nacional", "nacional/estatal", "estatal", "espana", "españa"}
 
-
-def formatear_fecha_larga(iso):
-    try:
-        d = datetime.fromisoformat(iso[:10])
-        return f"{d.day} de {MESES[d.month-1]} de {d.year}"
-    except Exception:
-        return iso[:10]
+formatear_fecha_larga = newsletter_utils.formatear_fecha_larga
 
 
 # ── Supabase (REST) ─────────────────────────────────────────────────
 def supabase_get(endpoint, params):
-    qs = urllib.parse.urlencode(params)
-    url = f"{SUPABASE_URL}/rest/v1/{endpoint}?{qs}"
-    headers = {
-        "apikey": SUPABASE_API_KEY,
-        "Authorization": f"Bearer {SUPABASE_API_KEY}",
-        "Accept": "application/json",
-    }
-    req = urllib.request.Request(url, headers=headers)
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return json.loads(resp.read())
+    return newsletter_utils.supabase_get(SUPABASE_URL, SUPABASE_API_KEY, endpoint, params)
 
 
 def supabase_write(endpoint, body, method="POST", params=None):
