@@ -3,7 +3,7 @@
 // Variables de entorno en Vercel: BREVO_API_KEY, BREVO_LIST_ID,
 //   BREVO_SENDER_EMAIL (opcional), BREVO_SENDER_NAME (opcional)
 
-const https = require('https');
+const { brevoRequest, supabaseUpsert } = require('./_lib/http');
 
 const BASE = 'https://oponoticias.com/descargas';
 
@@ -44,38 +44,6 @@ const MATERIALES = {
 };
 const MATERIAL_DEFECTO = 'calendario-opositor-2026';
 
-// Llama a la API de Brevo y resuelve siempre (sin lanzar) con {status, data}.
-function brevoRequest(path, apiKey, payload) {
-  return new Promise((resolve) => {
-    const body = JSON.stringify(payload);
-    const req = https.request(
-      {
-        hostname: 'api.brevo.com',
-        path: `/v3/${path}`,
-        method: 'POST',
-        headers: {
-          'api-key': apiKey,
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      },
-      (response) => {
-        let data = '';
-        response.on('data', (chunk) => { data += chunk; });
-        response.on('end', () => {
-          let parsed = {};
-          try { parsed = JSON.parse(data || '{}'); } catch (_) {}
-          resolve({ status: response.statusCode, data: parsed });
-        });
-      }
-    );
-    req.on('error', (err) => resolve({ status: 0, data: { _err: String(err) } }));
-    req.write(body);
-    req.end();
-  });
-}
-
 // Doble escritura (Fase 2 migración a SES): además de dar de alta en Brevo, se
 // guarda/actualiza el suscriptor en Supabase (tabla `suscriptores`) para que la
 // tabla esté sincronizada desde ya. NO bloquea el alta: si falla, solo se registra.
@@ -83,35 +51,7 @@ function brevoRequest(path, apiKey, payload) {
 // la BD en las filas nuevas y se conserva en las existentes).
 // Variables de entorno NUEVAS en Vercel: SUPABASE_URL, SUPABASE_API_KEY.
 function supabaseUpsertSuscriptor(fields) {
-  return new Promise((resolve) => {
-    const baseUrl = process.env.SUPABASE_URL;
-    const apiKey  = process.env.SUPABASE_API_KEY;
-    if (!baseUrl || !apiKey) { resolve({ status: 0, skipped: true }); return; }
-    const u = new URL(`${baseUrl}/rest/v1/suscriptores?on_conflict=email`);
-    const body = JSON.stringify([fields]);
-    const req = https.request(
-      {
-        hostname: u.hostname,
-        path: u.pathname + u.search,
-        method: 'POST',
-        headers: {
-          'apikey': apiKey,
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          'Prefer': 'resolution=merge-duplicates,return=minimal',
-          'Content-Length': Buffer.byteLength(body),
-        },
-      },
-      (response) => {
-        let data = '';
-        response.on('data', (chunk) => { data += chunk; });
-        response.on('end', () => resolve({ status: response.statusCode, data }));
-      }
-    );
-    req.on('error', (err) => resolve({ status: 0, data: { _err: String(err) } }));
-    req.write(body);
-    req.end();
-  });
+  return supabaseUpsert('suscriptores', [fields]);
 }
 
 function emailBienvenidaHtml(material, email) {

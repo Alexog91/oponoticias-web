@@ -13,41 +13,7 @@
 //   SUPABASE_URL        — URL del proyecto Supabase
 //   SUPABASE_API_KEY    — clave service_role LEGACY (JWT eyJ…, no sb_secret_)
 
-const https = require('https');
-
-// PATCH a Supabase (actualiza filas que cumplen el filtro). Resuelve siempre.
-function supabasePatch(path, apiKey, baseUrl, body) {
-  return new Promise((resolve) => {
-    const data = JSON.stringify(body);
-    const u = new URL(`${baseUrl}/rest/v1/${path}`);
-    const req = https.request(
-      {
-        hostname: u.hostname,
-        path: u.pathname + u.search,
-        method: 'PATCH',
-        headers: {
-          apikey: apiKey,
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation', // devuelve las filas afectadas
-          'Content-Length': Buffer.byteLength(data),
-        },
-      },
-      (response) => {
-        let out = '';
-        response.on('data', (c) => { out += c; });
-        response.on('end', () => {
-          let parsed = [];
-          try { parsed = JSON.parse(out || '[]'); } catch (_) {}
-          resolve({ status: response.statusCode, data: parsed });
-        });
-      }
-    );
-    req.on('error', () => resolve({ status: 0, data: [] }));
-    req.write(data);
-    req.end();
-  });
-}
+const { supabasePatch } = require('./_lib/http');
 
 function paginaConfirmacion(ok) {
   const titulo = ok ? 'Te has dado de baja' : 'No hemos podido procesar la baja';
@@ -90,7 +56,7 @@ export default async function handler(req, res) {
   let ok = false;
   if (esUuid) {
     const filtro = `suscriptores?token_baja=eq.${encodeURIComponent(token)}`;
-    const r = await supabasePatch(filtro, apiKey, baseUrl, {
+    const r = await supabasePatch(filtro, {
       estado: 'baja',
       fecha_baja: new Date().toISOString(),
     });
