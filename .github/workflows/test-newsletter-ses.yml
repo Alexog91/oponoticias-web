@@ -1,0 +1,65 @@
+name: TEST Newsletter SES (manual)
+
+# Workflow de PRUEBA del motor propio de envío por Amazon SES (migración desde Brevo).
+# NO toca el envío diario real (que sigue por Brevo con newsletter.yml). Solo manual.
+#
+# Dos modos (input dry_run):
+#   - dry_run=true  (por defecto): lee Supabase y construye el email por comunidad,
+#     pero NO envía nada ni toca la tabla. Funciona con los secretos actuales.
+#   - dry_run=false: envía DE VERDAD, solo a la dirección de `test_email` (ignora la
+#     lista de suscriptores). Requiere los secretos SES_SMTP_USER / SES_SMTP_PASS.
+#
+# Nota sandbox: mientras AWS no conceda producción, solo se puede enviar a direcciones
+# verificadas. El dominio oponoticias.com está verificado → usar un buzón @oponoticias.com
+# como test_email (p.ej. info@oponoticias.com) funciona ya.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_email:
+        description: 'Dirección de prueba (usa una @oponoticias.com mientras haya sandbox)'
+        required: true
+        default: 'info@oponoticias.com'
+      dry_run:
+        description: '¿Solo simular (sin enviar)?'
+        required: true
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+      test_comunidad:
+        description: 'Comunidad simulada para la prueba (vacío = ve todas)'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  test-ses:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Ejecutar motor SES en modo prueba
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          # Credenciales SMTP de SES (solo necesarias si dry_run=false).
+          SES_SMTP_USER:    ${{ secrets.SES_SMTP_USER }}
+          SES_SMTP_PASS:    ${{ secrets.SES_SMTP_PASS }}
+          SES_SMTP_HOST:    email-smtp.eu-west-1.amazonaws.com
+          SENDER_EMAIL:     info@oponoticias.com
+          SENDER_NAME:      OpoNoticias
+          # Modo prueba: solo a esta dirección, sin tocar la tabla de suscriptores.
+          TEST_EMAILS:      ${{ github.event.inputs.test_email }}
+          TEST_COMUNIDAD:   ${{ github.event.inputs.test_comunidad }}
+          DRY_RUN:          ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+          # En sandbox SES limita a 1 envío/seg → margen de sobra.
+          SEND_INTERVAL:    '1.1'
+        run: python3 enviar_newsletter_ses.py

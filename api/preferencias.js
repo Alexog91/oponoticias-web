@@ -46,6 +46,43 @@ function brevo(method, path, apiKey, payload) {
   });
 }
 
+// Doble escritura (Fase 2 migración a SES): además de guardar COMUNIDAD en Brevo,
+// actualiza la comunidad del suscriptor en Supabase (tabla `suscriptores`) para
+// mantener la tabla sincronizada. No bloquea. Upsert por email (merge-duplicates);
+// se omite estado y token_baja (se conservan; el default cubre las filas nuevas).
+// Variables de entorno NUEVAS en Vercel: SUPABASE_URL, SUPABASE_API_KEY.
+function supabaseUpsertComunidad(email, comunidad) {
+  return new Promise((resolve) => {
+    const baseUrl = process.env.SUPABASE_URL;
+    const apiKey  = process.env.SUPABASE_API_KEY;
+    if (!baseUrl || !apiKey) { resolve({ status: 0, skipped: true }); return; }
+    const u = new URL(`${baseUrl}/rest/v1/suscriptores?on_conflict=email`);
+    const body = JSON.stringify([{ email, comunidad }]);
+    const req = https.request(
+      {
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        method: 'POST',
+        headers: {
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      },
+      (response) => {
+        let data = '';
+        response.on('data', (chunk) => { data += chunk; });
+        response.on('end', () => resolve({ status: response.statusCode, data }));
+      }
+    );
+    req.on('error', (err) => resolve({ status: 0, data: { _err: String(err) } }));
+    req.write(body);
+    req.end();
+  });
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -85,6 +122,12 @@ export default async function handler(req, res) {
   if (!ok) {
     console.error('Brevo preferencias error:', upd.status, JSON.stringify(upd.data));
     return res.status(502).json({ error: 'No se pudo guardar la preferencia' });
+  }
+
+  // Doble escritura en Supabase (no bloquea).
+  const sb = await supabaseUpsertComunidad(email, com);
+  if (!sb.skipped && !(sb.status >= 200 && sb.status < 300)) {
+    console.error('Supabase upsert comunidad (no bloquea):', sb.status, JSON.stringify(sb.data).slice(0, 200));
   }
 
   return res.status(200).json({ ok: true });

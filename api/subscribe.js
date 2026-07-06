@@ -76,6 +76,44 @@ function brevoRequest(path, apiKey, payload) {
   });
 }
 
+// Doble escritura (Fase 2 migración a SES): además de dar de alta en Brevo, se
+// guarda/actualiza el suscriptor en Supabase (tabla `suscriptores`) para que la
+// tabla esté sincronizada desde ya. NO bloquea el alta: si falla, solo se registra.
+// Upsert por email (merge-duplicates). Se omite token_baja (lo pone el default de
+// la BD en las filas nuevas y se conserva en las existentes).
+// Variables de entorno NUEVAS en Vercel: SUPABASE_URL, SUPABASE_API_KEY.
+function supabaseUpsertSuscriptor(fields) {
+  return new Promise((resolve) => {
+    const baseUrl = process.env.SUPABASE_URL;
+    const apiKey  = process.env.SUPABASE_API_KEY;
+    if (!baseUrl || !apiKey) { resolve({ status: 0, skipped: true }); return; }
+    const u = new URL(`${baseUrl}/rest/v1/suscriptores?on_conflict=email`);
+    const body = JSON.stringify([fields]);
+    const req = https.request(
+      {
+        hostname: u.hostname,
+        path: u.pathname + u.search,
+        method: 'POST',
+        headers: {
+          'apikey': apiKey,
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal',
+          'Content-Length': Buffer.byteLength(body),
+        },
+      },
+      (response) => {
+        let data = '';
+        response.on('data', (chunk) => { data += chunk; });
+        response.on('end', () => resolve({ status: response.statusCode, data }));
+      }
+    );
+    req.on('error', (err) => resolve({ status: 0, data: { _err: String(err) } }));
+    req.write(body);
+    req.end();
+  });
+}
+
 function emailBienvenidaHtml(material, email) {
   const prefUrl = `https://oponoticias.com/preferencias?e=${encodeURIComponent(email || '')}`;
   return `<!DOCTYPE html>
@@ -198,6 +236,21 @@ export default async function handler(req, res) {
   if (!altaOk) {
     console.error('Brevo contacts error:', contacto.status, JSON.stringify(contacto.data));
     return res.status(502).json({ error: 'Error al suscribir' });
+  }
+
+  // 1b) Doble escritura en Supabase (no bloquea; ver helper arriba). El alta es un
+  //     opt-in explícito → estado 'activo' (reactiva si alguien se había dado de baja
+  //     y vuelve a suscribirse). Solo se manda comunidad si viene (para no borrar una
+  //     preferencia ya guardada). token_baja lo genera la BD.
+  const sb = await supabaseUpsertSuscriptor({
+    email,
+    estado: 'activo',
+    origen: material ? 'recursos' : 'web',
+    material: matSlug,
+    ...(com ? { comunidad: com } : {}),
+  });
+  if (!sb.skipped && !(sb.status >= 200 && sb.status < 300)) {
+    console.error('Supabase upsert suscriptor (no bloquea):', sb.status, JSON.stringify(sb.data).slice(0, 200));
   }
 
   // 2) Email de bienvenida con el lead magnet.
