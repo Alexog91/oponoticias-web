@@ -1,0 +1,59 @@
+name: TEST PostgREST heterogeneous batch keys (diagnóstico, temporal)
+
+# Diagnóstico puntual: comprueba cómo se comporta el upsert bulk de Supabase/PostgREST
+# cuando los objetos de un mismo array tienen claves distintas (el caso real de
+# importar_suscriptores_brevo.py --api: unos registros llevan 'comunidad', otros
+# 'estado'+'fecha_baja', la mayoría ninguna clave extra). Usa emails @example.invalid
+# (no existen, no se puede enviar nada ahí) y los borra al final. No afecta a datos reales.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Insertar lote heterogéneo de prueba
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+        run: |
+          echo "=== POST con claves heterogéneas ==="
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" \
+            -X POST "$SUPABASE_URL/rest/v1/suscriptores?on_conflict=email" \
+            -H "apikey: $SUPABASE_API_KEY" \
+            -H "Authorization: Bearer $SUPABASE_API_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d '[
+              {"email":"zzz-test-heterog-a@example.invalid","origen":"diagnostico","comunidad":"Madrid"},
+              {"email":"zzz-test-heterog-b@example.invalid","origen":"diagnostico","estado":"baja","fecha_baja":"2020-01-01T00:00:00Z"},
+              {"email":"zzz-test-heterog-c@example.invalid","origen":"diagnostico"}
+            ]'
+
+      - name: Leer de vuelta los 3 registros (ver qué quedó guardado de verdad)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+        run: |
+          echo "=== GET de los 3 registros de prueba ==="
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" \
+            "$SUPABASE_URL/rest/v1/suscriptores?email=like.zzz-test-heterog-*&select=email,comunidad,estado,fecha_baja,origen" \
+            -H "apikey: $SUPABASE_API_KEY" \
+            -H "Authorization: Bearer $SUPABASE_API_KEY"
+
+      - name: Limpiar (borrar los 3 registros de prueba)
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+        run: |
+          echo "=== DELETE de limpieza ==="
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" \
+            -X DELETE "$SUPABASE_URL/rest/v1/suscriptores?email=like.zzz-test-heterog-*" \
+            -H "apikey: $SUPABASE_API_KEY" \
+            -H "Authorization: Bearer $SUPABASE_API_KEY" \
+            -H "Prefer: return=representation"

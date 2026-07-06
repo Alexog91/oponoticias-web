@@ -154,6 +154,8 @@ recovery*.docx
 !descargas/
 !descargas/*.pdf
 api*key*
+*credentials*.csv
+*_credentials.csv
 
 # Python
 __pycache__/
