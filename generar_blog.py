@@ -228,6 +228,24 @@ def articulo_reciente(categoria):
         return False
 
 
+def reclamar_categoria_hoy(categoria):
+    """Reserva la categoría para HOY antes de generar nada (evita que dos
+    ejecuciones paralelas —manual + cron el mismo día— generen 2 artículos
+    de la misma categoría: ver crear_tabla_blog_claims.sql). El INSERT choca
+    con la clave primaria (categoria, fecha) si otra ejecución ya la reservó
+    hoy, y Supabase lo resuelve de forma atómica (a diferencia de comprobar
+    y luego actuar en Python, que dejaría una ventana de carrera).
+    Si la tabla aún no existe (falta ejecutar la migración), NO bloquea:
+    se asume reservado para no romper el flujo existente."""
+    hoy = datetime.now(timezone.utc).date().isoformat()
+    status = supabase_post("blog_claims", {"categoria": categoria, "fecha": hoy})
+    if status == 409:
+        return False
+    if status not in (200, 201):
+        print(f"  ⚠️  No se pudo reservar la categoría (status {status}), se continúa igualmente.")
+    return True
+
+
 def generar_articulo(categoria, convocatorias):
     año = datetime.now().year
     nombre = NOMBRE_CATEGORIA[categoria]
@@ -798,6 +816,9 @@ def main():
         print(f"\n📂 {NOMBRE_CATEGORIA[categoria]}")
         if articulo_reciente(categoria):
             print("  ⏭️  Ya hay artículo reciente, saltando…")
+            continue
+        if not reclamar_categoria_hoy(categoria):
+            print("  ⏭️  Otra ejecución ya está generando esta categoría hoy, saltando…")
             continue
 
         convocatorias = obtener_convocatorias(categoria, limite=5)
