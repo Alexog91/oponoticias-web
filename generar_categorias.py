@@ -66,26 +66,48 @@ _CCAA_NOMBRES = {
 
 # ── Supabase ──────────────────────────────────────────────────────────────────
 
-def consultar_convocatorias(categoria_nombre, limite=40):
-    params = urllib.parse.urlencode({
-        'categoria': f'eq.{categoria_nombre}',
-        'order': 'fecha.desc',
-        'limit': str(limite),
-        'select': 'titulo,fecha,enlace,resumen_claude,cuerpo,comunidad_autonoma',
-    })
-    url = f"{SUPABASE_URL}/rest/v1/convocatorias?{params}"
-    headers = {
-        'apikey': SUPABASE_API_KEY,
-        'Authorization': f'Bearer {SUPABASE_API_KEY}',
-        'Accept': 'application/json',
-    }
-    req = urllib.request.Request(url, headers=headers)
-    try:
-        with urllib.request.urlopen(req, timeout=15) as resp:
-            return json.loads(resp.read())
-    except Exception as e:
-        print(f"  ❌ Error consultando {categoria_nombre}: {e}")
-        return []
+def consultar_todas_convocatorias(page_size=1000):
+    """Trae TODAS las convocatorias en una sola pasada (paginado vía Range),
+    en vez de una consulta por cada categoría (8 peticiones). Se pagina en
+    vez de confiar en un `limit` alto porque Supabase/PostgREST puede tener
+    un tope de filas por petición (típicamente 1000) que truncaría en
+    silencio la tabla completa (1302 convocatorias a fecha 6/7/2026)."""
+    todas = []
+    offset = 0
+    while True:
+        params = urllib.parse.urlencode({
+            'order': 'fecha.desc',
+            'select': 'titulo,fecha,enlace,resumen_claude,comunidad_autonoma,categoria',
+        })
+        url = f"{SUPABASE_URL}/rest/v1/convocatorias?{params}"
+        headers = {
+            'apikey': SUPABASE_API_KEY,
+            'Authorization': f'Bearer {SUPABASE_API_KEY}',
+            'Accept': 'application/json',
+            'Range-Unit': 'items',
+            'Range': f'{offset}-{offset + page_size - 1}',
+        }
+        req = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                pagina = json.loads(resp.read())
+        except Exception as e:
+            print(f"  ❌ Error consultando convocatorias (offset {offset}): {e}")
+            break
+        todas.extend(pagina)
+        if len(pagina) < page_size:
+            break
+        offset += page_size
+    return todas
+
+
+def _agrupar_por_categoria(convocatorias):
+    """Agrupa por categoria preservando el orden (fecha desc) de la consulta
+    original, para poder recortar top-40 por categoría en memoria."""
+    por_cat = {}
+    for c in convocatorias:
+        por_cat.setdefault(c.get('categoria'), []).append(c)
+    return por_cat
 
 
 # ── Utilidades ────────────────────────────────────────────────────────────────
@@ -443,9 +465,13 @@ if __name__ == "__main__":
     CATEGORIA_DIR.mkdir(parents=True, exist_ok=True)
     slugs_generados = []
 
+    todas = consultar_todas_convocatorias()
+    por_cat = _agrupar_por_categoria(todas)
+    print(f"📥 {len(todas)} convocatorias cargadas en 1 pasada.")
+
     for cat_nombre, slug, descripcion in CATEGORIAS:
         print(f"\n📂 {cat_nombre}...")
-        convocatorias = consultar_convocatorias(cat_nombre)
+        convocatorias = por_cat.get(cat_nombre, [])[:40]
         print(f"   {len(convocatorias)} convocatorias encontradas")
 
         html = generar_html(cat_nombre, slug, descripcion, convocatorias)
