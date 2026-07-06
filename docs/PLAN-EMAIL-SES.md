@@ -77,13 +77,19 @@ Estado: **Fase 0 en curso** (5 jul 2026). Ver [[oponoticias-esp-alternativas]].
 - [ ] 🤖 Guiar cada paso + revisar los registros DNS antes de que propaguen.
 
 ## Fase 2 — Almacén de contactos en Supabase (en paralelo, Brevo intacto)
-- [ ] 🧑 Exportar CSV de contactos desde Brevo (email + atributo COMUNIDAD).
-      (Brevo → Contactos → seleccionar todos → Exportar.)
-- [x] 🤖 `importar_suscriptores_brevo.py` ✅ HECHO 5 jul 2026. Lee el CSV (autodetecta
-      columna email/comunidad y separador `;`/`,`), deduplica, normaliza email a
-      minúsculas, valida comunidad. Upsert por email (merge-duplicates) en lotes de 500.
-      NO envía estado ni token_baja (default de la BD → no resucita bajas, conserva
-      tokens). `DRY_RUN=1` para simular. Verificado con CSV de ejemplo.
+- [x] 🤖 **`importar_suscriptores_brevo.py` — reescrito 6 jul 2026 a modo API.**
+      HALLAZGO auditando el primer CSV exportado (287 contactos, 5 jul): el CSV de Brevo
+      NO incluye si un contacto está bloqueado/dado de baja (emailBlacklisted) — de 288
+      contactos reales, **8 estaban dados de baja** e indistinguibles en el CSV. Importarlos
+      tal cual los habría dejado "activos" en Supabase, violando su baja. Arreglo:
+      **modo `--api`** (recomendado) pagina `GET /v3/contacts` de Brevo directamente
+      (limit=1000), lee `attributes.COMUNIDAD` y `emailBlacklisted`, y marca
+      `estado='baja'+fecha_baja` en los bloqueados. Ventaja añadida: se re-ejecuta en
+      cualquier momento sin exportar CSV a mano — resuelve también que la lista sigue
+      creciendo mientras se espera AWS. El modo CSV se conserva (con aviso explícito de
+      su limitación) por si hiciera falta puntualmente. Verificado con test unitario
+      (API mockeada): paginación, bloqueado→baja+fecha, comunidad, minúsculas — todo OK.
+      Upsert por email (merge-duplicates) en lotes de 500. `DRY_RUN=1` para simular.
 - [x] 🤖 **Doble escritura** ✅ HECHO 5 jul 2026, **ACTIVADA EN PRODUCCIÓN 6 jul 2026**.
       `api/subscribe.js` (alta → upsert `{email, estado:'activo', origen, material,
       comunidad?}`) y `api/preferencias.js` (cambio de comunidad → upsert
@@ -121,6 +127,31 @@ Estado: **Fase 0 en curso** (5 jul 2026). Ver [[oponoticias-esp-alternativas]].
   bajo el capó → cubre también el paso "usuario IAM de solo-envío" de la Fase 1),
   `SENDER_EMAIL`, `SENDER_NAME`. `SES_SMTP_HOST` por defecto ya es eu-west-1.
 - **En Vercel (para el endpoint de bajas):** `SUPABASE_URL`, `SUPABASE_API_KEY`.
+
+### REVISIÓN GENERAL 6 jul 2026 (sin agentes, solo herramientas directas)
+Auditoría completa: higiene de git, consistencia entre archivos, seguridad, y un
+diagnóstico empírico contra el Supabase real. Hallazgos:
+- **🔴 Seguridad (corregido):** un CSV de credenciales SMTP descargado de AWS
+  (`ses-smtp-user...credentials.csv`) estaba sin trackear DENTRO del repo. Nunca se
+  llegó a commitear (verificado en todo el historial), pero no había regla de
+  `.gitignore` que lo cubriera ante un futuro `git add` amplio. Añadida regla
+  `*credentials*.csv`.
+- **🔴 Bug crítico (corregido y verificado):** ver más abajo — el importador
+  `--api` habría fallado por completo al ejecutarse de verdad (PostgREST 400).
+- **✅ Consistencia:** las listas `COMUNIDADES` de `api/preferencias.js` e
+  `importar_suscriptores_brevo.py` son idénticas; `_ESTATAL` idéntica entre
+  `enviar_newsletter.py` y `enviar_newsletter_ses.py`; nombres de env vars
+  consistentes en los 3 endpoints de Vercel.
+- **✅ Validación del token de baja:** confirmado que el token literal `"test"`
+  (usado en modo `TEST_EMAILS`) NUNCA pasa la regex de UUID de `api/unsubscribe.js`
+  → aunque alguien clicase "darse de baja" en un correo de prueba, no haría nada
+  (ni error ni baja accidental). Comportamiento seguro por diseño.
+- **Nota para más adelante (no urgente):** `enviar_newsletter_ses.py` reutiliza una
+  única conexión SMTP para todo el envío con `SEND_INTERVAL` entre mensajes. Con
+  los volúmenes actuales (cientos) tarda minutos, sin problema. Si la lista crece a
+  varios miles, vigilar que el servidor SMTP no cierre la conexión por inactividad
+  o que el workflow no exceda su tiempo máximo — se resolvería reconectando cada
+  N envíos, pero no hace falta tocarlo todavía.
 
 ### Estado del código (5 jul 2026): TODO escrito, verificado y PROBADO EN CI.
 Piezas listas e inertes (Brevo intacto): `enviar_newsletter_ses.py`, `api/unsubscribe.js`,
