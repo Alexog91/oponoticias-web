@@ -1157,20 +1157,9 @@ def publicar_carrusel_instagram(convocatorias, max_slides=3):
         return False
 
 
-def generar_slug(titulo, ref_boe=""):
-    """Genera un slug único usando el título + referencia BOE como sufijo."""
-    slug = titulo.lower()
-    slug = unicodedata.normalize('NFKD', slug)
-    slug = ''.join([c for c in slug if not unicodedata.combining(c)])
-    slug = re.sub(r'[^a-z0-9]+', '-', slug)
-    slug = slug.strip('-')
-    slug = re.sub(r'-+', '-', slug)
-    slug = slug[:60]
-    # El ref_boe (ej: BOE-A-2026-12461) garantiza unicidad aunque los títulos coincidan
-    if ref_boe and ref_boe != "BOE":
-        sufijo = re.sub(r'[^a-z0-9]+', '-', ref_boe.lower()).strip('-')
-        return f"{slug}-{sufijo}.html"
-    return f"{slug}.html"
+# generar_slug: idéntica a la de generar_ccaa.py/generar_categorias.py, ahora
+# compartida en boe_utils.py (antes estaba triplicada).
+from boe_utils import generar_slug
 
 
 # Contexto útil por categoría (2-3 frases reales). Sirve para des-thin-ear las
