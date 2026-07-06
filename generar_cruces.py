@@ -19,7 +19,6 @@ Uso:
 import os
 import json
 import html as html_lib
-import re
 import urllib.request
 import urllib.parse
 from pathlib import Path

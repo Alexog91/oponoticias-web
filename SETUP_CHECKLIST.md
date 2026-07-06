@@ -1,6 +1,14 @@
 # OpoNoticias — Checklist de Setup
 
-## ✅ Completado
+> ⚠️ **DOCUMENTO DESACTUALIZADO.** Es el checklist del setup inicial del proyecto
+> (rediseño de la web, primer script de leer_boe.py). No refleja nada de lo
+> añadido después: newsletter (Brevo → migrando a Amazon SES, ver
+> `docs/PLAN-EMAIL-SES.md`), segmentación por comunidad, vídeo diario, blog con
+> IA, Instagram/Facebook/TikTok/X, hubs de CCAA/categoría, páginas de cruce
+> categoría×CCAA, ni la unificación a un solo repo (12 jun 2026). Se conserva
+> como referencia histórica, no como guía del estado actual.
+
+## ✅ Completado (histórico — ver aviso arriba)
 
 - [x] **Web rediseñada** (magazine style, paleta neutral cálida)
   - index.html (home con hero, categorías, últimas convocatorias, CTA Telegram)

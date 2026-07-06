@@ -1,6 +1,19 @@
 # OpoNoticias — Automatización y Despliegue
 
-## Arquitectura
+> ⚠️ **DOCUMENTO DESACTUALIZADO (desde el 12 jun 2026).** Describe la arquitectura
+> original de DOS repos (`oponoticias` con los scripts + `oponoticias-web` con la web).
+> Desde el 12 jun 2026 **todo está unificado en un único repo** (`oponoticias-web`):
+> scripts Python, workflows de GitHub Actions y la web viven juntos, y
+> `leer_boe.py` hace `git push` al mismo repo (`HEAD:main`), no a uno externo.
+> Los secrets/variables de entorno de este documento también están incompletos
+> (faltan TELEGRAM_ADMIN_CHAT_ID, MAKE_WEBHOOK_URL, FB_*, TIKTOK_*, SES_SMTP_*,
+> SUPABASE_*, etc.) y no reflejan las piezas añadidas después (newsletter, vídeo
+> diario con Remotion, publicación en Instagram/Facebook/TikTok/X, blog con IA).
+> Para el estado real, revisa `.github/workflows/*.yml` directamente y
+> `docs/PLAN-EMAIL-SES.md`. Se conserva este documento como referencia histórica
+> del setup inicial del proyecto.
+
+## Arquitectura (histórica — ver aviso arriba)
 
 ```
 ┌─────────────────────────────────────────────────────────┐
