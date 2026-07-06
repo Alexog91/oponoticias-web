@@ -35,6 +35,10 @@ STORAGE_BUCKET   = os.environ.get("SUPABASE_STORAGE_BUCKET", "social")
 TOKENS_BUCKET    = os.environ.get("SUPABASE_TOKENS_BUCKET", "private")
 CLIENT_KEY       = os.environ.get("TIKTOK_CLIENT_KEY", "")
 CLIENT_SECRET    = os.environ.get("TIKTOK_CLIENT_SECRET", "")
+# Solo para avisar al admin si el refresh_token nuevo no se puede guardar
+# (ver _obtener_access_token) — mismas variables que ya usa leer_boe.py.
+TELEGRAM_TOKEN          = os.environ.get("TELEGRAM_TOKEN", "")
+TELEGRAM_ADMIN_CHAT_ID  = os.environ.get("TELEGRAM_ADMIN_CHAT_ID", "")
 
 TOKENS_KEY = "tiktok/tokens.json"
 TIKTOK_API = "https://open.tiktokapis.com/v2"
@@ -60,9 +64,10 @@ def _leer_tokens():
 
 
 def _guardar_tokens(tokens):
-    """Sobreescribe tokens en Supabase Storage con los valores frescos."""
+    """Sobreescribe tokens en Supabase Storage con los valores frescos.
+    Devuelve True si se guardó correctamente, False si no (nunca lanza)."""
     if not SUPABASE_URL or not SUPABASE_API_KEY:
-        return
+        return False
     payload = json.dumps(tokens, ensure_ascii=False).encode("utf-8")
     url = f"{SUPABASE_URL}/storage/v1/object/{TOKENS_BUCKET}/{TOKENS_KEY}"
     req = urllib.request.Request(
@@ -78,8 +83,31 @@ def _guardar_tokens(tokens):
     )
     try:
         urllib.request.urlopen(req, timeout=15)
+        return True
     except Exception as e:
         print(f"⚠️  TikTok: no se pudieron guardar tokens actualizados ({e})")
+        return False
+
+
+def _alertar_admin(mensaje):
+    """Aviso puntual al chat privado del admin por Telegram. Best-effort:
+    nunca lanza (si falla, se queda solo en el print que ya hizo el llamador)."""
+    if not (TELEGRAM_TOKEN and TELEGRAM_ADMIN_CHAT_ID):
+        return
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = urllib.parse.urlencode({
+            "chat_id": TELEGRAM_ADMIN_CHAT_ID,
+            "text": mensaje,
+            "parse_mode": "HTML",
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            url, data=data,
+            headers={"Content-Type": "application/x-www-form-urlencoded"},
+        )
+        urllib.request.urlopen(req, timeout=10).read()
+    except Exception:
+        pass
 
 
 # ── OAuth token refresh ────────────────────────────────────────────────────────
@@ -139,8 +167,38 @@ def _obtener_access_token():
         "refresh_expires_in": resp.get("refresh_expires_in", 31536000),
         "obtained_at":        int(time.time()),
     }
-    _guardar_tokens(nuevos)
-    print("🔄 TikTok: token refrescado y guardado en Supabase")
+
+    # CRÍTICO: en cuanto TikTok emite el refresh_token nuevo, invalida el
+    # anterior (rotación de un solo uso) — no hay forma de "deshacer" eso. Si
+    # el guardado en Supabase falla aquí, el próximo run leerá el refresh_token
+    # VIEJO (ya inválido) y la cuenta queda bloqueada hasta reautorizar a mano
+    # con tiktok_oauth_setup.py. Por eso se reintenta el guardado varias veces
+    # antes de rendirse, y si aun así falla se avisa al admin — mejor un aviso
+    # inmediato que descubrirlo días después porque TikTok dejó de publicar.
+    guardado = False
+    for intento in range(3):
+        if _guardar_tokens(nuevos):
+            guardado = True
+            break
+        if intento < 2:
+            time.sleep(3)
+
+    if guardado:
+        print("🔄 TikTok: token refrescado y guardado en Supabase")
+    else:
+        print("🚨 TikTok: el refresh_token nuevo NO se pudo guardar tras 3 intentos — "
+              "la próxima ejecución probablemente fallará al refrescar.")
+        _alertar_admin(
+            "🚨 <b>TikTok: fallo guardando el refresh_token</b>\n\n"
+            "Se refrescó correctamente pero no se pudo guardar en Supabase "
+            "tras 3 intentos. El refresh_token anterior ya está invalidado "
+            "por TikTok, así que la próxima ejecución probablemente fallará "
+            "al refrescar. Puede hacer falta reautorizar a mano con "
+            "tiktok_oauth_setup.py."
+        )
+
+    # El access_token de esta respuesta es válido 24h independientemente de si
+    # se pudo guardar o no, así que se usa igual para intentar publicar hoy.
     return nuevos["access_token"]
 
 
