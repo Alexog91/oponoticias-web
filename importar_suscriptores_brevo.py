@@ -1,22 +1,35 @@
 """
-importar_suscriptores_brevo.py — Migra los contactos exportados de Brevo (CSV) a la
-tabla `suscriptores` de Supabase. Uso único al migrar a SES (Fase 2 del PLAN-EMAIL-SES).
+importar_suscriptores_brevo.py — Migra los contactos de Brevo a la tabla `suscriptores`
+de Supabase. Dos modos:
 
-Cómo obtener el CSV: Brevo → Contactos → (seleccionar todos) → Exportar → descargar CSV.
-Debe tener al menos una columna de email; si tiene COMUNIDAD, también se importa.
+  --api   (RECOMENDADO) Lee los contactos DIRECTAMENTE de la API de Brevo (paginado).
+          Siempre trae el estado real, incluida la lista de bloqueados/dados de baja
+          (emailBlacklisted) — algo que el CSV exportado desde la web de Brevo NO
+          incluye. Se puede re-ejecutar en cualquier momento sin exportar nada a mano;
+          útil porque la lista sigue creciendo mientras se espera la aprobación de AWS.
+          Requiere BREVO_API_KEY.
+
+  <csv>   Modo antiguo con un CSV exportado a mano (Brevo → Contactos → Exportar).
+          OJO: el CSV no distingue contactos bloqueados/dados de baja en Brevo — si se
+          usa este modo, hay que descartar esos emails aparte (ver aviso en pantalla).
 
 Uso:
+    BREVO_API_KEY=... SUPABASE_URL=... SUPABASE_API_KEY=... python3 importar_suscriptores_brevo.py --api
     SUPABASE_URL=... SUPABASE_API_KEY=... python3 importar_suscriptores_brevo.py contactos.csv
-    # o con DRY_RUN=1 para ver qué se importaría sin escribir nada:
-    DRY_RUN=1 python3 importar_suscriptores_brevo.py contactos.csv
+    # DRY_RUN=1 para ver qué se importaría sin escribir nada en Supabase:
+    DRY_RUN=1 python3 importar_suscriptores_brevo.py --api
 
 Notas de diseño:
   - Upsert por email (on_conflict=email, merge-duplicates): re-ejecutar es seguro.
-  - NO se envía `estado` → las filas nuevas quedan 'activo' (default de la BD) y las
-    existentes conservan su estado (no resucita a quien se dio de baja).
+  - Si el contacto está bloqueado/dado de baja en Brevo (emailBlacklisted=true, modo
+    --api), se marca `estado='baja'` + `fecha_baja` explícitamente — nunca se le vuelve
+    a escribir por el motor SES.
+  - Si NO está bloqueado, no se envía `estado` → las filas nuevas quedan 'activo'
+    (default de la BD) y las existentes conservan su estado (no resucita una baja
+    que el usuario hubiera pedido ya en el nuevo sistema).
   - NO se envía `token_baja` → lo genera el default de la BD en las filas nuevas y se
     conserva en las existentes.
-  - `comunidad` sí se actualiza (en la migración Brevo es la fuente de verdad).
+  - `comunidad` sí se actualiza (Brevo es la fuente de verdad en esta migración).
 """
 
 import os
@@ -24,6 +37,8 @@ import sys
 import csv
 import json
 import urllib.request
+import urllib.parse
+from datetime import datetime, timezone
 
 SUPABASE_URL     = os.environ["SUPABASE_URL"].rstrip("/")
 SUPABASE_API_KEY = os.environ["SUPABASE_API_KEY"]
@@ -41,6 +56,47 @@ COMUNIDADES = {
 }
 
 
+# ── Modo API (recomendado) ──────────────────────────────────────────
+def obtener_contactos_brevo_api():
+    """Pagina GET /v3/contacts y devuelve todos los contactos con su comunidad
+    (atributo personalizado) y si están bloqueados/dados de baja en Brevo."""
+    api_key = os.environ["BREVO_API_KEY"]
+    contactos, offset, limit = [], 0, 1000
+    while True:
+        qs = urllib.parse.urlencode({"limit": limit, "offset": offset, "sort": "desc"})
+        req = urllib.request.Request(
+            f"https://api.brevo.com/v3/contacts?{qs}",
+            headers={"api-key": api_key, "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read())
+        lote = data.get("contacts", [])
+        contactos.extend(lote)
+        if len(lote) < limit:
+            break
+        offset += limit
+    print(f"  {len(contactos)} contactos leídos de la API de Brevo.")
+
+    registros, bloqueados = [], 0
+    for c in contactos:
+        email = (c.get("email") or "").strip().lower()
+        if not email:
+            continue
+        reg = {"email": email, "origen": "brevo-import"}
+        com = ((c.get("attributes") or {}).get("COMUNIDAD") or "").strip()
+        if com in COMUNIDADES:
+            reg["comunidad"] = com
+        if c.get("emailBlacklisted"):
+            reg["estado"] = "baja"
+            reg["fecha_baja"] = datetime.now(timezone.utc).isoformat()
+            bloqueados += 1
+        registros.append(reg)
+    print(f"  De ellos, {bloqueados} están bloqueados/dados de baja en Brevo → "
+          f"se marcarán 'baja' en Supabase (no se les volverá a escribir).")
+    return registros
+
+
+# ── Modo CSV (antiguo, sin estado de bloqueo) ───────────────────────
 def detectar_columnas(cabeceras):
     email_col, com_col = None, None
     for h in cabeceras:
@@ -53,8 +109,9 @@ def detectar_columnas(cabeceras):
 
 
 def leer_csv(ruta):
+    print("  ⚠️  Modo CSV: NO distingue contactos bloqueados/dados de baja en Brevo.")
+    print("      Se recomienda el modo --api salvo que ya se haya filtrado el CSV a mano.")
     with open(ruta, newline="", encoding="utf-8-sig") as f:
-        # Detecta el separador (Brevo suele usar ';' o ','), con fallback a ','.
         muestra = f.read(4096)
         f.seek(0)
         try:
@@ -107,11 +164,15 @@ def upsert_lote(lote):
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("Uso: python3 importar_suscriptores_brevo.py <contactos.csv>")
-    ruta = sys.argv[1]
+        sys.exit("Uso: python3 importar_suscriptores_brevo.py --api | <contactos.csv>")
+    origen = sys.argv[1]
 
-    print(f"📥 Importando suscriptores desde {ruta}" + ("  (DRY RUN)" if DRY_RUN else ""))
-    registros = leer_csv(ruta)
+    print(f"📥 Importando suscriptores" + ("  (DRY RUN)" if DRY_RUN else ""))
+    if origen == "--api":
+        registros = obtener_contactos_brevo_api()
+    else:
+        registros = leer_csv(origen)
+
     print(f"  {len(registros)} contactos únicos a importar.")
     con_com = sum(1 for r in registros if r.get("comunidad"))
     print(f"  De ellos, {con_com} con comunidad; {len(registros) - con_com} sin comunidad (reciben todo).")
@@ -122,7 +183,6 @@ def main():
         print("  (DRY RUN: no se ha escrito nada en Supabase).")
         return 0
 
-    # Upsert en lotes de 500.
     total_ok, total_err = 0, 0
     for i in range(0, len(registros), 500):
         lote = registros[i:i + 500]

@@ -84,13 +84,18 @@ Estado: **Fase 0 en curso** (5 jul 2026). Ver [[oponoticias-esp-alternativas]].
       minúsculas, valida comunidad. Upsert por email (merge-duplicates) en lotes de 500.
       NO envía estado ni token_baja (default de la BD → no resucita bajas, conserva
       tokens). `DRY_RUN=1` para simular. Verificado con CSV de ejemplo.
-- [x] 🤖 **Doble escritura** ✅ HECHO 5 jul 2026. `api/subscribe.js` (alta → upsert
-      `{email, estado:'activo', origen, material, comunidad?}`) y `api/preferencias.js`
-      (cambio de comunidad → upsert `{email, comunidad}`) escriben TAMBIÉN en Supabase.
-      Helper `https` autocontenido en cada archivo (sin módulo compartido, para no
-      arriesgar el sistema de módulos de Vercel). NO bloquea: si Supabase falla, el
-      alta/cambio en Brevo sigue OK (solo se registra el error). Requiere en Vercel las
-      env vars `SUPABASE_URL` y `SUPABASE_API_KEY`. Sintaxis verificada.
+- [x] 🤖 **Doble escritura** ✅ HECHO 5 jul 2026, **ACTIVADA EN PRODUCCIÓN 6 jul 2026**.
+      `api/subscribe.js` (alta → upsert `{email, estado:'activo', origen, material,
+      comunidad?}`) y `api/preferencias.js` (cambio de comunidad → upsert
+      `{email, comunidad}`) escriben TAMBIÉN en Supabase. Helper `https` autocontenido
+      en cada archivo (sin módulo compartido, para no arriesgar el sistema de módulos de
+      Vercel). NO bloquea: si Supabase falla, el alta/cambio en Brevo sigue OK (solo se
+      registra el error). Env vars `SUPABASE_URL` (pública, `https://opnbxphxfclazxduhmkp.supabase.co`)
+      y `SUPABASE_API_KEY` (clave service_role legacy, pegada por el usuario — nunca
+      pasó por el chat) añadidas en Vercel → Settings → Environment Variables
+      (Production + Preview, marcadas Sensitive) + **Redeploy manual disparado y
+      confirmado "Ready" en Production (15s)**. A partir de ahora, toda alta nueva o
+      cambio de comunidad se sincroniza solo en Supabase, sin esperar al corte final.
 
 ## Fase 3 — Motor de envío SES (nuevo, NO reemplaza nada todavía)
 - [x] 🤖 `enviar_newsletter_ses.py` ✅ HECHO 5 jul 2026. Lee suscriptores activos de
@@ -117,10 +122,30 @@ Estado: **Fase 0 en curso** (5 jul 2026). Ver [[oponoticias-esp-alternativas]].
   `SENDER_EMAIL`, `SENDER_NAME`. `SES_SMTP_HOST` por defecto ya es eu-west-1.
 - **En Vercel (para el endpoint de bajas):** `SUPABASE_URL`, `SUPABASE_API_KEY`.
 
-### Estado del código (5 jul 2026): TODO escrito y verificado en sintaxis/lógica.
+### Estado del código (5 jul 2026): TODO escrito, verificado y PROBADO EN CI.
 Piezas listas e inertes (Brevo intacto): `enviar_newsletter_ses.py`, `api/unsubscribe.js`,
 `importar_suscriptores_brevo.py`, doble escritura en `subscribe.js`/`preferencias.js`.
-Falta solo lo que depende de credenciales/aprobación externa (abajo) + las pruebas.
+Todo subido a main (inofensivo: la doble escritura es no-op sin las env vars de Vercel).
+Workflow manual `test-newsletter-ses.yml` creado (dry-run / envío real a buzón verificado).
+**✅ PRUEBA DRY_RUN EJECUTADA EN GITHUB ACTIONS (run #1, éxito):** leyó las 33 convocatorias
+reales de hoy de Supabase, filtró para 'Madrid' → 6/33 correctas (Madrid + estatales),
+construyó el email sin errores, 0 fallos.
+
+**✅ ENVÍO REAL PROBADO Y CONFIRMADO (6 jul 2026, run #2).** Credenciales SMTP creadas
+(usuario IAM `ses-smtp-user.20260706-140654`, política `ses:SendRawEmail` — el "usuario
+de solo-envío" de la Fase 1 queda cubierto) y guardadas como secrets de GitHub
+(`SES_SMTP_USER`/`SES_SMTP_PASS`). Insight clave usado para probar SIN esperar a que AWS
+apruebe producción: en sandbox SES solo bloquea destinatarios NO verificados — como el
+DOMINIO `oponoticias.com` ya está verificado, cualquier `@oponoticias.com` (p.ej.
+`info@oponoticias.com`) cuenta como destinatario válido YA. Log del run: "✓
+info@oponoticias.com — 33/33, 0 errores". **Verificado visualmente en Proton:**
+llegó a Bandeja de entrada (NO spam), remitente autenticado (candado), diseño y
+contenido correctos (33 tarjetas con badges/puesto/plazas/enlace BOE), bloque de
+preferencias correcto, y — la señal más importante — **Proton reconoció nativamente la
+cabecera `List-Unsubscribe`** (mostró su propio banner "Cancelar suscripción").
+Pipeline de punta a punta (Supabase → segmentación Python → SMTP SES → bandeja de
+entrada) validado en producción real. Solo falta la aprobación de AWS para poder
+mandar a los suscriptores externos reales (Gmail/Hotmail/etc., no verificados en sandbox).
 
 ## Fase 4 — Convivencia y validación (Brevo SIGUE siendo el oficial)
 - [ ] 🧑🤖 Durante unos días: el script SES se ejecuta a mano enviando solo a
