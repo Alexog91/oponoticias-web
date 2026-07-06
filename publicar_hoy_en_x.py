@@ -77,12 +77,15 @@ def generar_tweet(conv):
 
 
 def obtener_convocatorias_hoy():
-    """Devuelve las convocatorias de hoy con telegram_enviado=true."""
+    """Devuelve las convocatorias de hoy con telegram_enviado=true y que
+    todavía NO se han tuiteado (twitter_enviado=false) — evita repetir tweets
+    si el script se relanza a mano."""
     qs = urllib.parse.urlencode({
         'telegram_enviado': 'eq.true',
+        'twitter_enviado': 'eq.false',
         'order': 'id.desc',
         'limit': '100',
-        'select': 'titulo,enlace,resumen_claude,comunidad_autonoma,fecha',
+        'select': 'id,titulo,enlace,resumen_claude,comunidad_autonoma,fecha',
     })
     url = f"{SUPABASE_URL.rstrip('/')}/convocatorias?{qs}"
     headers = {
@@ -92,8 +95,21 @@ def obtener_convocatorias_hoy():
     req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=15) as r:
         rows = json.loads(r.read())
-    print(f"📦 {len(rows)} convocatorias recientes con telegram_enviado=true")
+    print(f"📦 {len(rows)} convocatorias recientes con telegram_enviado=true y sin tuitear")
     return rows
+
+
+def marcar_twitter_enviado(conv_id):
+    url = f"{SUPABASE_URL.rstrip('/')}/convocatorias?id=eq.{conv_id}"
+    headers = {
+        'apikey': SUPABASE_API_KEY,
+        'Authorization': f'Bearer {SUPABASE_API_KEY}',
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal',
+    }
+    data = json.dumps({'twitter_enviado': True}).encode('utf-8')
+    req = urllib.request.Request(url, data=data, headers=headers, method='PATCH')
+    urllib.request.urlopen(req, timeout=10).read()
 
 
 def enviar_tweet(conv, n, total):
@@ -129,6 +145,7 @@ def main():
     for i, conv in enumerate(convs, 1):
         try:
             enviar_tweet(conv, i, len(convs))
+            marcar_twitter_enviado(conv['id'])
             ok += 1
             time.sleep(1.5)   # respetar rate limit de Buffer
         except Exception as e:
