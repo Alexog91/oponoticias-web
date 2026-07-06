@@ -1,0 +1,18 @@
+name: TEST verificar limpieza (diagnóstico, temporal)
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar que no quedan restos de prueba
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+        run: |
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" \
+            "$SUPABASE_URL/rest/v1/suscriptores?email=like.zzz-test-heterog-*&select=email" \
+            -H "apikey: $SUPABASE_API_KEY" \
+            -H "Authorization: Bearer $SUPABASE_API_KEY"
