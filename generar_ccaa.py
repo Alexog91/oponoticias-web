@@ -233,6 +233,10 @@ def links_cruces_categoria(ccaa_slug):
 
 def generar_html(ccaa_nombre, slug, convocatorias):
     n = len(convocatorias)
+    # Sin convocatorias no hay contenido real que ofrecer — noindex evita el
+    # riesgo de contenido fino (motivo del rechazo de AdSense del 24 jun 2026).
+    # Se sigue generando el archivo (no se rompen enlaces desde otras páginas).
+    robots = "index, follow" if n > 0 else "noindex, follow"
     meta_desc = (f"Convocatorias de oposiciones en {ccaa_nombre} {AÑO} publicadas en el BOE. "
                  f"{n} plazas de empleo público actualizadas diariamente por OpoNoticias.")
     canonical = f"https://oponoticias.com/ccaa/{slug}"
@@ -290,7 +294,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
   <title>Oposiciones en {ccaa_nombre} {AÑO} | OpoNoticias</title>
   <meta name="description" content="{html_lib.escape(meta_desc)}">
   <link rel="canonical" href="{canonical}">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="{robots}">
   <meta name="theme-color" content="#5A5047">
   <script>document.documentElement.className += ' js';</script>
 

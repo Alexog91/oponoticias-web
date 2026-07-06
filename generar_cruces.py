@@ -17,6 +17,7 @@ Uso:
 """
 
 import os
+import re
 import json
 import html as html_lib
 import urllib.request
@@ -386,6 +387,27 @@ def actualizar_sitemap(urls_nuevas):
     print(f"✅ Sitemap actualizado con {len(nuevas)} páginas de cruce.")
 
 
+def quitar_del_sitemap(urls_a_quitar):
+    """Elimina del sitemap las entradas <url> cuyo <loc> coincida exactamente
+    (páginas de cruce que han caído por debajo de MIN_SUSTANCIALES y cuyo
+    HTML se acaba de borrar del disco)."""
+    if not urls_a_quitar or not SITEMAP_PATH.exists():
+        return
+    contenido = SITEMAP_PATH.read_text(encoding='utf-8')
+    quitadas = 0
+    for url in urls_a_quitar:
+        patron = re.compile(
+            r'  <url>\n    <loc>' + re.escape(url) + r'</loc>\n.*?</url>\n',
+            re.DOTALL)
+        nuevo_contenido, n = patron.subn('', contenido)
+        if n:
+            contenido = nuevo_contenido
+            quitadas += 1
+    if quitadas:
+        SITEMAP_PATH.write_text(contenido, encoding='utf-8')
+        print(f"🧹 {quitadas} páginas de cruce caducadas quitadas del sitemap.")
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
@@ -394,7 +416,7 @@ if __name__ == "__main__":
         raise SystemExit(1)
 
     generadas, saltadas = [], 0
-    urls_nuevas = []
+    urls_nuevas, urls_borradas = [], []
 
     for cat_nombre, cat_slug, _desc in CATEGORIAS:
         cat_dir = CATEGORIA_DIR / cat_slug
@@ -402,14 +424,19 @@ if __name__ == "__main__":
         for ccaa_nombre, ccaa_slug in CCAA_CRUCE:
             convocatorias = por_ccaa.get(ccaa_nombre, [])[:30]
             n_sust = _n_sustanciales(convocatorias)
+            path = cat_dir / f"{ccaa_slug}.html"
             if n_sust < MIN_SUSTANCIALES:
                 saltadas += 1
+                if path.exists():
+                    path.unlink()
+                    url = f"https://oponoticias.com/categoria/{cat_slug}/{ccaa_slug}"
+                    urls_borradas.append(url)
+                    print(f"  🗑️  {cat_slug}/{ccaa_slug}.html borrada (solo {n_sust} sustanciales, por debajo de {MIN_SUSTANCIALES})")
                 continue
 
             cat_dir.mkdir(parents=True, exist_ok=True)
             html_out = generar_html(cat_nombre, cat_slug, ccaa_nombre, ccaa_slug,
                                      convocatorias, n_sust)
-            path = cat_dir / f"{ccaa_slug}.html"
             path.write_text(limpiar_hrefs(html_out), encoding='utf-8')
             url = f"https://oponoticias.com/categoria/{cat_slug}/{ccaa_slug}"
             urls_nuevas.append(url)
@@ -418,6 +445,9 @@ if __name__ == "__main__":
 
     if urls_nuevas:
         actualizar_sitemap(urls_nuevas)
+    if urls_borradas:
+        quitar_del_sitemap(urls_borradas)
 
     print(f"\n✅ Listo. {len(generadas)} páginas de cruce generadas · "
-          f"{saltadas} combinaciones sin contenido suficiente (< {MIN_SUSTANCIALES}).")
+          f"{saltadas} combinaciones sin contenido suficiente (< {MIN_SUSTANCIALES}) · "
+          f"{len(urls_borradas)} páginas caducadas borradas.")

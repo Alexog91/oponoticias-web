@@ -221,6 +221,10 @@ def links_cruces_ccaa(cat_slug):
 
 def generar_html(cat_nombre, slug, descripcion, convocatorias):
     n = len(convocatorias)
+    # Sin convocatorias no hay contenido real que ofrecer — noindex evita el
+    # riesgo de contenido fino (motivo del rechazo de AdSense del 24 jun 2026).
+    # Se sigue generando el archivo (no se rompen enlaces desde otras páginas).
+    robots = "index, follow" if n > 0 else "noindex, follow"
     cruces_html = links_cruces_ccaa(slug)
     seccion_cruces = f"""
         <div class="ccaa-otras">
@@ -277,7 +281,7 @@ def generar_html(cat_nombre, slug, descripcion, convocatorias):
   <title>Oposiciones de {cat_nombre} {AÑO} | OpoNoticias</title>
   <meta name="description" content="{html_lib.escape(meta_desc)}">
   <link rel="canonical" href="{canonical}">
-  <meta name="robots" content="index, follow">
+  <meta name="robots" content="{robots}">
   <meta name="theme-color" content="#5A5047">
   <script>document.documentElement.className += ' js';</script>
 
