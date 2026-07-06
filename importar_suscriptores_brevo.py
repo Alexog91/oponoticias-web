@@ -77,23 +77,34 @@ def obtener_contactos_brevo_api():
         offset += limit
     print(f"  {len(contactos)} contactos leídos de la API de Brevo.")
 
-    registros, bloqueados = [], 0
+    # IMPORTANTE: Supabase/PostgREST rechaza con 400 "All object keys must match"
+    # (código PGRST102) cualquier lote bulk cuyos objetos no compartan EXACTAMENTE
+    # las mismas claves. Por eso se devuelven dos listas de estructura homogénea
+    # por separado (verificado empíricamente contra la API real antes de este fix):
+    #   - `comunidad` va SIEMPRE presente (con "" si no tiene) porque Brevo es la
+    #     fuente de verdad de la comunidad en esta migración: sobrescribir con ""
+    #     es el comportamiento correcto.
+    #   - `estado`/`fecha_baja` SOLO se incluyen en el lote de bloqueados. El lote
+    #     de activos nunca lleva la clave `estado`, así el upsert no toca esa
+    #     columna y no resucita una baja que el usuario hubiera pedido ya en el
+    #     nuevo sistema (api/unsubscribe.js) entre una importación y la siguiente.
+    activos, bloqueados = [], []
     for c in contactos:
         email = (c.get("email") or "").strip().lower()
         if not email:
             continue
-        reg = {"email": email, "origen": "brevo-import"}
         com = ((c.get("attributes") or {}).get("COMUNIDAD") or "").strip()
-        if com in COMUNIDADES:
-            reg["comunidad"] = com
+        com = com if com in COMUNIDADES else ""
         if c.get("emailBlacklisted"):
-            reg["estado"] = "baja"
-            reg["fecha_baja"] = datetime.now(timezone.utc).isoformat()
-            bloqueados += 1
-        registros.append(reg)
-    print(f"  De ellos, {bloqueados} están bloqueados/dados de baja en Brevo → "
+            bloqueados.append({
+                "email": email, "origen": "brevo-import", "comunidad": com,
+                "estado": "baja", "fecha_baja": datetime.now(timezone.utc).isoformat(),
+            })
+        else:
+            activos.append({"email": email, "origen": "brevo-import", "comunidad": com})
+    print(f"  De ellos, {len(bloqueados)} están bloqueados/dados de baja en Brevo → "
           f"se marcarán 'baja' en Supabase (no se les volverá a escribir).")
-    return registros
+    return activos, bloqueados
 
 
 # ── Modo CSV (antiguo, sin estado de bloqueo) ───────────────────────
@@ -134,15 +145,16 @@ def leer_csv(ruta):
                 invalidos += 1
                 continue
             vistos.add(email)
-            reg = {"email": email, "origen": "brevo-import"}
-            if com_col:
-                com = (fila.get(com_col) or "").strip()
-                if com in COMUNIDADES:
-                    reg["comunidad"] = com
-            registros.append(reg)
+            com = (fila.get(com_col) or "").strip() if com_col else ""
+            com = com if com in COMUNIDADES else ""
+            # `comunidad` siempre presente (mismo motivo que en el modo --api: todos
+            # los objetos de un lote deben compartir las mismas claves, o PostgREST
+            # rechaza el bulk upsert entero con 400 "All object keys must match").
+            registros.append({"email": email, "origen": "brevo-import", "comunidad": com})
         if invalidos:
             print(f"  ⚠️  {invalidos} filas sin email válido, omitidas.")
-        return registros
+        # El modo CSV no distingue bloqueados (ver aviso arriba) → lista vacía.
+        return registros, []
 
 
 def upsert_lote(lote):
@@ -169,30 +181,38 @@ def main():
 
     print(f"📥 Importando suscriptores" + ("  (DRY RUN)" if DRY_RUN else ""))
     if origen == "--api":
-        registros = obtener_contactos_brevo_api()
+        activos, bloqueados = obtener_contactos_brevo_api()
     else:
-        registros = leer_csv(origen)
+        activos, bloqueados = leer_csv(origen)
 
-    print(f"  {len(registros)} contactos únicos a importar.")
-    con_com = sum(1 for r in registros if r.get("comunidad"))
-    print(f"  De ellos, {con_com} con comunidad; {len(registros) - con_com} sin comunidad (reciben todo).")
+    total = len(activos) + len(bloqueados)
+    con_com = sum(1 for r in activos + bloqueados if r.get("comunidad"))
+    print(f"  {total} contactos únicos a importar.")
+    print(f"  De ellos, {con_com} con comunidad; {total - con_com} sin comunidad (reciben todo).")
 
     if DRY_RUN:
-        for r in registros[:5]:
+        for r in (activos + bloqueados)[:5]:
             print("   ejemplo:", r)
         print("  (DRY RUN: no se ha escrito nada en Supabase).")
         return 0
 
+    # Dos lotes SEPARADOS y de estructura homogénea cada uno (activos sin la
+    # clave 'estado', bloqueados con ella) — un upsert bulk con objetos de
+    # distintas claves lo rechaza PostgREST entero con 400 "All object keys
+    # must match" (código PGRST102), verificado empíricamente.
     total_ok, total_err = 0, 0
-    for i in range(0, len(registros), 500):
-        lote = registros[i:i + 500]
-        status, err = upsert_lote(lote)
-        if 200 <= status < 300:
-            total_ok += len(lote)
-            print(f"  ✓ Lote {i // 500 + 1}: {len(lote)} filas ({status})")
-        else:
-            total_err += len(lote)
-            print(f"  ❌ Lote {i // 500 + 1}: {status} — {err[:200]}")
+    for nombre, grupo in (("activos", activos), ("bloqueados", bloqueados)):
+        for i in range(0, len(grupo), 500):
+            lote = grupo[i:i + 500]
+            if not lote:
+                continue
+            status, err = upsert_lote(lote)
+            if 200 <= status < 300:
+                total_ok += len(lote)
+                print(f"  ✓ Lote {nombre} {i // 500 + 1}: {len(lote)} filas ({status})")
+            else:
+                total_err += len(lote)
+                print(f"  ❌ Lote {nombre} {i // 500 + 1}: {status} — {err[:200]}")
 
     print(f"\n✅ Importados {total_ok}; errores {total_err}.")
     return 0 if total_err == 0 else 1

@@ -16,12 +16,12 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: Insertar lote heterogéneo de prueba
+      - name: Insertar DOS lotes homogéneos (el fix aplicado) de prueba
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
         run: |
-          echo "=== POST con claves heterogéneas ==="
+          echo "=== POST lote 'activos' (mismas claves entre sí) ==="
           curl -s -w "\nHTTP_STATUS:%{http_code}\n" \
             -X POST "$SUPABASE_URL/rest/v1/suscriptores?on_conflict=email" \
             -H "apikey: $SUPABASE_API_KEY" \
@@ -30,8 +30,18 @@ jobs:
             -H "Prefer: resolution=merge-duplicates,return=representation" \
             -d '[
               {"email":"zzz-test-heterog-a@example.invalid","origen":"diagnostico","comunidad":"Madrid"},
-              {"email":"zzz-test-heterog-b@example.invalid","origen":"diagnostico","estado":"baja","fecha_baja":"2020-01-01T00:00:00Z"},
-              {"email":"zzz-test-heterog-c@example.invalid","origen":"diagnostico"}
+              {"email":"zzz-test-heterog-c@example.invalid","origen":"diagnostico","comunidad":""}
+            ]'
+          echo ""
+          echo "=== POST lote 'bloqueados' (mismas claves entre sí, distintas del anterior) ==="
+          curl -s -w "\nHTTP_STATUS:%{http_code}\n" \
+            -X POST "$SUPABASE_URL/rest/v1/suscriptores?on_conflict=email" \
+            -H "apikey: $SUPABASE_API_KEY" \
+            -H "Authorization: Bearer $SUPABASE_API_KEY" \
+            -H "Content-Type: application/json" \
+            -H "Prefer: resolution=merge-duplicates,return=representation" \
+            -d '[
+              {"email":"zzz-test-heterog-b@example.invalid","origen":"diagnostico","comunidad":"","estado":"baja","fecha_baja":"2020-01-01T00:00:00Z"}
             ]'
 
       - name: Leer de vuelta los 3 registros (ver qué quedó guardado de verdad)
