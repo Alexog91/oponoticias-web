@@ -1236,8 +1236,9 @@ def _titulo_seo(puesto, ambito, plazas, anio):
 
 # Trámites administrativos que NO son convocatorias buscables (no merecen índice).
 _RE_TRAMITE = re.compile(
-    r'(?i)correcci[oó]n|errata|modificaci[oó]n|lista de admit|'
-    r'relaci[oó]n .*aprob|adjudicaci|nombramiento|jubilaci|baja ')
+    r'(?i)correcci[oó]n|\bcorrig|errata|modificaci[oó]n|lista de admit|'
+    r'relaci[oó]n .*aprob|aprueba la relaci[oó]n|admitidas? y exclu|admitidos? y exclu|'
+    r'sedes de examen|adjudicaci|nombramiento|jubilaci|baja ')
 
 
 def _ficha_indexable(plazas, titulo_oficial):
@@ -1636,6 +1637,7 @@ def regenerar_sitemap(slugs_nuevos):
         urls = [
             ("https://oponoticias.com/", hoy, "daily", "1.0"),
             ("https://oponoticias.com/boe-hoy", hoy, "daily", "0.9"),
+            ("https://oponoticias.com/convocatorias", hoy, "daily", "0.9"),
             ("https://oponoticias.com/blog", hoy, "weekly", "0.8"),
             ("https://oponoticias.com/recursos", hoy, "weekly", "0.7"),
             ("https://oponoticias.com/calculadora-nota", hoy, "monthly", "0.7"),
