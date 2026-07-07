@@ -10,16 +10,14 @@ jobs:
   update-noticias:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-
+      # actualizar_noticias.py solo usa librería estándar → no hay dependencias
+      # que instalar (antes había un `pip install --upgrade pip` inútil).
       - name: Run actualizar_noticias.py
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}

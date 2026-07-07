@@ -1,0 +1,37 @@
+# Dependabot: abre PRs automáticos cuando hay actualizaciones de dependencias.
+# Cubre los 3 ecosistemas del repo. Agrupado y semanal para no generar ruido.
+# (Los "security updates" automáticos son un toggle aparte en Settings →
+# Code security del repo, que hay que activar a mano en la UI de GitHub.)
+version: 2
+updates:
+  # Dependencias de Node/Remotion (render del vídeo diario)
+  - package-ecosystem: "npm"
+    directory: "/remotion"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      remotion:
+        patterns: ["remotion", "@remotion/*"]
+      otras-npm:
+        patterns: ["*"]
+        exclude-patterns: ["remotion", "@remotion/*"]
+
+  # Dependencias Python (Pillow, piper-tts, edge-tts, num2words)
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      python:
+        patterns: ["*"]
+
+  # Las propias GitHub Actions (checkout, setup-python, setup-node…)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
