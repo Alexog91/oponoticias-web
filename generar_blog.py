@@ -520,8 +520,8 @@ def plantilla_indice(articulos):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Blog de oposiciones — OpoNoticias</title>
-  <meta name="description" content="Guías, análisis y consejos sobre oposiciones y empleo público en España. Artículos actualizados sobre convocatorias del BOE por categoría.">
+  <title>Noticias y actualidad de oposiciones {datetime.now().year} | OpoNoticias</title>
+  <meta name="description" content="Noticias y actualidad de oposiciones y empleo público en España: análisis de las convocatorias del BOE, guías y consejos para preparar tu oposición en {datetime.now().year}.">
   <link rel="canonical" href="{BASE_URL}/blog">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5A5047">
@@ -529,8 +529,8 @@ def plantilla_indice(articulos):
 
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="OpoNoticias">
-  <meta property="og:title" content="Blog de oposiciones — OpoNoticias">
-  <meta property="og:description" content="Guías y análisis sobre oposiciones y empleo público en España.">
+  <meta property="og:title" content="Noticias y actualidad de oposiciones {datetime.now().year} | OpoNoticias">
+  <meta property="og:description" content="Noticias, actualidad y análisis de oposiciones y empleo público en España.">
   <meta property="og:url" content="{BASE_URL}/blog">
 
   <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
@@ -578,9 +578,9 @@ def plantilla_indice(articulos):
       </nav>
 
       <div class="blog-hero">
-        <span class="eyebrow">Para estudiar mejor</span>
-        <h1 class="section-title">El blog del opositor</h1>
-        <p class="section-lead">Guías, análisis de convocatorias y consejos prácticos para preparar tu oposición. Contenido actualizado a partir de lo que publica el BOE.</p>
+        <span class="eyebrow">El blog del opositor</span>
+        <h1 class="section-title">Noticias y actualidad de oposiciones</h1>
+        <p class="section-lead">Análisis de las convocatorias del BOE, guías y consejos prácticos para preparar tu oposición. Actualidad del empleo público en España, actualizada a partir de lo que se publica cada día.</p>
       </div>
 
       <div class="blog-grid">{cards}
