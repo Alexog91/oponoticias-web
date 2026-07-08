@@ -366,7 +366,7 @@ def generar_html(destacadas):
     </div>
   </footer>
 
-  <script src="assets/script.js?v=7" defer></script>
+  <script src="assets/script.js?v=8" defer></script>
 </body>
 </html>"""
 

@@ -350,7 +350,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
     </div>
   </footer>
 
-  <script src="../assets/script.js?v=7" defer></script>
+  <script src="../assets/script.js?v=8" defer></script>
 </body>
 </html>"""
 
