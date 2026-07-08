@@ -78,7 +78,7 @@
       xhr.setRequestHeader('Content-Type', 'application/json');
       xhr.onload = function () {
         btn.disabled    = false;
-        btn.textContent = 'Enviarme la guía →';
+        btn.textContent = 'Enviarme el Kit →';
         var resp = {};
         try { resp = JSON.parse(xhr.responseText); } catch (_) {}
         if (xhr.status === 200 && resp.ok) {
@@ -92,7 +92,7 @@
       };
       xhr.onerror = function () {
         btn.disabled    = false;
-        btn.textContent = 'Enviarme la guía →';
+        btn.textContent = 'Enviarme el Kit →';
         msgEl.textContent = 'Error de conexión. Inténtalo de nuevo.';
         msgEl.className   = 'newsletter-msg err';
       };
@@ -155,11 +155,11 @@
       overlay.innerHTML =
         '<div class="nl-pop">' +
           '<button type="button" class="nl-pop-close" aria-label="Cerrar">&times;</button>' +
-          '<span class="eyebrow">Guía gratuita</span>' +
-          '<h2 id="nlPopTitle">Descárgate gratis el Calendario del Opositor 2026</h2>' +
+          '<span class="eyebrow">Recurso gratuito</span>' +
+          '<h2 id="nlPopTitle">Descárgate gratis el Kit del Opositor</h2>' +
           '<p class="nl-pop-sub">Te lo enviamos al instante a tu correo. Y de regalo, cada mañana el resumen del BOE. Sin spam, cancela cuando quieras.</p>' +
           '<ul class="nl-pop-perks">' +
-            '<li>Calendario y Guía del Opositor 2026 (PDF)</li>' +
+            '<li>Kit del Opositor (Excel + guía de uso en PDF)</li>' +
             '<li>Resumen diario de convocatorias nuevas</li>' +
             '<li>Gratis para siempre</li>' +
           '</ul>' +
@@ -169,7 +169,7 @@
               '<option value="">Tu comunidad (opcional) — recibir todas</option>' +
               '<option>Andalucía</option><option>Aragón</option><option>Asturias</option><option>Baleares</option><option>Canarias</option><option>Cantabria</option><option>Castilla-La Mancha</option><option>Castilla y León</option><option>Cataluña</option><option>Comunidad Valenciana</option><option>Extremadura</option><option>Galicia</option><option>La Rioja</option><option>Madrid</option><option>Murcia</option><option>Navarra</option><option>País Vasco</option><option>Ceuta</option><option>Melilla</option><option>Nacional/Estatal</option>' +
             '</select>' +
-            '<button type="submit" class="btn btn-primary" style="margin-top:10px;">Enviarme la guía →</button>' +
+            '<button type="submit" class="btn btn-primary" style="margin-top:10px;">Enviarme el Kit →</button>' +
             '<p class="newsletter-legal">Al suscribirte aceptas nuestra <a href="' + privacyHref() + '">política de privacidad</a>. Sin spam.</p>' +
             '<div class="newsletter-msg" id="nlPopMsg" aria-live="polite"></div>' +
           '</form>' +
@@ -250,13 +250,13 @@
           }
           setTimeout(function () { close(null); }, 2600);
         } else {
-          btn.disabled = false; btn.textContent = 'Enviarme la guía →';
+          btn.disabled = false; btn.textContent = 'Enviarme el Kit →';
           msg.textContent = 'Algo ha ido mal. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
           msg.className = 'newsletter-msg err';
         }
       };
       xhr.onerror = function () {
-        btn.disabled = false; btn.textContent = 'Enviarme la guía →';
+        btn.disabled = false; btn.textContent = 'Enviarme el Kit →';
         msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
         msg.className = 'newsletter-msg err';
       };

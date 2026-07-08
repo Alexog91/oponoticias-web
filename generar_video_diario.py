@@ -227,11 +227,11 @@ def construir_guion(convocatorias, max_destacadas=3):
             "items": listado,
             "extra": max(0, len(todas) - len(listado)),
         })
-    # 5) Newsletter: gancho con el lead magnet (Calendario del Opositor).
+    # 5) Newsletter: gancho con el lead magnet (Kit del Opositor).
     escenas.append({
         "kind": "newsletter",
-        "narr": "Suscríbete gratis y llévate el Calendario del Opositor en tu correo.",
-        "regalo": "Calendario del Opositor 2026",
+        "narr": "Suscríbete gratis y llévate el Kit del Opositor en tu correo.",
+        "regalo": "Kit del Opositor",
         "cta": "oponoticias.com",
     })
     # 6) Cierre: filtrado por comunidad en la web + seguir.

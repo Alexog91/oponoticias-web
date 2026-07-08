@@ -1,5 +1,5 @@
 // Vercel Serverless Function — suscripción al newsletter via Brevo
-// + envío automático del lead magnet (Calendario y Guía del Opositor 2026).
+// + envío automático del lead magnet (por defecto, el Kit del Opositor).
 // Variables de entorno en Vercel: BREVO_API_KEY, BREVO_LIST_ID,
 //   BREVO_SENDER_EMAIL (opcional), BREVO_SENDER_NAME (opcional)
 
@@ -9,7 +9,7 @@ const BASE = 'https://oponoticias.com/descargas';
 
 // Catálogo de materiales descargables. La clave es el `slug` que envía el
 // front-end; cada uno define el nombre y el archivo a entregar por email.
-// Si no llega `material` (formulario de la home / pop-up), se usa el calendario.
+// Si no llega `material` (formulario de la home / pop-up), se usa MATERIAL_DEFECTO.
 const MATERIALES = {
   'calendario-opositor-2026': {
     nombre: 'Calendario y Guía del Opositor 2026',
@@ -32,9 +32,12 @@ const MATERIALES = {
     url: `${BASE}/guia-instancia-y-tasas.pdf`,
   },
   'kit-del-opositor': {
-    nombre: 'Kit del Opositor (Excel)',
-    desc: 'tu agenda para preparar la oposición: retroplanning, repaso espaciado (1, 7 y 30 días) y tracker de tests que detecta tus temas flojos',
+    nombre: 'Kit del Opositor',
+    desc: 'tu agenda en Excel para preparar la oposición: retroplanning, repaso espaciado (1, 7 y 30 días) y tracker de tests que detecta tus temas flojos',
     url: `${BASE}/kit-del-opositor.xlsx`,
+    // El Kit es un .xlsx: sin la guía de uso cuesta arrancar (y en el móvil no
+    // siempre se abre). Se adjunta como enlace secundario en el email.
+    extra: { nombre: 'guía de uso (PDF)', url: `${BASE}/kit-del-opositor.pdf` },
   },
   'kit-del-opositor-guia': {
     nombre: 'Kit del Opositor (guía de uso, PDF)',
@@ -42,7 +45,7 @@ const MATERIALES = {
     url: `${BASE}/kit-del-opositor.pdf`,
   },
 };
-const MATERIAL_DEFECTO = 'calendario-opositor-2026';
+const MATERIAL_DEFECTO = 'kit-del-opositor';
 
 // Doble escritura (Fase 2 migración a SES): además de dar de alta en Brevo, se
 // guarda/actualiza el suscriptor en Supabase (tabla `suscriptores`) para que la
@@ -75,15 +78,20 @@ function emailBienvenidaHtml(material, email) {
       Gracias por suscribirte. Aquí tienes tu <strong>${material.nombre}</strong>:
       ${material.desc}.
     </p>
-    <p style="text-align:center;margin:24px 0;">
+    <p style="text-align:center;margin:24px 0 ${material.extra ? '10px' : '24px'};">
       <a href="${material.url}" target="_blank" rel="noopener"
          style="display:inline-block;background:#5a5047;color:#fff;text-decoration:none;padding:14px 28px;border-radius:8px;font-size:15px;font-weight:600;">
         📥 Descargar ${material.nombre}
       </a>
     </p>
+    ${material.extra ? `<p style="text-align:center;margin:0 0 24px;color:#8b8b7a;font-size:14px;">
+      Y aquí tienes la <a href="${material.extra.url}" target="_blank" rel="noopener"
+         style="color:#c4a574;text-decoration:none;font-weight:600;">${material.extra.nombre}</a>
+      para sacarle todo el partido.
+    </p>` : ''}
     <p style="margin:0 0 8px;color:#4a4540;font-size:15px;line-height:1.6;">
       A partir de mañana recibirás cada día laborable un resumen de las nuevas convocatorias del BOE,
-      en lenguaje claro y organizadas por categoría y comunidad autónoma.
+      organizadas por categoría y comunidad autónoma. No se te escapará ninguna plaza.
     </p>
 
     <!-- Bloque de bienvenida: cómo usarlo + síguenos (todo en este único email) -->
@@ -144,7 +152,7 @@ export default async function handler(req, res) {
   // Comunidad opcional (viene de un <select> controlado; validación laxa).
   const com = typeof comunidad === 'string' ? comunidad.trim().slice(0, 40) : '';
 
-  // Material a entregar (por slug). Si no llega o es desconocido → calendario.
+  // Material a entregar (por slug). Si no llega o es desconocido → MATERIAL_DEFECTO.
   const matSlug = MATERIALES[material] ? material : MATERIAL_DEFECTO;
   const mat = MATERIALES[matSlug];
 
