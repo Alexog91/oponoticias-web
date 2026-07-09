@@ -620,9 +620,7 @@ def enviar_resumen_privado(convocatorias_enviadas):
         "📌 https://oponoticias.com\n"
         "✈️ https://t.me/OPONOTICIAS\n"
         "📘 https://www.facebook.com/profile.php?id=61590965302457\n"
-        "📸 https://www.instagram.com/oponoticiason/\n"
-        "💬 https://whatsapp.com/channel/0029Vb8BReo89ind8LpWxp26\n\n"
-        "<i>☝️ Copia esto en el Canal de WhatsApp</i>"
+        "📸 https://www.instagram.com/oponoticiason/"
     )
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
