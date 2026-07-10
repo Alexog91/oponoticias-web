@@ -128,8 +128,9 @@ def _sanitizar_resumen(texto):
         low = l.lower()
         if low.startswith(INICIOS_RAZONAMIENTO):
             continue
-        # Debe tener el patrón "<N PLAZAS|VARIAS PLAZAS> - <puesto> - <lugar>"
-        if ' - ' in l and re.match(r'^\s*(\d+\s*plazas?|varias\s*plazas?)\b',
+        # Debe tener el patrón "<N PLAZAS|VARIAS PLAZAS> - <puesto> - <lugar>".
+        # \d[\d.]* acepta el separador de miles del BOE (p. ej. "2.704 PLAZAS").
+        if ' - ' in l and re.match(r'^\s*(\d[\d.]*\s*plazas?|varias\s*plazas?)\b',
                                    l, re.IGNORECASE):
             partes = [p.strip() for p in l.split(' - ') if p.strip()]
             if len(partes) >= 2:
@@ -137,18 +138,21 @@ def _sanitizar_resumen(texto):
     return None
 
 
-def _resumen_fallback(titulo, resumen):
+def _resumen_fallback(titulo, resumen, notas_boe=""):
     """Construye un resumen válido 'PLAZAS - PUESTO - LUGAR' SOLO con reglas
     locales (sin IA). Se usa cuando Claude no devuelve un formato utilizable,
-    para que nunca se publique texto en bruto."""
-    texto = f"{titulo} {resumen}"
+    para que nunca se publique texto en bruto. Si se le pasan las anotaciones
+    del BOE (p. ej. "Convocatoria. 2.704 plazas") las usa como fuente del número."""
+    texto = f"{notas_boe} {titulo} {resumen}"
     low = texto.lower()
 
-    # 1 · Nº de plazas
-    m = re.search(r'(\d+)\s*plaza', low)
+    # 1 · Nº de plazas — prioriza el número real (con punto de millar del BOE)
+    #     sobre el genérico "varias plazas".
+    m = re.search(r'(\d[\d.]*)\s*plaza', low)
     if m:
-        n = int(m.group(1))
-        plazas = "1 PLAZA" if n == 1 else f"{n} PLAZAS"
+        num = re.sub(r'[^\d]', '', m.group(1))          # "2.704" → "2704"
+        n = int(num) if num else 1
+        plazas = "1 PLAZA" if n == 1 else f"{m.group(1).rstrip('. ')} PLAZAS"
     elif 'varias plaza' in low or 'plazas' in low:
         plazas = "VARIAS PLAZAS"
     else:
@@ -182,58 +186,92 @@ def _resumen_fallback(titulo, resumen):
     return f"{plazas} - {puesto} - {lugar}"
 
 
-def generar_resumen_con_claude(titulo, resumen):
-    """Usa Claude API para generar un resumen inteligente.
-    Garantiza SIEMPRE el formato 'PLAZAS - PUESTO - LUGAR' (valida la salida
-    y, si Claude se desvía, cae a un fallback determinista local)."""
+def obtener_datos_boe(ref_boe):
+    """Descarga el texto oficial completo de la disposición del BOE (XML) para
+    poder analizar A FONDO la convocatoria: el RSS solo trae 200 caracteres y
+    casi nunca incluye el número real de plazas (que sí está en el articulado).
+
+    Devuelve (notas, texto):
+      - `notas`: anotaciones del BOE; suelen indicar el total ("Convocatoria.
+        2.704 plazas") — es la fuente más fiable del número de plazas.
+      - `texto`: inicio del articulado (incluye la sección "Número de plazas").
+    Best-effort: ante cualquier fallo devuelve ("", "") y se sigue con el RSS."""
+    if not ref_boe or not re.match(r'^BOE-[A-Z]-\d{4}-\d+$', ref_boe or ''):
+        return "", ""
+    url = f"https://www.boe.es/diario_boe/xml.php?id={ref_boe}"
+    try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=15) as r:
+            root = ET.fromstring(r.read())
+    except Exception as e:
+        print(f"   ⚠️  No se pudo leer el texto del BOE {ref_boe} ({e})")
+        return "", ""
+    notas = " · ".join(
+        "".join(n.itertext()).strip() for n in root.iter('nota')
+        if "".join(n.itertext()).strip()
+    )
+    texto_el = root.find('.//texto')
+    parrafos = ["".join(p.itertext()).strip() for p in texto_el.iter('p')] if texto_el is not None else []
+    texto = " ".join(p for p in parrafos if p)[:2500]
+    return notas, texto
+
+
+def generar_resumen_con_claude(titulo, resumen, ref_boe=None):
+    """Usa Claude API para generar un resumen inteligente analizando el texto
+    OFICIAL del BOE (no solo el título/RSS). Garantiza SIEMPRE el formato
+    'PLAZAS - PUESTO - LUGAR' (valida la salida y, si Claude se desvía, cae a un
+    fallback determinista local que también aprovecha las notas del BOE)."""
+
+    # Texto oficial completo: es lo que permite dar el nº real de plazas.
+    notas_boe, texto_boe = obtener_datos_boe(ref_boe)
 
     try:
-        prompt = f"""Analiza esta convocatoria del BOE y extrae la información clave.
+        contexto = f"Título: {titulo}\nDescripción (RSS): {resumen}"
+        if notas_boe:
+            contexto += f"\nAnotación oficial del BOE: {notas_boe}"
+        if texto_boe:
+            contexto += f"\nTexto oficial del BOE (inicio):\n{texto_boe}"
 
-Título: {titulo}
-Descripción: {resumen}
+        prompt = f"""Analiza a fondo esta convocatoria del BOE y extrae la información clave.
+
+{contexto}
 
 RESPONDE SOLO con una línea en MAYÚSCULAS con este formato exacto:
-[NÚMERO] PLAZAS - [PUESTO ESPECÍFICO] - [LUGAR]
+[PLAZAS] - [PUESTO ESPECÍFICO] - [LUGAR]
 
-IMPORTANTE: Busca SIEMPRE el puesto ESPECÍFICO, nunca genérico.
+═══ NÚMERO DE PLAZAS — aplica estas reglas EN ORDEN ═══
+1. Si es exactamente 1 plaza → "1 PLAZA".
+2. Si hay un número TOTAL claro de plazas (aunque sean muchas) → ese número + "PLAZAS",
+   tal como lo escribe el BOE, CON el punto de millar. Ej: "2.704 PLAZAS", "35 PLAZAS", "150 PLAZAS".
+   La "Anotación oficial del BOE" (p. ej. "Convocatoria. 2.704 plazas") es la fuente MÁS FIABLE del total.
+3. SOLO si son plazas de VARIOS cuerpos/escalas/categorías distintas y NO existe un total
+   único que tenga sentido para el lector → "VARIAS PLAZAS".
+PROHIBIDO poner "VARIAS PLAZAS" cuando el BOE da un número total: en ese caso SIEMPRE pon el número.
 
-Ejemplos de puestos ESPECÍFICOS (NO genéricos):
-- POLICÍA LOCAL (NO "Policía")
-- ENFERMERO (NO "Sanitario")
-- INSPECTOR DE HACIENDA (NO "Hacienda")
-- TÉCNICO DE HACIENDA
-- AGENTE DE HACIENDA
-- JUEZ (NO "Justicia")
-- FISCAL
-- LETRADO DE LA ADMINISTRACIÓN DE JUSTICIA
-- GESTOR PROCESAL
-- AUXILIAR JUDICIAL
+═══ PUESTO — SIEMPRE el más específico, nunca genérico ═══
+Ejemplos correctos (específico, NO genérico):
+- POLICÍA NACIONAL / POLICÍA LOCAL (NO "Policía")
+- ENFERMERO (NO "Sanitario")   - INSPECTOR DE HACIENDA (NO "Hacienda")
+- TÉCNICO DE HACIENDA           - AGENTE DE HACIENDA
+- JUEZ / FISCAL (NO "Justicia") - LETRADO DE LA ADMINISTRACIÓN DE JUSTICIA
+- GESTOR PROCESAL               - AUXILIAR JUDICIAL
 - PROFESOR DE EDUCACIÓN FÍSICA (NO "Profesor")
-- TÉCNICO INFORMÁTICO (NO "Técnico")
-- INGENIERO TÉCNICO
-- BOMBERO
-- JARDINERO
-- PEÓN DE SERVICIOS
-- ADMINISTRATIVO
-- SECRETARIO DE AYUNTAMIENTO
+- TÉCNICO INFORMÁTICO (NO "Técnico")  - INGENIERO TÉCNICO
+- BOMBERO / JARDINERO / PEÓN DE SERVICIOS / ADMINISTRATIVO / SECRETARIO DE AYUNTAMIENTO
+NUNCA pongas términos genéricos como "Justicia", "Hacienda", "Sanitario", "Funcionario", "Personal".
 
-Estrategia:
-1. Lee el título completo buscando palabras específicas
-2. Si dice "Resolución de X de Y, del Ayuntamiento de Z", busca después qué puesto es
-3. Extrae el puesto más específico posible del texto
-4. Si encuentras "Inspector", "Técnico", "Agente", "Gestor", "Letrado", "Auxiliar" + categoría, úsalo
-5. NUNCA pongas términos genéricos como "Justicia", "Hacienda", "Sanitario", "Funcionario"
+═══ LUGAR ═══
+La comunidad, provincia o municipio del organismo convocante. Si es estatal (Ministerio,
+Policía Nacional, Guardia Civil, AGE, agencia estatal) → "ESPAÑA".
 
-Ejemplos correctos:
+Ejemplos de salida correcta:
+2.704 PLAZAS - POLICÍA NACIONAL - ESPAÑA
 2 PLAZAS - POLICÍA LOCAL - CÁDIZ
 1 PLAZA - INSPECTOR DE HACIENDA - MADRID
-3 PLAZAS - LETRADO DE LA ADMINISTRACIÓN DE JUSTICIA - BARCELONA
-1 PLAZA - ENFERMERO - VALENCIA
-1 PLAZA - PROFESOR DE EDUCACIÓN FÍSICA - SEVILLA
+150 PLAZAS - ENFERMERO - ANDALUCÍA
+VARIAS PLAZAS - PERSONAL FUNCIONARIO Y LABORAL - VALENCIA
 
-Si NO encuentras un puesto específico, busca cualquier palabra del texto que indique el cargo.
-Si realmente no hay nada, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
+Si realmente no encuentras el puesto, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
 
         # Llamar a Claude API
         url = "https://api.anthropic.com/v1/messages"
@@ -275,13 +313,13 @@ Si realmente no hay nada, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
             print(f"✨ Claude generó: {limpio}")
             return limpio
 
-        fallback = _resumen_fallback(titulo, resumen)
+        fallback = _resumen_fallback(titulo, resumen, notas_boe)
         print(f"⚠️  Respuesta sin formato válido ({resumen_generado[:50]!r}). "
               f"Fallback: {fallback}")
         return fallback
 
     except Exception as e:
-        fallback = _resumen_fallback(titulo, resumen)
+        fallback = _resumen_fallback(titulo, resumen, notas_boe)
         print(f"⚠️  Error con Claude: {e}. Fallback: {fallback}")
         return fallback
 
@@ -869,8 +907,9 @@ def _plazas_num(conv):
     partes = (conv.get('resumen_ia') or '').split(' - ')
     if not partes:
         return 0
-    m = re.search(r'\d+', partes[0])
-    return int(m.group()) if m else 0
+    # "2.704 PLAZAS" → 2704 (quita el punto de millar antes de convertir).
+    m = re.search(r'\d[\d.]*', partes[0])
+    return int(re.sub(r'[^\d]', '', m.group())) if m else 0
 
 
 # Hashtags por CCAA para los tweets de X (Buffer vía Make).
@@ -1776,7 +1815,7 @@ if __name__ == "__main__":
 
         print(f"\n🤖 Analizando: {conv['titulo'][:60]}...")
         conv['categoria'] = categoria               # se usa luego en Facebook
-        conv['resumen_ia'] = generar_resumen_con_claude(conv['titulo'], conv['resumen'])
+        conv['resumen_ia'] = generar_resumen_con_claude(conv['titulo'], conv['resumen'], conv.get('ref_boe'))
         conv['comunidad_autonoma'] = clasificar_comunidad(conv['titulo'], conv['resumen'])
 
         es_nueva = guardar_en_supabase(conv)        # inserta con telegram_enviado=false (default)
