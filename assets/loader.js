@@ -132,7 +132,9 @@ function puestoValido(puesto) {
 function numPlazas(plazasStr) {
   if (!plazasStr) return 0;
   const up = plazasStr.toUpperCase();
-  const m = up.match(/(\d+)/);
+  // Quita el separador de miles del BOE antes de leer el número:
+  // "2.704 PLAZAS" → 2704 (con /(\d+)/ a secas se leía solo "2").
+  const m = up.replace(/\.(?=\d)/g, '').match(/(\d+)/);
   if (m) return parseInt(m[1], 10);
   if (up.includes('VARIAS')) return 6; // plural sin número concreto
   return 1;
@@ -234,6 +236,30 @@ function puntuarConvocatoria(c) {
   return pts;
 }
 
+/** Referencia BOE (BOE-A-AAAA-N) extraída del enlace de una convocatoria. */
+function refDe(c) {
+  const m = ((c && c.enlace) || '').match(/BOE-[A-Z]-\d{4}-\d+/);
+  return m ? m[0] : '';
+}
+
+// Convocatorias FIJADAS a mano en la portada (tarjeta de arriba + grid de
+// enmedio), para mantener arriba una convocatoria importante varios días aunque
+// su frescura decaiga. Se retiran solas al pasar la fecha `hasta` (inclusive).
+const FIJADAS = [
+  { ref: 'BOE-A-2026-15055', hasta: '2026-07-17' },   // Policía Nacional · 2.704 plazas
+];
+
+/** Devuelve la convocatoria fijada vigente (si está entre las cargadas), o null. */
+function convocatoriaFijada(convs) {
+  const hoy = new Date().toISOString().slice(0, 10);   // AAAA-MM-DD (UTC, sirve)
+  for (const f of FIJADAS) {
+    if (f.hasta < hoy) continue;                        // ya caducada
+    const c = convs.find(x => refDe(x) === f.ref);
+    if (c) return c;
+  }
+  return null;
+}
+
 /** Elige la mejor convocatoria para destacar. */
 function seleccionarDestacada(convs) {
   const ordenadas = [...convs]
@@ -268,8 +294,10 @@ async function cargarPortada() {
     badge.innerHTML = `<span class="dot"></span>Actualizado · ${fecha}`;
   }
 
-  /* 2 · Artículo destacado — elige la mejor convocatoria */
-  const featured   = seleccionarDestacada(convs);
+  /* 2 · Artículo destacado — una convocatoria FIJADA a mano manda; si no, la
+   *     mejor por puntuación. */
+  const fijada     = convocatoriaFijada(convs);
+  const featured   = fijada || seleccionarDestacada(convs);
   // Para el grid: SOLO la última edición del BOE (mismo día) — nunca mezclamos
   // días. Dentro de ese día, las más ATRACTIVAS (nº de plazas + demanda
   // potencial del cuerpo). Excluimos la destacada, que ya se muestra arriba.
@@ -283,9 +311,12 @@ async function cargarPortada() {
         && d.getMonth()    === maxDate.getMonth()
         && d.getDate()     === maxDate.getDate();
   };
-  const restantes  = validas
+  let restantes    = validas
     .filter(c => c.id !== featured.id && mismoDia(c))
     .sort((a, b) => puntuarConvocatoria(b) - puntuarConvocatoria(a));
+  // La convocatoria fijada también encabeza el grid de enmedio (y se mantiene
+  // ahí los días del fijado, aunque ya no sea la edición del día).
+  if (fijada) restantes = [fijada, ...restantes.filter(c => c.id !== fijada.id)];
 
   /* 2a · Hero card (parte superior derecha) */
   const heroCard = document.querySelector('.hero-card');

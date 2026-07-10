@@ -194,7 +194,8 @@ def obtener_datos_boe(ref_boe):
     Devuelve (notas, texto):
       - `notas`: anotaciones del BOE; suelen indicar el total ("Convocatoria.
         2.704 plazas") — es la fuente más fiable del número de plazas.
-      - `texto`: inicio del articulado (incluye la sección "Número de plazas").
+      - `texto`: la cabecera del articulado (sección "Número de plazas") MÁS todos
+        los párrafos de cualquier parte del documento que mencionen plazas/vacantes.
     Best-effort: ante cualquier fallo devuelve ("", "") y se sigue con el RSS."""
     if not ref_boe or not re.match(r'^BOE-[A-Z]-\d{4}-\d+$', ref_boe or ''):
         return "", ""
@@ -212,7 +213,14 @@ def obtener_datos_boe(ref_boe):
     )
     texto_el = root.find('.//texto')
     parrafos = ["".join(p.itertext()).strip() for p in texto_el.iter('p')] if texto_el is not None else []
-    texto = " ".join(p for p in parrafos if p)[:2500]
+    parrafos = [p for p in parrafos if p]
+    # Se revisa TODO el documento, pero de forma dirigida (no tiene sentido
+    # mandarle a Claude 150k caracteres de temario/baremos): la cabecera —donde
+    # está la sección "1. Número de plazas"— MÁS todos los párrafos de cualquier
+    # parte que mencionen plazas/vacantes, por si el desglose viene más abajo.
+    inicio = " ".join(parrafos)[:2200]
+    clave = " ".join(p for p in parrafos if re.search(r'plaza|vacante', p, re.IGNORECASE))
+    texto = (inicio + "\n" + clave).strip()[:4000]
     return notas, texto
 
 
