@@ -207,20 +207,76 @@ def obtener_datos_boe(ref_boe):
     except Exception as e:
         print(f"   ⚠️  No se pudo leer el texto del BOE {ref_boe} ({e})")
         return "", ""
+    return _parsear_datos_boe(root)
+
+
+def _parsear_datos_boe(root):
+    """Extrae (notas, texto) del árbol XML del BOE. Separado de la descarga para
+    poder testearlo contra fixtures sin red.
+
+    El texto reúne, en orden de prioridad para que sobrevivan al recorte:
+      1. TABLAS: el desglose de plazas suele ir tabulado (fila "Total. … 89") y
+         los párrafos solo dicen "las plazas figuran en el anexo" → sin esto,
+         Claude nunca ve el número (bug de las convocatorias tabuladas).
+      2. ANEXO: en concursos (p. ej. universitarios) cada plaza se enumera bajo
+         un "Cuerpo:" como "1. Área de Conocimiento…, 2. …" SIN la palabra "plaza";
+         se capturan esas entradas (con el nº) para que Claude pueda contarlas.
+      3. Párrafos que mencionan plaza/vacante (el desglose puede venir en prosa).
+      4. La cabecera del articulado (sección "1. Número de plazas")."""
     notas = " · ".join(
         "".join(n.itertext()).strip() for n in root.iter('nota')
         if "".join(n.itertext()).strip()
     )
     texto_el = root.find('.//texto')
-    parrafos = ["".join(p.itertext()).strip() for p in texto_el.iter('p')] if texto_el is not None else []
+    if texto_el is None:
+        return notas, ""
+
+    parrafos = ["".join(p.itertext()).strip() for p in texto_el.iter('p')]
     parrafos = [p for p in parrafos if p]
-    # Se revisa TODO el documento, pero de forma dirigida (no tiene sentido
-    # mandarle a Claude 150k caracteres de temario/baremos): la cabecera —donde
-    # está la sección "1. Número de plazas"— MÁS todos los párrafos de cualquier
-    # parte que mencionen plazas/vacantes, por si el desglose viene más abajo.
-    inicio = " ".join(parrafos)[:2200]
-    clave = " ".join(p for p in parrafos if re.search(r'plaza|vacante', p, re.IGNORECASE))
-    texto = (inicio + "\n" + clave).strip()[:4000]
+
+    # 1 · Tablas → cada fila como "celda | celda" (la fila del Total trae el nº).
+    tablas = []
+    for tabla in texto_el.iter('table'):
+        filas = []
+        for tr in tabla.iter('tr'):
+            celdas = [" ".join("".join(c.itertext()).split()) for c in tr]
+            celdas = [c for c in celdas if c]
+            if celdas:
+                filas.append(" | ".join(celdas))
+        if filas:
+            tablas.append("\n".join(filas))
+    tablas_txt = "\n".join(tablas)[:1500]
+
+    # 2 · Entradas numeradas de un anexo de plazas (concursos: una por plaza).
+    #     Se exige un encabezado "Cuerpo:" delante para NO contar cualquier lista
+    #     numerada (bases de pruebas físicas, baremos…): p. ej. el anexo de la
+    #     convocatoria de Policía enumera reglas de test, no plazas.
+    anexo, en_anexo, tras_cuerpo = [], False, False
+    for p in parrafos:
+        if re.match(r'ANEXO\b', p, re.IGNORECASE):
+            en_anexo, tras_cuerpo = True, False
+        elif en_anexo and re.match(r'Cuerpos?:', p, re.IGNORECASE):
+            tras_cuerpo = True
+        elif en_anexo and tras_cuerpo and re.match(r'\d+\.\s', p):
+            anexo.append(p[:120])
+    anexo_txt = ""
+    if anexo:
+        anexo_txt = (f"({len(anexo)} plazas enumeradas en el anexo) "
+                     + " · ".join(anexo[:40]))[:1500]
+
+    # 3 · Párrafos que mencionan plaza/vacante · 4 · cabecera del articulado.
+    clave = " ".join(p for p in parrafos if re.search(r'plaza|vacante', p, re.IGNORECASE))[:1500]
+    inicio = " ".join(parrafos)[:2000]
+
+    secciones = []
+    if tablas_txt:
+        secciones.append("TABLAS DE PLAZAS:\n" + tablas_txt)
+    if anexo_txt:
+        secciones.append("ANEXOS:\n" + anexo_txt)
+    if clave:
+        secciones.append(clave)
+    secciones.append(inicio)
+    texto = "\n".join(secciones).strip()[:5000]
     return notas, texto
 
 
