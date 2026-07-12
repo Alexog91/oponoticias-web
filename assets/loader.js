@@ -311,12 +311,12 @@ async function cargarPortada() {
         && d.getMonth()    === maxDate.getMonth()
         && d.getDate()     === maxDate.getDate();
   };
-  let restantes    = validas
+  // El grid de enmedio es SOLO la última edición del BOE (mismoDia). La
+  // convocatoria fijada manda en el hero de arriba, pero NO se cuela aquí: esta
+  // sección debe reflejar siempre las destacadas del BOE más reciente.
+  const restantes  = validas
     .filter(c => c.id !== featured.id && mismoDia(c))
     .sort((a, b) => puntuarConvocatoria(b) - puntuarConvocatoria(a));
-  // La convocatoria fijada también encabeza el grid de enmedio (y se mantiene
-  // ahí los días del fijado, aunque ya no sea la edición del día).
-  if (fijada) restantes = [fijada, ...restantes.filter(c => c.id !== fijada.id)];
 
   /* 2a · Hero card (parte superior derecha) */
   const heroCard = document.querySelector('.hero-card');
