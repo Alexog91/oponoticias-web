@@ -306,7 +306,7 @@ async function cargarPortada() {
   if (badge) {
     const d = parseFecha(convs[0].created_at);
     const fecha = d ? `${d.getDate()} ${MESES_LARGO[d.getMonth()]}` : 'hoy';
-    badge.innerHTML = `<span class="dot"></span>Actualizado · ${fecha}`;
+    badge.innerHTML = `<span class="dot"></span>Actualizado · ${fecha} · directo del BOE`;
   }
 
   /* 2 · Artículo destacado — una convocatoria FIJADA a mano manda; si no, la
@@ -845,9 +845,23 @@ function montarFiltroCA(categoria, caPresentes) {
   aplicar();
 }
 
+/* Año dinámico: el "2026" del titular, el <title> y la meta description se
+ * actualizan solos al cambiar de año, sin tocar el HTML a mano (idea de Jaime).
+ * El HTML lleva 2026 escrito (correcto ahora y para buscadores sin JS); esto
+ * solo lo corrige cuando el año real difiere. */
+function actualizarAnio() {
+  const anio = String(new Date().getFullYear());
+  const y = document.getElementById('hero-year');
+  if (y) y.textContent = anio;
+  if (/20\d{2}/.test(document.title)) document.title = document.title.replace(/20\d{2}/, anio);
+  const md = document.querySelector('meta[name="description"]');
+  if (md && /20\d{2}/.test(md.content)) md.content = md.content.replace(/20\d{2}/, anio);
+}
+
 /* ── ARRANQUE ───────────────────────────────────────────────────────────── */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  actualizarAnio();
   try {
     const catMeta = document.querySelector('meta[name="opo-categoria"]');
     const pageMeta = document.querySelector('meta[name="opo-page"]');
