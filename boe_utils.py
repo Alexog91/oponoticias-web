@@ -52,6 +52,16 @@ def parsear_resumen(resumen_claude):
     }
 
 
+# Fecha en español ("9 de julio", "15 de enero de 2026") — se usa para no
+# confundir la FECHA de la disposición con el organismo (ver extraer_organismo).
+_FECHA_ES = (
+    r'\d{1,2}\s+de\s+'
+    r'(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|'
+    r'septiembre|octubre|noviembre|diciembre)'
+    r'(?:\s+de\s+\d{4})?'
+)
+
+
 def extraer_organismo(titulo):
     """Extrae el organismo del título largo del BOE (título corto y legible)."""
     m = re.search(
@@ -59,7 +69,18 @@ def extraer_organismo(titulo):
         r'(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)',
         titulo, re.IGNORECASE)
     if m:
-        return m.group(1).strip()
+        cand = m.group(1).strip()
+        # Títulos "Orden/Resolución [código], de [FECHA](, de la [ORG]), por la
+        # que...": el primer hueco tras la coma lo ocupa la FECHA de la
+        # disposición, no el organismo. Se quita la fecha inicial (y el conector
+        # que la sigue) y queda el organismo real si lo hay.
+        cand = re.sub(rf'^{_FECHA_ES}\s*(?:,\s+(?:de la|del|de los|de las|de)\s+)?',
+                      '', cand, flags=re.IGNORECASE).strip()
+        if cand:
+            return cand
+        # Solo había una fecha: son órdenes/resoluciones ministeriales numeradas
+        # (sin organismo explícito en el título) → Administración General del Estado.
+        return "Administración General del Estado"
     partes = titulo.split(',')
     if len(partes) >= 2:
         return re.sub(r'^(de la |del |de los |de las |de )', '',

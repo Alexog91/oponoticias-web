@@ -62,9 +62,24 @@ function tiempoRelativo(str) {
   return fmtCorto(str);
 }
 
+// Fecha en español ("9 de julio", "15 de enero de 2026") — para no confundir la
+// FECHA de la disposición con el organismo (ver extraerOrganismo).
+const RE_FECHA_ES = '\\d{1,2}\\s+de\\s+(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)(?:\\s+de\\s+\\d{4})?';
+
 function extraerOrganismo(titulo) {
   const match = titulo.match(/,\s+(?:de la|del|de los|de las|de)\s+(.+?)(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)/i);
-  if (match) return match[1].trim();
+  if (match) {
+    // "Orden/Resolución [código], de [FECHA](, de la [ORG]), por la que...": el
+    // hueco tras la coma lo ocupa la FECHA, no el organismo. Se quita la fecha
+    // inicial (y el conector siguiente) y queda el organismo real si lo hay.
+    let cand = match[1].trim()
+      .replace(new RegExp(`^${RE_FECHA_ES}\\s*(?:,\\s+(?:de la|del|de los|de las|de)\\s+)?`, 'i'), '')
+      .trim();
+    if (cand) return cand;
+    // Solo había una fecha (orden/resolución ministerial numerada, sin organismo
+    // explícito en el título) → Administración General del Estado.
+    return 'Administración General del Estado';
+  }
   const partes = titulo.split(',');
   if (partes.length >= 2) return partes[1].trim().replace(/^de la |^del |^de los |^de las |^de /i, '');
   return truncar(titulo, 80);

@@ -5,6 +5,7 @@ import xml.etree.ElementTree as ET
 import json
 import os
 from web_utils import limpiar_hrefs
+from boe_utils import extraer_organismo
 import time
 import re
 import subprocess
@@ -939,18 +940,9 @@ _MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
 
 
 def _extraer_organismo(titulo):
-    """Organismo corto a partir del título largo del BOE."""
-    m = re.search(
-        r',\s+(?:de la|del|de los|de las|de)\s+(.+?)'
-        r'(?:,\s+(?:por la que|por el que|referente|en la que|sobre|relativa)|$)',
-        titulo, re.IGNORECASE)
-    if m:
-        return m.group(1).strip()
-    partes = titulo.split(',')
-    if len(partes) >= 2:
-        return re.sub(r'^(de la |del |de los |de las |de )', '',
-                      partes[1].strip(), flags=re.IGNORECASE)
-    return titulo[:60]
+    """Organismo corto del título del BOE. Lógica única en boe_utils (así el
+    arreglo de la fecha-como-organismo vale para fichas, portada, hub, etc.)."""
+    return extraer_organismo(titulo)
 
 
 def _datos_imagen(conv):
