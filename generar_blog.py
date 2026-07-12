@@ -185,7 +185,10 @@ def supabase_post(table, data):
 
 def claude(prompt, max_tokens=4000):
     body = json.dumps({
-        "model": "claude-sonnet-4-6",
+        "model": "claude-sonnet-5",
+        # Sonnet 5 activa "adaptive thinking" por defecto; se desactiva para no
+        # gastar tokens de razonamiento (facturados) ni recortar el artículo.
+        "thinking": {"type": "disabled"},
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
     }).encode()

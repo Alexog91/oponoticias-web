@@ -346,7 +346,7 @@ Si realmente no encuentras el puesto, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
         }
 
         data = {
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-5",
             "max_tokens": 60,
             "system": (
                 "Eres un extractor de datos del BOE. Respondes EXCLUSIVAMENTE "
@@ -355,7 +355,10 @@ Si realmente no encuentras el puesto, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
                 "explicaciones, análisis, razonamientos, viñetas, markdown, "
                 "comillas o saltos de línea. Tu respuesta es solo esa línea."
             ),
-            "temperature": 0,
+            # Sonnet 5 activa "adaptive thinking" por defecto (se comería los 60
+            # tokens del extracto) y rechaza temperature≠1 con error 400: se
+            # desactiva el thinking y se quita temperature.
+            "thinking": {"type": "disabled"},
             "messages": [
                 {"role": "user", "content": prompt}
             ]
