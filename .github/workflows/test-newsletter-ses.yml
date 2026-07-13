@@ -17,9 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       test_email:
-        description: 'Dirección de prueba (usa una @oponoticias.com mientras haya sandbox)'
-        required: true
-        default: 'info@oponoticias.com'
+        description: 'Direcciones de prueba separadas por coma. VACÍO = lee la lista REAL de Supabase (solo úsalo con dry_run=true para contar/validar).'
+        required: false
+        default: ''
       dry_run:
         description: '¿Solo simular (sin enviar)?'
         required: true
