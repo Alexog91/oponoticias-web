@@ -5,7 +5,7 @@ Recorre los registros de Supabase sin comunidad asignada, pregunta a Claude a qu
 comunidad pertenece (a partir del título y del resumen) y guarda el resultado en la
 columna `comunidad_autonoma`.
 
-Requisito previo: ejecutar crear_columna_comunidad.sql en Supabase.
+Requisito previo: ejecutar sql/crear_columna_comunidad.sql en Supabase.
 
 Coste estimado: ~0,05 € (claude-haiku, una línea por registro).
 

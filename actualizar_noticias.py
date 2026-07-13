@@ -11,7 +11,7 @@ Pensado para ejecutarse cada hora (cron / GitHub Actions), igual que leer_boe.py
 Uso:
   SUPABASE_URL=... SUPABASE_API_KEY=... python3 actualizar_noticias.py
 
-Requisitos en Supabase: tabla `noticias_rss` (ver SQL en crear_tabla_noticias.sql).
+Requisitos en Supabase: tabla `noticias_rss` (ver SQL en sql/crear_tabla_noticias.sql).
 """
 
 import urllib.request

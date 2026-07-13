@@ -234,7 +234,7 @@ def articulo_reciente(categoria):
 def reclamar_categoria_hoy(categoria):
     """Reserva la categoría para HOY antes de generar nada (evita que dos
     ejecuciones paralelas —manual + cron el mismo día— generen 2 artículos
-    de la misma categoría: ver crear_tabla_blog_claims.sql). El INSERT choca
+    de la misma categoría: ver sql/crear_tabla_blog_claims.sql). El INSERT choca
     con la clave primaria (categoria, fecha) si otra ejecución ya la reservó
     hoy, y Supabase lo resuelve de forma atómica (a diferencia de comprobar
     y luego actuar en Python, que dejaría una ventana de carrera).

@@ -7,7 +7,7 @@ el corte. Este script se puede ejecutar a mano en modo prueba sin afectar a nada
 
 Diferencias clave con la versión de Brevo:
   - Los suscriptores se leen de la tabla `suscriptores` de Supabase (no de una lista
-    de Brevo). Ver crear_tabla_suscriptores.sql.
+    de Brevo). Ver sql/crear_tabla_suscriptores.sql.
   - El filtrado por comunidad autónoma se hace EN PYTHON (no con etiquetas
     condicionales {% if %} de Brevo): se genera el HTML ya filtrado para cada contacto.
   - El envío es contacto a contacto por SMTP de Amazon SES (biblioteca estándar
