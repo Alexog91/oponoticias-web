@@ -59,7 +59,9 @@ jobs:
           # Modo prueba: solo a esta dirección, sin tocar la tabla de suscriptores.
           TEST_EMAILS:      ${{ github.event.inputs.test_email }}
           TEST_COMUNIDAD:   ${{ github.event.inputs.test_comunidad }}
-          DRY_RUN:          ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+          # Seguridad: con test_email vacío (= lista REAL) se fuerza DRY_RUN, para
+          # que este workflow de PRUEBA nunca haga un envío real a toda la lista.
+          DRY_RUN:          ${{ (github.event.inputs.dry_run == 'true' || github.event.inputs.test_email == '') && '1' || '0' }}
           # En sandbox SES limita a 1 envío/seg → margen de sobra.
           SEND_INTERVAL:    '1.1'
         run: python3 enviar_newsletter_ses.py
