@@ -1,0 +1,30 @@
+name: TEST cliente SMTP SES (JS, manual)
+
+# Valida api/_lib/ses.js (el cliente SMTP nativo que usará subscribe.js para el
+# email de bienvenida) enviando UN correo real a la dirección indicada, con los
+# secretos SES_SMTP_USER/PASS. Manual.
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_to:
+        description: 'Dirección de prueba'
+        required: true
+        default: 'info@oponoticias.com'
+
+permissions:
+  contents: read
+
+jobs:
+  test-ses-js:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Enviar correo de prueba por SES (cliente JS)
+        env:
+          SES_SMTP_USER: ${{ secrets.SES_SMTP_USER }}
+          SES_SMTP_PASS: ${{ secrets.SES_SMTP_PASS }}
+          TEST_TO:       ${{ github.event.inputs.test_to }}
+        run: node test_ses_helper.js
