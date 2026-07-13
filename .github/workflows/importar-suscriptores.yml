@@ -1,0 +1,43 @@
+name: Importar suscriptores Brevo → Supabase (manual)
+
+# Ejecuta importar_suscriptores_brevo.py --api: trae TODOS los contactos de
+# Brevo (paginado, con su estado real de baja/bloqueo) y los sube a la tabla
+# `suscriptores` de Supabase por upsert (on_conflict=email). Re-ejecutar es
+# seguro (idempotente). Es el paso de migración final que faltaba: sin él, el
+# boletín por SES solo llega a las altas hechas por el formulario desde que se
+# activó la doble escritura, NO a los contactos históricos de Brevo.
+#
+# dry_run=true (por defecto): lee Brevo y cuenta, pero NO escribe en Supabase.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '¿Solo simular (sin escribir en Supabase)?'
+        required: true
+        type: choice
+        default: 'true'
+        options: ['true', 'false']
+
+permissions:
+  contents: read
+
+jobs:
+  importar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Importar contactos
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          BREVO_API_KEY:    ${{ secrets.BREVO_API_KEY }}
+          DRY_RUN:          ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+        run: python3 importar_suscriptores_brevo.py --api
