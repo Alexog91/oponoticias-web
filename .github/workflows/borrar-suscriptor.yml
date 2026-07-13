@@ -1,0 +1,44 @@
+name: Borrar suscriptor (manual)
+
+# Borra una fila de la tabla `suscriptores` de Supabase por email exacto. Útil
+# para pruebas, spam o solicitudes de borrado (RGPD). Manual y sin default para
+# evitar borrados accidentales.
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: 'Email EXACTO a borrar de suscriptores'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  borrar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: DELETE en Supabase
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          EMAIL:            ${{ github.event.inputs.email }}
+        run: |
+          python3 - <<'PY'
+          import os, urllib.request, urllib.parse
+          base = os.environ['SUPABASE_URL'].rstrip('/')
+          key  = os.environ['SUPABASE_API_KEY']
+          email = os.environ['EMAIL'].strip()
+          url = f"{base}/rest/v1/suscriptores?email=eq.{urllib.parse.quote(email)}"
+          req = urllib.request.Request(url, method='DELETE', headers={
+              'apikey': key, 'Authorization': f'Bearer {key}',
+              'Prefer': 'return=representation',
+          })
+          with urllib.request.urlopen(req, timeout=20) as r:
+              body = r.read().decode()
+          import json
+          filas = json.loads(body or '[]')
+          print(f"✓ Borradas {len(filas)} fila(s) con email {email!r}.")
+          for f in filas:
+              print("  ·", {k: f.get(k) for k in ('email', 'comunidad', 'estado')})
+          PY
