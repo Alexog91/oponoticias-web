@@ -21,12 +21,30 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Enviar newsletter
+      # ── Envío por Amazon SES (motor propio) ──────────────────────────────
+      # Traspaso desde Brevo el 13 jul 2026: SES en producción (50k/día, 14/seg),
+      # dominio oponoticias.com verificado con DKIM. Probado end-to-end (SPF/DKIM/
+      # DMARC PASS, bandeja de entrada). El script es idempotente: tabla
+      # envios_newsletter (1 fila/día) → no reenvía si el día ya se mandó.
+      - name: Enviar newsletter (Amazon SES)
         env:
-          SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
-          SUPABASE_API_KEY:    ${{ secrets.SUPABASE_API_KEY }}
-          BREVO_API_KEY:       ${{ secrets.BREVO_API_KEY }}
-          BREVO_LIST_ID:       ${{ secrets.BREVO_LIST_ID }}
-          BREVO_SENDER_EMAIL:  info@oponoticias.com
-          BREVO_SENDER_NAME:   OpoNoticias
-        run: python3 enviar_newsletter.py
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          SES_SMTP_USER:    ${{ secrets.SES_SMTP_USER }}
+          SES_SMTP_PASS:    ${{ secrets.SES_SMTP_PASS }}
+          # Opcionales con defaults correctos: SES_SMTP_HOST/PORT (eu-west-1:587),
+          # SENDER_EMAIL (info@oponoticias.com), SENDER_NAME, SITE_URL.
+        run: python3 enviar_newsletter_ses.py
+
+      # ── ROLLBACK a Brevo ─────────────────────────────────────────────────
+      # Si SES diera problemas, comenta el paso de arriba y descomenta este
+      # (Brevo sigue operativo unos días; enviar_newsletter.py sigue en el repo).
+      # - name: Enviar newsletter (Brevo · rollback)
+      #   env:
+      #     SUPABASE_URL:        ${{ secrets.SUPABASE_URL }}
+      #     SUPABASE_API_KEY:    ${{ secrets.SUPABASE_API_KEY }}
+      #     BREVO_API_KEY:       ${{ secrets.BREVO_API_KEY }}
+      #     BREVO_LIST_ID:       ${{ secrets.BREVO_LIST_ID }}
+      #     BREVO_SENDER_EMAIL:  info@oponoticias.com
+      #     BREVO_SENDER_NAME:   OpoNoticias
+      #   run: python3 enviar_newsletter.py
