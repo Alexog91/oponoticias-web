@@ -1,9 +1,9 @@
 // Vercel Serverless Function — guarda la comunidad autónoma preferida de un
-// suscriptor como atributo COMUNIDAD en Brevo. La usa la página /preferencias
-// (enlazada desde el email diario y el de bienvenida) para segmentar el envío.
-// Variables de entorno en Vercel: BREVO_API_KEY
+// suscriptor en la tabla `suscriptores` de Supabase (fuente de verdad). La usa la
+// página /preferencias (enlazada desde el email diario y el de bienvenida) para
+// segmentar el envío. Variables de entorno en Vercel: SUPABASE_URL, SUPABASE_API_KEY.
 
-const { brevoRequest, supabaseUpsert } = require('./_lib/http');
+const { supabaseUpsert } = require('./_lib/http');
 
 // Comunidades válidas (nombre tal cual se guarda en Supabase → permite filtrar
 // después el envío diario por comunidad_autonoma). "" = recibir todas.
@@ -14,11 +14,9 @@ const COMUNIDADES = new Set([
   'País Vasco', 'Ceuta', 'Melilla', 'Nacional/Estatal',
 ]);
 
-// Doble escritura (Fase 2 migración a SES): además de guardar COMUNIDAD en Brevo,
-// actualiza la comunidad del suscriptor en Supabase (tabla `suscriptores`) para
-// mantener la tabla sincronizada. No bloquea. Upsert por email (merge-duplicates);
-// se omite estado y token_baja (se conservan; el default cubre las filas nuevas).
-// Variables de entorno NUEVAS en Vercel: SUPABASE_URL, SUPABASE_API_KEY.
+// Actualiza la comunidad del suscriptor en Supabase. Upsert por email
+// (merge-duplicates); se omiten estado y token_baja (se conservan; el default
+// cubre las filas nuevas, p. ej. si el enlace se abre antes del alta).
 function supabaseUpsertComunidad(email, comunidad) {
   return supabaseUpsert('suscriptores', [{ email, comunidad }]);
 }
@@ -39,35 +37,16 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Comunidad no válida' });
   }
 
-  const apiKey = process.env.BREVO_API_KEY;
-  if (!apiKey) {
-    console.error('Falta BREVO_API_KEY');
+  // Guarda la comunidad en Supabase (fuente de verdad). Upsert por email:
+  // actualiza si ya existe, o crea la fila si el enlace se abre antes del alta.
+  const sb = await supabaseUpsertComunidad(email, com);
+  if (sb.skipped) {
+    console.error('Faltan SUPABASE_URL / SUPABASE_API_KEY');
     return res.status(500).json({ error: 'Configuración incompleta' });
   }
-
-  // 1) Asegura que el atributo COMUNIDAD existe (idempotente; ignora "ya existe").
-  await brevoRequest('contacts/attributes/normal/COMUNIDAD', apiKey, { type: 'text' });
-
-  // 2) Actualiza el contacto. updateEnabled crea el contacto si no existía
-  //    (por si el enlace se abre antes de que Brevo lo tenga), pero lo normal
-  //    es que ya esté suscrito.
-  const upd = await brevoRequest('contacts', apiKey, {
-    email,
-    attributes: { COMUNIDAD: com },
-    updateEnabled: true,
-  });
-
-  const ok = [200, 201, 204].includes(upd.status)
-    || upd.data.code === 'duplicate_parameter';
-  if (!ok) {
-    console.error('Brevo preferencias error:', upd.status, JSON.stringify(upd.data));
+  if (!(sb.status >= 200 && sb.status < 300)) {
+    console.error('Supabase upsert comunidad:', sb.status, JSON.stringify(sb.data).slice(0, 200));
     return res.status(502).json({ error: 'No se pudo guardar la preferencia' });
-  }
-
-  // Doble escritura en Supabase (no bloquea).
-  const sb = await supabaseUpsertComunidad(email, com);
-  if (!sb.skipped && !(sb.status >= 200 && sb.status < 300)) {
-    console.error('Supabase upsert comunidad (no bloquea):', sb.status, JSON.stringify(sb.data).slice(0, 200));
   }
 
   return res.status(200).json({ ok: true });

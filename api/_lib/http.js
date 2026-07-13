@@ -35,21 +35,6 @@ function httpsJson({ hostname, path, method = 'GET', headers = {}, body }) {
   });
 }
 
-// Llama a la API de Brevo. Resuelve siempre con {status, data}.
-function brevoRequest(path, apiKey, payload, method = 'POST') {
-  return httpsJson({
-    hostname: 'api.brevo.com',
-    path: `/v3/${path}`,
-    method,
-    headers: {
-      'api-key': apiKey,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: payload,
-  });
-}
-
 // Upsert en Supabase (merge-duplicates por on_conflict). No bloquea: si faltan
 // las variables de entorno, resuelve {status:0, skipped:true} sin lanzar.
 function supabaseUpsert(table, rows, { onConflict = 'email' } = {}) {
@@ -93,4 +78,4 @@ function supabasePatch(pathWithQuery, body) {
   }).then((r) => ({ status: r.status, data: Array.isArray(r.data) ? r.data : [] }));
 }
 
-module.exports = { httpsJson, brevoRequest, supabaseUpsert, supabasePatch };
+module.exports = { httpsJson, supabaseUpsert, supabasePatch };

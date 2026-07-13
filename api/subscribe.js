@@ -1,9 +1,10 @@
-// Vercel Serverless Function — suscripción al newsletter via Brevo
-// + envío automático del lead magnet (por defecto, el Kit del Opositor).
-// Variables de entorno en Vercel: BREVO_API_KEY, BREVO_LIST_ID,
-//   BREVO_SENDER_EMAIL (opcional), BREVO_SENDER_NAME (opcional)
+// Vercel Serverless Function — alta en el newsletter (tabla `suscriptores` de
+// Supabase, fuente de verdad) + envío automático del lead magnet por Amazon SES.
+// Variables de entorno en Vercel: SUPABASE_URL, SUPABASE_API_KEY,
+//   SES_SMTP_USER, SES_SMTP_PASS  (opcionales: SENDER_EMAIL, SENDER_NAME).
 
-const { brevoRequest, supabaseUpsert } = require('./_lib/http');
+const { supabaseUpsert } = require('./_lib/http');
+const { enviarEmailSES } = require('./_lib/ses');
 
 const BASE = 'https://oponoticias.com/descargas';
 
@@ -47,12 +48,9 @@ const MATERIALES = {
 };
 const MATERIAL_DEFECTO = 'kit-del-opositor';
 
-// Doble escritura (Fase 2 migración a SES): además de dar de alta en Brevo, se
-// guarda/actualiza el suscriptor en Supabase (tabla `suscriptores`) para que la
-// tabla esté sincronizada desde ya. NO bloquea el alta: si falla, solo se registra.
-// Upsert por email (merge-duplicates). Se omite token_baja (lo pone el default de
-// la BD en las filas nuevas y se conserva en las existentes).
-// Variables de entorno NUEVAS en Vercel: SUPABASE_URL, SUPABASE_API_KEY.
+// Alta/actualización del suscriptor en Supabase (tabla `suscriptores`). Upsert
+// por email (merge-duplicates). Se omite token_baja (lo pone el default de la BD
+// en las filas nuevas y se conserva en las existentes).
 function supabaseUpsertSuscriptor(fields) {
   return supabaseUpsert('suscriptores', [fields]);
 }
@@ -156,40 +154,9 @@ export default async function handler(req, res) {
   const matSlug = MATERIALES[material] ? material : MATERIAL_DEFECTO;
   const mat = MATERIALES[matSlug];
 
-  const apiKey      = process.env.BREVO_API_KEY;
-  const listId      = parseInt(process.env.BREVO_LIST_ID, 10);
-  const senderEmail = process.env.BREVO_SENDER_EMAIL || 'info@oponoticias.com';
-  const senderName  = process.env.BREVO_SENDER_NAME || 'OpoNoticias';
-
-  if (!apiKey || !listId) {
-    console.error('Faltan variables de entorno BREVO_API_KEY o BREVO_LIST_ID');
-    return res.status(500).json({ error: 'Configuración incompleta' });
-  }
-
-  // Si el alta trae comunidad, asegura el atributo COMUNIDAD en Brevo.
-  if (com) {
-    await brevoRequest('contacts/attributes/normal/COMUNIDAD', apiKey, { type: 'text' });
-  }
-
-  // 1) Alta del contacto en la lista (+ comunidad si viene)
-  const contacto = await brevoRequest('contacts', apiKey, {
-    email,
-    listIds: [listId],
-    updateEnabled: true,
-    ...(com ? { attributes: { COMUNIDAD: com } } : {}),
-  });
-  // 201 = creado, 204 = actualizado, duplicate_parameter = ya estaba suscrito
-  const altaOk = [200, 201, 204].includes(contacto.status)
-    || contacto.data.code === 'duplicate_parameter';
-  if (!altaOk) {
-    console.error('Brevo contacts error:', contacto.status, JSON.stringify(contacto.data));
-    return res.status(502).json({ error: 'Error al suscribir' });
-  }
-
-  // 1b) Doble escritura en Supabase (no bloquea; ver helper arriba). El alta es un
-  //     opt-in explícito → estado 'activo' (reactiva si alguien se había dado de baja
-  //     y vuelve a suscribirse). Solo se manda comunidad si viene (para no borrar una
-  //     preferencia ya guardada). token_baja lo genera la BD.
+  // 1) Alta en Supabase, la fuente de verdad. Opt-in explícito → estado 'activo'
+  //    (reactiva si alguien se había dado de baja y vuelve a suscribirse). Solo se
+  //    manda comunidad si viene (para no pisar una preferencia ya guardada).
   const sb = await supabaseUpsertSuscriptor({
     email,
     estado: 'activo',
@@ -197,24 +164,26 @@ export default async function handler(req, res) {
     material: matSlug,
     ...(com ? { comunidad: com } : {}),
   });
-  if (!sb.skipped && !(sb.status >= 200 && sb.status < 300)) {
-    console.error('Supabase upsert suscriptor (no bloquea):', sb.status, JSON.stringify(sb.data).slice(0, 200));
+  if (sb.skipped) {
+    console.error('Faltan SUPABASE_URL / SUPABASE_API_KEY');
+    return res.status(500).json({ error: 'Configuración incompleta' });
+  }
+  if (!(sb.status >= 200 && sb.status < 300)) {
+    console.error('Supabase upsert suscriptor:', sb.status, JSON.stringify(sb.data).slice(0, 200));
+    return res.status(502).json({ error: 'Error al suscribir' });
   }
 
-  // 2) Email de bienvenida con el lead magnet.
-  //    No bloquea la suscripción: si el envío falla, el contacto ya está dado
-  //    de alta y recibirá el boletín diario igualmente.
-  const correo = await brevoRequest('smtp/email', apiKey, {
-    sender: { name: senderName, email: senderEmail },
-    to: [{ email }],
+  // 2) Email de bienvenida con el lead magnet, por Amazon SES. NO bloquea: si el
+  //    envío falla, el alta ya está hecha y recibirá el boletín diario igualmente.
+  const correo = await enviarEmailSES({
+    from: process.env.SENDER_EMAIL || 'info@oponoticias.com',
+    fromName: process.env.SENDER_NAME || 'OpoNoticias',
+    to: email,
     subject: `Tu descarga: ${mat.nombre} (gratis) 📥`,
-    htmlContent: emailBienvenidaHtml(mat, email),
-    // Etiqueta por material: permite ver en Brevo (Transaccional > Estadísticas)
-    // cuántos envíos hay por recurso, y así saber cuál se pide más.
-    tags: [`material-${matSlug}`],
+    html: emailBienvenidaHtml(mat, email),
   });
-  if (![200, 201].includes(correo.status)) {
-    console.error('Brevo email bienvenida error (no bloquea):', correo.status, JSON.stringify(correo.data));
+  if (!correo.ok) {
+    console.error('Email bienvenida SES (no bloquea):', correo.message);
   }
 
   return res.status(200).json({ ok: true });
