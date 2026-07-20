@@ -2,9 +2,27 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oponoticias.com/blog</loc>
-    <lastmod>2026-07-16</lastmod>
+    <lastmod>2026-07-20</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-justicia-2026-plazas-procesos-y-novedades-202607</loc>
+    <lastmod>2026-07-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-sanidad-2026-convocatorias-y-novedades-202607</loc>
+    <lastmod>2026-07-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-administracion-2026-plazas-y-convocatorias-202607</loc>
+    <lastmod>2026-07-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://oponoticias.com/blog/oposiciones-de-seguridad-2026-2704-plazas-de-policia-202607</loc>
@@ -61,7 +79,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://oponoticias.com/blog/oposiciones-justicia-2026-convocatorias-abiertas-202606</loc>
+    <loc>https://oponoticias.com/blog/como-elegir-la-oposicion-adecuada-a-tu-perfil</loc>
     <lastmod>2026-06-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
@@ -73,7 +91,7 @@
     <priority>0.6</priority>
   </url>
   <url>
-    <loc>https://oponoticias.com/blog/como-elegir-la-oposicion-adecuada-a-tu-perfil</loc>
+    <loc>https://oponoticias.com/blog/oposiciones-justicia-2026-convocatorias-abiertas-202606</loc>
     <lastmod>2026-06-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
