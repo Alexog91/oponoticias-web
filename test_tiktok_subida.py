@@ -52,7 +52,19 @@ def main():
     modo       = os.environ.get("TIKTOK_TEST_MODO", "directo").lower()
     privacidad = os.environ.get("TIKTOK_TEST_PRIVACIDAD", "SELF_ONLY")
 
-    if modo == "borrador":
+    if modo == "auto":
+        # Réplica exacta de lo que hace el pipeline diario: intenta directo y,
+        # si falla, cae a borrador para no perder el vídeo del día.
+        print("🎵 Enviando a TikTok (AUTO: directo → borrador si falla)…")
+        ok = publicar_tiktok.publicar_directo_tiktok(
+            url, "Prueba OpoNoticias", privacidad=privacidad, verificar_estado=True)
+        destino = "tu perfil"
+        if not ok:
+            print("↩️  La publicación directa falló, probando borrador…")
+            ok = publicar_tiktok.publicar_draft_tiktok(url, "Prueba OpoNoticias",
+                                                       verificar_estado=True)
+            destino = "la app → Perfil → Borradores"
+    elif modo == "borrador":
         print("🎵 Enviando a TikTok (borrador)…")
         ok = publicar_tiktok.publicar_draft_tiktok(url, "Prueba OpoNoticias",
                                                    verificar_estado=True)
