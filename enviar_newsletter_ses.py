@@ -143,6 +143,27 @@ def _es_estatal(ccaa):
     return (ccaa or "").strip().lower() in _ESTATAL
 
 
+def con_contenido(suscriptores, convocatorias):
+    """[(suscriptor, sus convocatorias)] SOLO de a quienes hoy les toca algo.
+
+    A quien no le toca nada NO se le escribe: un boletín que dice "0 novedades"
+    no aporta, y son justo los que provocan bajas y quejas de spam (en SES, por
+    encima del 0,1 % de quejas peligra la cuenta). Hay una guarda global más
+    arriba para el día que el BOE no publica nada; esta es la de cada persona,
+    que salta cuando sí hay convocatorias pero ninguna es de su comunidad.
+    """
+    con, sin = [], 0
+    for s in suscriptores:
+        suyas = convocatorias_para(s.get("comunidad") or "", convocatorias)
+        if suyas:
+            con.append((s, suyas))
+        else:
+            sin += 1
+    if sin:
+        print(f"  ⤷ {sin} sin convocatorias de su comunidad hoy — no se les envía")
+    return con
+
+
 def convocatorias_para(comunidad, convocatorias):
     """Devuelve las convocatorias que le tocan a un suscriptor según su comunidad.
     - Sin comunidad (o estatal) → las ve TODAS.
@@ -360,12 +381,11 @@ def main():
 
     n_ok, n_err = 0, 0
     try:
-        for s in suscriptores:
+        for s, suyas in con_contenido(suscriptores, convocatorias):
             email = (s.get("email") or "").strip()
             if not email:
                 continue
             comunidad = s.get("comunidad") or ""
-            suyas = convocatorias_para(comunidad, convocatorias)
             unsub = url_baja(s.get("token_baja"))
             asunto = (f"Oposiciones {fecha_larga}: "
                       f"{len(suyas)} convocatoria{'s' if len(suyas) != 1 else ''} nueva"
