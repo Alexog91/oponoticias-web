@@ -40,7 +40,10 @@ CLIENT_SECRET    = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 TELEGRAM_TOKEN          = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_ADMIN_CHAT_ID  = os.environ.get("TELEGRAM_ADMIN_CHAT_ID", "")
 
-TOKENS_KEY = "tiktok/tokens.json"
+# Ruta del fichero de tokens. Configurable para que el SANDBOX no pise
+# los tokens de PRODUCCIÓN (si se comparten, autorizar el sandbox rompe
+# la publicación diaria).
+TOKENS_KEY = os.environ.get("TIKTOK_TOKENS_KEY", "tiktok/tokens.json")
 TIKTOK_API = "https://open.tiktokapis.com/v2"
 
 

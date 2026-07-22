@@ -32,7 +32,10 @@ SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")
 # Bucket PRIVADO para los tokens (no el bucket público de imágenes).
 TOKENS_BUCKET    = os.environ.get("SUPABASE_TOKENS_BUCKET", "private")
-TOKENS_KEY       = "tiktok/tokens.json"
+# Ruta del fichero de tokens. Configurable para que el SANDBOX no pise
+# los tokens de PRODUCCIÓN (si se comparten, autorizar el sandbox rompe
+# la publicación diaria).
+TOKENS_KEY = os.environ.get("TIKTOK_TOKENS_KEY", "tiktok/tokens.json")
 
 
 def auth_url():

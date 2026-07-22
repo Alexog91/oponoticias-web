@@ -1,0 +1,69 @@
+name: TikTok SANDBOX — autorizar y publicar directo
+
+# Sirve para GRABAR EL VÍDEO DEMO que pide TikTok en la solicitud de audit del
+# Direct Post. En sandbox el Direct Post SÍ funciona sin audit, que es justo lo
+# que TikTok pide demostrar ("If your app has not been approved before, you are
+# required to use a sandbox environment to demonstrate the integration").
+#
+# Los tokens del sandbox se guardan en tiktok/tokens-sandbox.json, SEPARADOS de
+# los de producción: así autorizar el sandbox NO rompe la publicación diaria.
+#
+# Uso:
+#   1) accion=oauth  y code vacío   → imprime el enlace de autorización
+#   2) accion=oauth  y code pegado  → guarda los tokens del sandbox
+#   3) accion=publicar              → publica un vídeo de prueba DIRECTO
+
+on:
+  workflow_dispatch:
+    inputs:
+      accion:
+        description: 'oauth (autorizar) o publicar (vídeo de prueba directo)'
+        required: true
+        default: 'oauth'
+      code:
+        description: 'Solo para accion=oauth: el code del redirect. Vacío = te da el enlace.'
+        required: false
+        default: ''
+      privacidad:
+        description: 'Solo para accion=publicar. SELF_ONLY = solo tú lo ves.'
+        required: false
+        default: 'SELF_ONLY'
+
+permissions:
+  contents: read
+
+env:
+  # App de SANDBOX (client key no es secreto: viaja en la URL de autorización).
+  TIKTOK_CLIENT_KEY:    sbawre9qt8j0j0hvvm
+  TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_SANDBOX_CLIENT_SECRET }}
+  # CLAVE: fichero de tokens separado para no pisar los de producción.
+  TIKTOK_TOKENS_KEY:    tiktok/tokens-sandbox.json
+  SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+  SUPABASE_API_KEY:     ${{ secrets.SUPABASE_API_KEY }}
+
+jobs:
+  sandbox:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Autorizar (OAuth del sandbox)
+        if: ${{ inputs.accion == 'oauth' }}
+        env:
+          TIKTOK_AUTH_CODE: ${{ inputs.code }}
+        run: python3 tiktok_oauth_setup.py
+
+      - name: Instalar ffmpeg
+        if: ${{ inputs.accion == 'publicar' }}
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Publicar vídeo de prueba DIRECTO en sandbox
+        if: ${{ inputs.accion == 'publicar' }}
+        env:
+          SUPABASE_STORAGE_BUCKET: social
+          TIKTOK_TEST_MODO:        directo
+          TIKTOK_TEST_PRIVACIDAD:  ${{ inputs.privacidad }}
+        run: python3 test_tiktok_subida.py
