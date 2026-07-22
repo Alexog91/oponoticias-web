@@ -133,6 +133,9 @@ def obtener_suscriptores():
     subs = supabase_get("suscriptores", {
         "select": "email,comunidad,token_baja",
         "estado": "eq.activo",
+        # Orden estable: obligatorio para que la paginación no repita ni pierda
+        # filas cuando la lista pase de 1.000 (tope por petición de Supabase).
+        "order": "id",
     })
     print(f"  {len(subs)} suscriptores activos")
     return subs
