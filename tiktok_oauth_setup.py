@@ -38,6 +38,25 @@ TOKENS_BUCKET    = os.environ.get("SUPABASE_TOKENS_BUCKET", "private")
 TOKENS_KEY = os.environ.get("TIKTOK_TOKENS_KEY", "tiktok/tokens.json")
 
 
+def _limpiar_code(texto):
+    """Extrae el `code` de lo que sea que se haya pegado.
+
+    Tras autorizar, TikTok redirige a
+        https://oponoticias.com/callback?code=XXXX&scopes=...&state=...
+    y el code hay que sacarlo de la barra de direcciones. Arrastrar sin querer
+    el `&scopes=...` del final es dificilísimo de evitar, y TikTok responde con
+    un `invalid_request - The request parameters are malformed` que no dice
+    dónde está el problema. Así que se acepta el code suelto, el code con la
+    cola pegada o la URL entera.
+    """
+    t = (texto or "").strip()
+    if "code=" in t:                       # URL completa o "code=XXXX"
+        t = t.split("code=", 1)[1]
+    t = t.split("&", 1)[0]                 # corta &scopes=…&state=…
+    # TikTok URL-encodea el code en el redirect (%2A = '*', %21 = '!').
+    return urllib.parse.unquote(t).strip()
+
+
 def auth_url():
     params = {
         "client_key":    CLIENT_KEY,
@@ -122,9 +141,11 @@ if __name__ == "__main__":
     # Modo no interactivo (GitHub Actions): el código llega por variable de entorno.
     code = os.environ.get("TIKTOK_AUTH_CODE", "").strip()
     if code:
-        # TikTok URL-encodea el code en el redirect (p.ej. '...%2A...'); lo normalizamos.
-        code = urllib.parse.unquote(code)
+        original, code = code, _limpiar_code(code)
         print("Código recibido por TIKTOK_AUTH_CODE (modo no interactivo).")
+        if code != original.strip():
+            print("   ℹ️  Se ha limpiado lo pegado (sobraba parte de la URL): "
+                  f"{len(original.strip())} → {len(code)} caracteres.")
     else:
         print()
         print("1. Abre esta URL en tu navegador (logueado como @oponoticias):")

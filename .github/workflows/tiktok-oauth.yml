@@ -13,7 +13,7 @@ on:
   workflow_dispatch:
     inputs:
       code:
-        description: 'Code de la URL de redirección. DÉJALO VACÍO la primera vez: el workflow te dará el enlace para autorizar.'
+        description: 'PEGA LA URL ENTERA del 404 (o solo el code). DÉJALO VACÍO la primera vez: te dará el enlace.'
         required: false
         default: ''
 

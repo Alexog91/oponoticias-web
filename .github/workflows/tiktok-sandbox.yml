@@ -21,7 +21,7 @@ on:
         required: true
         default: 'oauth'
       code:
-        description: 'Solo para accion=oauth: el code del redirect. Vacío = te da el enlace.'
+        description: 'Solo para accion=oauth: PEGA LA URL ENTERA del 404 (o solo el code). Vacío = te da el enlace.'
         required: false
         default: ''
       privacidad:
