@@ -13,8 +13,9 @@ on:
   workflow_dispatch:
     inputs:
       code:
-        description: 'Pega aquí el code de la URL de redirección de TikTok'
-        required: true
+        description: 'Code de la URL de redirección. DÉJALO VACÍO la primera vez: el workflow te dará el enlace para autorizar.'
+        required: false
+        default: ''
 
 jobs:
   oauth:

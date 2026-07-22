@@ -133,6 +133,12 @@ if __name__ == "__main__":
         print("   La página puede dar 404 — es normal.")
         print("4. Copia el valor del parámetro 'code' de la URL.")
         print()
+        # En CI no hay quien teclee: se imprime la URL y se sale. El usuario
+        # relanza el workflow pegando el code (que caduca en minutos).
+        if os.environ.get("GITHUB_ACTIONS") == "true":
+            print("5. Vuelve a lanzar este workflow pegando el code en el campo.")
+            print("   ⚠️  El code caduca en pocos minutos y es de un solo uso.")
+            raise SystemExit(0)
         code = input("Pega el code aquí: ").strip()
 
     if not code:
