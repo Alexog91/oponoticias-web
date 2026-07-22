@@ -1,0 +1,65 @@
+name: TikTok — diagnóstico de permisos (manual)
+
+# ¿El token guardado sirve para PUBLICAR DIRECTO o solo para dejar borradores?
+#
+# Consulta creator_info, que es justo lo que exige TikTok antes de un Direct
+# Post. Si el token se emitió con el scope antiguo (video.upload) devolverá
+# error de scope: entonces hay que rehacer el OAuth (workflow "tiktok-oauth").
+#
+# NO publica nada: solo lee.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostico:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Consultar creator_info
+        env:
+          TIKTOK_CLIENT_KEY:    ${{ secrets.TIKTOK_CLIENT_KEY }}
+          TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
+          SUPABASE_URL:         ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY:     ${{ secrets.SUPABASE_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import publicar_tiktok as tt
+
+          if not tt.configurado():
+              raise SystemExit("❌ Faltan credenciales de TikTok o Supabase.")
+
+          token = tt._obtener_access_token()
+          if not token:
+              raise SystemExit("❌ No se pudo obtener el access_token.")
+          print("✓ access_token obtenido\n")
+
+          info = tt._consultar_creator_info(token)
+          print("=" * 60)
+          if info is None:
+              print("❌ creator_info FALLÓ.")
+              print("   Lo más probable: el token se emitió con el scope viejo")
+              print("   (user.info.basic,video.upload) y no incluye video.publish.")
+              print("   SOLUCIÓN: relanzar el workflow 'tiktok-oauth' y volver a")
+              print("   autorizar la app; el nuevo token ya pedirá video.publish.")
+              raise SystemExit(1)
+
+          print("✅ El token SÍ sirve para publicación directa.\n")
+          print(f"  Cuenta            : {info.get('creator_nickname')} "
+                f"(@{info.get('creator_username')})")
+          print(f"  Privacidad posible: {info.get('privacy_level_options')}")
+          print(f"  Duración máx.     : {info.get('max_video_post_duration_sec')} s")
+          print(f"  Comentarios off   : {info.get('comment_disabled')}")
+          print(f"  Dúo off           : {info.get('duet_disabled')}")
+          print(f"  Stitch off        : {info.get('stitch_disabled')}")
+
+          elegido = tt._elegir_privacidad(info.get('privacy_level_options'))
+          print(f"\n  → El vídeo diario se publicaría como: {elegido}")
+          PY
