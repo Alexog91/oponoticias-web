@@ -234,6 +234,229 @@ def _consultar_estado(publish_id, access_token):
         return {}
 
 
+# ── Publicación DIRECTA (scope video.publish) ───────────────────────────────
+# Límite de caracteres del pie en TikTok.
+TITULO_MAX = 2200
+# De más a menos visibilidad. Solo se usa lo que el creador tenga disponible.
+_PRIVACIDAD_PREFERIDA = [
+    "PUBLIC_TO_EVERYONE", "FOLLOWER_OF_CREATOR",
+    "MUTUAL_FOLLOW_FRIENDS", "SELF_ONLY",
+]
+
+
+def _elegir_privacidad(opciones, preferida=None):
+    """Nivel de privacidad a usar, SIEMPRE dentro de los que ofrece el creador.
+
+    TikTok rechaza un `privacy_level` que no esté en `privacy_level_options`, y
+    forzar uno más abierto del que el creador permite viola sus UX guidelines
+    (motivo de retirada del acceso a la API).
+    """
+    disponibles = list(opciones or [])
+    if not disponibles:
+        return None
+    if preferida in disponibles:
+        return preferida
+    for nivel in _PRIVACIDAD_PREFERIDA:
+        if nivel in disponibles:
+            return nivel
+    return disponibles[0]
+
+
+def _construir_post_info(titulo, creator, preferida=None):
+    """`post_info` del Direct Post respetando los ajustes del creador.
+
+    Si el creador tiene desactivados comentarios/dúo/stitch, hay que mandarlo
+    desactivado también aquí: la API no lo hace por nosotros.
+    """
+    privacidad = _elegir_privacidad(creator.get("privacy_level_options"), preferida)
+    if not privacidad:
+        return None
+    return {
+        "title":           (titulo or "")[:TITULO_MAX],
+        "privacy_level":   privacidad,
+        "disable_comment": bool(creator.get("comment_disabled")),
+        "disable_duet":    bool(creator.get("duet_disabled")),
+        "disable_stitch":  bool(creator.get("stitch_disabled")),
+    }
+
+
+def _consultar_creator_info(access_token):
+    """Obligatorio antes de publicar directo (lo exige la propia API).
+
+    Devuelve los niveles de privacidad disponibles y los ajustes del creador.
+    """
+    req = urllib.request.Request(
+        f"{TIKTOK_API}/post/publish/creator_info/query/",
+        data=b"",
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type":  "application/json; charset=UTF-8",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:400]
+        print(f"⚠️  TikTok creator_info falló: HTTP {e.code} · {cuerpo}")
+        if "scope" in cuerpo.lower():
+            print("   ↳ Parece que el token NO tiene el scope video.publish. "
+                  "Vuelve a autorizar con tiktok_oauth_setup.py.")
+        return None
+    except Exception as e:
+        print(f"⚠️  Error TikTok creator_info: {e}")
+        return None
+    if resp.get("error", {}).get("code", "") != "ok":
+        print(f"⚠️  TikTok creator_info: respuesta inesperada {resp}")
+        return None
+    return resp.get("data", {})
+
+
+def _subir_bytes(upload_url, video_bytes):
+    """PUT del vídeo al upload_url que devuelve init (sin Authorization)."""
+    total = len(video_bytes)
+    put = urllib.request.Request(
+        upload_url,
+        data=video_bytes,
+        headers={
+            "Content-Type":  "video/mp4",
+            "Content-Range": f"bytes 0-{total - 1}/{total}",
+        },
+        method="PUT",
+    )
+    try:
+        urllib.request.urlopen(put, timeout=180).read()
+        return True
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:400]
+        print(f"⚠️  TikTok upload falló: HTTP {e.code} · {cuerpo}")
+    except Exception as e:
+        print(f"⚠️  Error TikTok upload: {e}")
+    return False
+
+
+def _descargar_video(video_url):
+    try:
+        with urllib.request.urlopen(video_url, timeout=120) as r:
+            datos = r.read()
+    except Exception as e:
+        print(f"⚠️  TikTok: no se pudo descargar el vídeo ({e})")
+        return None
+    if not datos:
+        print("⚠️  TikTok: el vídeo descargado está vacío")
+        return None
+    return datos
+
+
+def publicar_directo_tiktok(video_url, titulo="", privacidad=None,
+                            verificar_estado=True):
+    """Publica el vídeo DIRECTAMENTE en el perfil (sin pasar por borradores).
+
+    Requiere el scope `video.publish` y haber pasado la audit de la Content
+    Posting API. Si el token todavía es el antiguo (solo `video.upload`),
+    creator_info devolverá error de scope y hay que rehacer el OAuth.
+
+    Best-effort: nunca rompe el flujo principal. Devuelve True si TikTok aceptó
+    la publicación (el procesado es asíncrono).
+    """
+    if not configurado():
+        print("ℹ️  TikTok: no configurado (faltan TIKTOK_CLIENT_KEY/SECRET o Supabase)")
+        return False
+
+    access_token = _obtener_access_token()
+    if not access_token:
+        print("⚠️  TikTok: no se pudo obtener access_token — omitiendo publicación")
+        return False
+
+    creator = _consultar_creator_info(access_token)
+    if creator is None:
+        return False
+    post_info = _construir_post_info(titulo, creator, privacidad)
+    if post_info is None:
+        print(f"⚠️  TikTok: el creador no ofrece ningún privacy_level "
+              f"({creator.get('privacy_level_options')}) — no se publica")
+        return False
+
+    # Aviso si el vídeo supera lo que la cuenta puede publicar.
+    tope = creator.get("max_video_post_duration_sec")
+    if tope:
+        print(f"  · límite de la cuenta: {tope}s por vídeo")
+
+    video_bytes = _descargar_video(video_url)
+    if video_bytes is None:
+        return False
+    video_size = len(video_bytes)
+
+    payload = json.dumps({
+        "post_info": post_info,
+        "source_info": {
+            "source":            "FILE_UPLOAD",
+            "video_size":        video_size,
+            "chunk_size":        video_size,
+            "total_chunk_count": 1,
+        },
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        f"{TIKTOK_API}/post/publish/video/init/",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type":  "application/json; charset=UTF-8",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=60) as r:
+            resp = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:400]
+        print(f"⚠️  TikTok init (directo) falló: HTTP {e.code} · {cuerpo}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error TikTok init directo: {e}")
+        return False
+
+    if resp.get("error", {}).get("code", "") != "ok":
+        print(f"⚠️  TikTok init directo: respuesta inesperada {resp}")
+        return False
+
+    data = resp.get("data", {})
+    upload_url, publish_id = data.get("upload_url", ""), data.get("publish_id", "")
+    if not upload_url:
+        print(f"⚠️  TikTok: init sin upload_url {resp}")
+        return False
+
+    if not _subir_bytes(upload_url, video_bytes):
+        return False
+
+    print(f"🎵 TikTok (DIRECTO, {post_info['privacy_level']}): "
+          f"publish_id={publish_id}")
+
+    if verificar_estado:
+        ultimo = {}
+        for intento in range(6):
+            time.sleep(5)
+            ultimo = _consultar_estado(publish_id, access_token)
+            estado = ultimo.get("status", "?")
+            print(f"   intento {intento + 1}: status={estado} "
+                  f"fail_reason={ultimo.get('fail_reason', '')}")
+            if estado in ("PUBLISH_COMPLETE", "FAILED"):
+                break
+        estado = ultimo.get("status", "")
+        if estado == "PUBLISH_COMPLETE":
+            print("✅ Publicado en el perfil de TikTok.")
+        elif estado == "FAILED":
+            print(f"❌ TikTok marcó la publicación como FAILED: "
+                  f"{ultimo.get('fail_reason', '')}")
+            return False
+        else:
+            print(f"ℹ️  Estado final: {estado or 'desconocido'} — el procesado "
+                  f"sigue en curso (data: {ultimo})")
+
+    return True
+
+
 def publicar_draft_tiktok(video_url, titulo="", verificar_estado=False):
     """
     Sube un vídeo a la bandeja de borradores de TikTok (Content Posting API).

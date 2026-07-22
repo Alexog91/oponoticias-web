@@ -23,7 +23,10 @@ import urllib.request
 CLIENT_KEY    = os.environ.get("TIKTOK_CLIENT_KEY", "awrj1lcmltwx6qoe")
 CLIENT_SECRET = os.environ.get("TIKTOK_CLIENT_SECRET", "")
 REDIRECT_URI  = "https://oponoticias.com/callback"
-SCOPE         = "user.info.basic,video.upload"
+# video.publish = publicación DIRECTA al perfil (concedido en la audit del
+# 15 jul 2026). Se mantiene video.upload como plan B: si algún día se retira
+# el permiso, el código puede volver a dejar el vídeo en borradores.
+SCOPE         = "user.info.basic,video.publish,video.upload"
 
 SUPABASE_URL     = os.environ.get("SUPABASE_URL", "")
 SUPABASE_API_KEY = os.environ.get("SUPABASE_API_KEY", "")

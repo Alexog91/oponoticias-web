@@ -527,11 +527,17 @@ def enviar_video_redes(convocatorias):
         ig = publicar_meta.publicar_reel_instagram(url, caption)
         ok = fb or ig
 
-    # ── TikTok: API directa (borrador) si hay credenciales ─────────────────────
+    # ── TikTok: publicación DIRECTA al perfil (scope video.publish) ────────────
+    # Si falla (p. ej. el token aún es el antiguo, sin video.publish), se cae a
+    # borradores para no perder el vídeo del día: queda en Perfil → Borradores.
     import publicar_tiktok
     if publicar_tiktok.configurado():
-        if publicar_tiktok.publicar_draft_tiktok(url):
+        if publicar_tiktok.publicar_directo_tiktok(url, caption):
             ok = True
+        else:
+            print("↩️  TikTok: la publicación directa falló, probando borrador…")
+            if publicar_tiktok.publicar_draft_tiktok(url, caption):
+                ok = True
     elif VIDEO_WEBHOOK_URL:
         # Fallback: webhook de Make (solo si no hay TikTok API configurada)
         try:
