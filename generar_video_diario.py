@@ -525,7 +525,11 @@ def enviar_video_redes(convocatorias):
     if api_directa:
         fb = publicar_meta.publicar_video_facebook(url, caption)
         ig = publicar_meta.publicar_reel_instagram(url, caption)
-        ok = fb or ig
+        # El mismo vídeo, además, como HISTORIA de IG: aparece arriba del todo
+        # durante 24 h y arrastra gente al Reel. Es independiente del Reel — si
+        # una falla, la otra sigue en pie.
+        hist = publicar_meta.publicar_historia_instagram(url)
+        ok = fb or ig or hist
 
     # ── TikTok: publicación DIRECTA al perfil (scope video.publish) ────────────
     # Si falla (p. ej. el token aún es el antiguo, sin video.publish), se cae a

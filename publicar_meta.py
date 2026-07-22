@@ -348,6 +348,41 @@ def publicar_reel_instagram(video_url, caption):
         return False
 
 
+def publicar_historia_instagram(video_url):
+    """Publica el vídeo como HISTORIA de Instagram (contenedor STORIES + publish).
+
+    Mismo flujo de dos pasos que el Reel, pero con `media_type=STORIES`. Las
+    historias NO llevan pie de foto: Instagram lo ignora, así que ni se manda.
+    Dura 24 h y se muestra arriba del todo, que es justo lo que le da alcance
+    extra a la publicación del día.
+    """
+    if not configurado() or not FB_IG_ID:
+        return False
+    try:
+        cont = _post(f"{FB_IG_ID}/media", {
+            "media_type": "STORIES",
+            "video_url": video_url,
+            "access_token": FB_PAGE_TOKEN,
+        })
+        if not cont.get("id"):
+            print(f"⚠️  Instagram Historia: no se creó contenedor {cont}")
+            return False
+        if not _esperar_contenedor(cont["id"]):
+            return False
+        pub = _post(f"{FB_IG_ID}/media_publish", {
+            "creation_id": cont["id"],
+            "access_token": FB_PAGE_TOKEN,
+        })
+        if pub.get("id"):
+            print(f"📸 Instagram Historia (API directa): {pub['id']}")
+            return True
+        print(f"⚠️  Instagram Historia: publicación inesperada {pub}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Error Instagram Historia API (no bloquea): {e}")
+        return False
+
+
 # ── Diagnóstico ────────────────────────────────────────────────────────────────
 def diagnosticar():
     """Comprueba el estado del token y los IDs sin exponer el secreto.
