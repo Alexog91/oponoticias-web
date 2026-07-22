@@ -1,0 +1,104 @@
+name: Analizar cobertura de la newsletter (manual)
+
+# ¿A cuánta gente le llega un correo diciendo "0 convocatorias nuevas"?
+#
+# El motor tiene una guarda GLOBAL (si no hay convocatorias en todo el BOE no
+# se envía nada), pero NO una por suscriptor: quien filtra por una comunidad
+# pequeña recibe igualmente su correo diario aunque ese día no haya nada suyo.
+# Eso quema la lista y dispara las quejas de spam, que en SES cuestan caro.
+#
+# Solo LEE. Simula los últimos N días contra el reparto real de suscriptores.
+
+on:
+  workflow_dispatch:
+    inputs:
+      dias:
+        description: 'Días hacia atrás a simular'
+        required: false
+        default: '30'
+
+permissions:
+  contents: read
+
+jobs:
+  analizar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Simular envíos pasados
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          DIAS:             ${{ github.event.inputs.dias || '30' }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, collections, datetime, re
+
+          base = os.environ['SUPABASE_URL'].rstrip('/')
+          key  = os.environ['SUPABASE_API_KEY']
+          dias = int(os.environ['DIAS'])
+
+          def get(path):
+              req = urllib.request.Request(f"{base}/rest/v1/{path}", headers={
+                  'apikey': key, 'Authorization': f'Bearer {key}'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode())
+
+          # Mismas reglas que enviar_newsletter_ses.py
+          ESTATAL = {'', 'nacional', 'estatal', 'nacional/estatal', 'todas', 'españa'}
+          def es_estatal(c):
+              return (c or '').strip().lower() in ESTATAL
+
+          subs = [s for s in get('suscriptores?select=comunidad,estado&limit=5000')
+                  if s.get('estado') == 'activo']
+          por_ccaa = collections.Counter((s.get('comunidad') or '').strip() for s in subs)
+          print(f"{len(subs)} suscriptores activos en {len(por_ccaa)} grupos\n")
+
+          convos = get('convocatorias?select=fecha,comunidad_autonoma'
+                       '&order=fecha.desc&limit=3000')
+
+          # `fecha` es texto tipo "22 de julio de 2026" o ISO; agrupamos por el día
+          # tal cual viene, que es como lo hace el motor.
+          por_dia = collections.defaultdict(list)
+          for c in convos:
+              f = (c.get('fecha') or '').strip()
+              if f:
+                  por_dia[f].append(c.get('comunidad_autonoma'))
+
+          dias_orden = list(por_dia)[:dias]
+          print(f"Simulando {len(dias_orden)} días con convocatorias.\n")
+
+          total_envios = total_vacios = 0
+          dias_con_vacios = 0
+          vacios_por_ccaa = collections.Counter()
+
+          for dia in dias_orden:
+              ccaas_hoy = por_dia[dia]
+              hay_estatal = any(es_estatal(c) for c in ccaas_hoy)
+              presentes = {(c or '').strip() for c in ccaas_hoy}
+              vacios_hoy = 0
+              for ccaa, n in por_ccaa.items():
+                  if es_estatal(ccaa):
+                      suyas = len(ccaas_hoy)          # lo ve todo
+                  else:
+                      suyas = sum(1 for c in ccaas_hoy
+                                  if es_estatal(c) or (c or '').strip() == ccaa)
+                  total_envios += n
+                  if suyas == 0:
+                      total_vacios += n
+                      vacios_hoy += n
+                      vacios_por_ccaa[ccaa] += n
+              if vacios_hoy:
+                  dias_con_vacios += 1
+                  print(f"  {dia:28} {len(ccaas_hoy):3} convocatorias → "
+                        f"{vacios_hoy:3} correos VACÍOS")
+
+          print("\n" + "=" * 62)
+          pct = (100 * total_vacios / total_envios) if total_envios else 0
+          print(f"Correos simulados      : {total_envios}")
+          print(f"Correos VACÍOS         : {total_vacios}  ({pct:.1f} %)")
+          print(f"Días con algún vacío   : {dias_con_vacios} de {len(dias_orden)}")
+          if vacios_por_ccaa:
+              print("\nQuién se lleva los correos vacíos:")
+              for ccaa, n in vacios_por_ccaa.most_common():
+                  print(f"  {ccaa or '(sin comunidad)':32} {n:5}")
+          PY
