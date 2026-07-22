@@ -1,0 +1,91 @@
+name: Revisar emails inválidos (manual)
+
+# Busca suscriptores cuyo DOMINIO no existe o no acepta correo. Son typos al
+# apuntarse ("hotmail.comc", "gmial.com"): rebotan CADA envío y SES no siempre
+# los mete en su lista de supresión, así que se quedan en bucle para siempre.
+#
+# Solo LEE y lista. Para borrar uno: workflow "Borrar suscriptor (manual)".
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  revisar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar MX de cada dominio
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, urllib.parse, collections
+
+          base = os.environ['SUPABASE_URL'].rstrip('/')
+          key  = os.environ['SUPABASE_API_KEY']
+
+          def get(path):
+              req = urllib.request.Request(f"{base}/rest/v1/{path}", headers={
+                  'apikey': key, 'Authorization': f'Bearer {key}'})
+              with urllib.request.urlopen(req, timeout=30) as r:
+                  return json.loads(r.read().decode())
+
+          filas = get('suscriptores?select=email,estado&estado=eq.activo&limit=5000')
+          print(f"Suscriptores activos: {len(filas)}")
+
+          por_dominio = collections.defaultdict(list)
+          malformados = []
+          for f in filas:
+              email = (f.get('email') or '').strip().lower()
+              if email.count('@') != 1 or ' ' in email:
+                  malformados.append(email)
+                  continue
+              por_dominio[email.split('@')[1]].append(email)
+          print(f"Dominios distintos: {len(por_dominio)}")
+
+          def resuelve(dominio, tipo):
+              """DNS sobre HTTPS (Cloudflare). True si hay respuesta del tipo pedido."""
+              url = ('https://cloudflare-dns.com/dns-query?name='
+                     + urllib.parse.quote(dominio) + '&type=' + tipo)
+              req = urllib.request.Request(url, headers={'Accept': 'application/dns-json'})
+              try:
+                  with urllib.request.urlopen(req, timeout=15) as r:
+                      d = json.loads(r.read().decode())
+              except Exception as e:
+                  print(f"  ! {dominio} ({tipo}): {e}")
+                  return None                      # error de red: no acusar
+              return bool(d.get('Answer'))
+
+          sospechosos = {}
+          for dominio in sorted(por_dominio):
+              mx = resuelve(dominio, 'MX')
+              if mx is None:
+                  continue
+              if mx:
+                  continue
+              # Sin MX: aún podría recibir correo por su registro A (RFC 5321).
+              a = resuelve(dominio, 'A')
+              if a is False:
+                  sospechosos[dominio] = 'el dominio no existe'
+              elif a is True:
+                  sospechosos[dominio] = 'existe pero no anuncia servidor de correo (MX)'
+
+          print("\n" + "=" * 60)
+          if malformados:
+              print(f"MALFORMADOS ({len(malformados)}):")
+              for e in malformados:
+                  print("  ·", e)
+          if not sospechosos:
+              print("✓ Todos los dominios aceptan correo.")
+          else:
+              total = sum(len(por_dominio[d]) for d in sospechosos)
+              print(f"⚠ {total} suscriptor(es) en {len(sospechosos)} dominio(s) que no reciben correo:")
+              for d, motivo in sospechosos.items():
+                  print(f"\n  {d} — {motivo}")
+                  for e in por_dominio[d]:
+                      print("    ·", e)
+              print("\nBórralos con el workflow 'Borrar suscriptor (manual)'.")
+          PY
