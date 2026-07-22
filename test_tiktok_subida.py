@@ -47,12 +47,26 @@ def main():
     url = gvd.subir_video(salida, "video/tiktok-test.mp4")
     print(f"   URL: {url}")
 
-    # 3) Mandar a TikTok como borrador
-    print("🎵 Enviando a TikTok (borrador)…")
-    ok = publicar_tiktok.publicar_draft_tiktok(url, "Prueba OpoNoticias", verificar_estado=True)
+    # 3) Mandar a TikTok. Por defecto DIRECTO y en privado (SELF_ONLY): valida
+    #    el circuito real de publicación sin que lo vea nadie más que la cuenta.
+    modo       = os.environ.get("TIKTOK_TEST_MODO", "directo").lower()
+    privacidad = os.environ.get("TIKTOK_TEST_PRIVACIDAD", "SELF_ONLY")
+
+    if modo == "borrador":
+        print("🎵 Enviando a TikTok (borrador)…")
+        ok = publicar_tiktok.publicar_draft_tiktok(url, "Prueba OpoNoticias",
+                                                   verificar_estado=True)
+        destino = "la app → Perfil → Borradores"
+    else:
+        print(f"🎵 Enviando a TikTok (DIRECTO, privacidad={privacidad})…")
+        ok = publicar_tiktok.publicar_directo_tiktok(
+            url, "Prueba OpoNoticias", privacidad=privacidad, verificar_estado=True)
+        destino = ("tu perfil — como es SELF_ONLY solo lo ves tú"
+                   if privacidad == "SELF_ONLY" else "tu perfil")
+
     print("=" * 60)
     if ok:
-        print("✅ TikTok aceptó el vídeo. Ábrelo en la app → Perfil → Borradores.")
+        print(f"✅ TikTok aceptó el vídeo. Compruébalo en {destino}.")
     else:
         print("❌ La subida a TikTok falló (ver mensajes arriba).")
         raise SystemExit(1)

@@ -1,10 +1,19 @@
-name: Test TikTok (borrador producción)
+name: Test TikTok (publicación de prueba)
 
 # Prueba el pipeline de subida a TikTok: genera un vídeo corto, lo sube a
 # Supabase y lo manda como borrador. Requiere haber corrido antes el OAuth
 # (tiktok-oauth.yml) para tener los tokens de producción en Supabase.
 on:
   workflow_dispatch:
+    inputs:
+      modo:
+        description: 'directo (publica en el perfil) o borrador'
+        required: false
+        default: 'directo'
+      privacidad:
+        description: 'SELF_ONLY = solo tú lo ves. PUBLIC_TO_EVERYONE = público.'
+        required: false
+        default: 'SELF_ONLY'
 
 jobs:
   test:
@@ -19,11 +28,13 @@ jobs:
       - name: Instalar ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
-      - name: Subir vídeo de prueba a TikTok (borrador)
+      - name: Subir vídeo de prueba a TikTok
         env:
           TIKTOK_CLIENT_KEY: ${{ secrets.TIKTOK_CLIENT_KEY }}
           TIKTOK_CLIENT_SECRET: ${{ secrets.TIKTOK_CLIENT_SECRET }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
           SUPABASE_STORAGE_BUCKET: social
+          TIKTOK_TEST_MODO: ${{ inputs.modo }}
+          TIKTOK_TEST_PRIVACIDAD: ${{ inputs.privacidad }}
         run: python3 test_tiktok_subida.py
