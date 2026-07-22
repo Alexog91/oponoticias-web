@@ -33,8 +33,24 @@ jobs:
               with urllib.request.urlopen(req, timeout=30) as r:
                   return json.loads(r.read().decode())
 
-          filas = get('suscriptores?select=email,estado&estado=eq.activo&limit=5000')
-          print(f"Suscriptores activos: {len(filas)}")
+          # Desglose por estado: cuadra el total de la tabla con los que
+          # realmente reciben la newsletter (el motor filtra estado=activo).
+          todos = get('suscriptores?select=email,estado,comunidad&limit=5000')
+          por_estado = collections.Counter((f.get('estado') or '(vacío)') for f in todos)
+          print(f"TOTAL en la tabla: {len(todos)}")
+          for estado, n in por_estado.most_common():
+              marca = '← reciben la newsletter' if estado == 'activo' else ''
+              print(f"  {estado:12} {n:4}  {marca}")
+
+          por_ccaa = collections.Counter(
+              (f.get('comunidad') or '(sin comunidad → recibe todas)')
+              for f in todos if f.get('estado') == 'activo')
+          print("\nActivos por comunidad:")
+          for ccaa, n in por_ccaa.most_common():
+              print(f"  {ccaa:32} {n:4}")
+
+          filas = [f for f in todos if f.get('estado') == 'activo']
+          print(f"\nSuscriptores activos: {len(filas)}")
 
           por_dominio = collections.defaultdict(list)
           malformados = []
