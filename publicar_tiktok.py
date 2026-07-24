@@ -22,6 +22,7 @@ Variables de entorno necesarias:
 import os
 import json
 import time
+import html as html_lib
 import urllib.parse
 import urllib.request
 import urllib.error
@@ -90,6 +91,28 @@ def _guardar_tokens(tokens):
     except Exception as e:
         print(f"⚠️  TikTok: no se pudieron guardar tokens actualizados ({e})")
         return False
+
+
+def _mensaje_borrador(pie):
+    """Mensaje de Telegram con el pie del vídeo listo para pegar en TikTok.
+
+    TikTok denegó el Direct Post, así que el vídeo se queda en Borradores y hay
+    que publicarlo a mano. Y su endpoint de borradores NO admite título ni
+    hashtags (solo acepta el vídeo), así que no hay forma de dejar el texto ya
+    escrito dentro del borrador.
+
+    Lo más cerca que se puede llegar: mandarlo aquí dentro de un bloque <code>,
+    que en Telegram se copia **con un solo toque**. El trabajo diario pasa de
+    escribir el título y 6 hashtags a: tocar, abrir TikTok, pegar.
+
+    Se escapa el HTML porque el envío usa parse_mode=HTML y un solo '<' en el
+    pie tumbaría el mensaje entero.
+    """
+    texto = html_lib.escape(pie or "", quote=False)
+    return ("🎵 <b>Vídeo del día subido a TikTok</b> (borrador)\n"
+            "Ábrelo en la app: Perfil → Borradores.\n\n"
+            "Toca el texto para copiar el pie:\n"
+            f"<code>{texto}</code>")
 
 
 def _alertar_admin(mensaje):
@@ -414,7 +437,14 @@ def publicar_directo_tiktok(video_url, titulo="", privacidad=None,
             resp = json.loads(r.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         cuerpo = e.read().decode("utf-8", "replace")[:400]
-        print(f"⚠️  TikTok init (directo) falló: HTTP {e.code} · {cuerpo}")
+        # TikTok denegó la audit del Direct Post el 24 jul 2026, así que este
+        # error se espera CADA día hasta que se vuelva a solicitar y la
+        # concedan. No es una avería: el vídeo cae a borrador justo después.
+        if "unaudited_client" in cuerpo:
+            print("ℹ️  TikTok: sin audit del Direct Post (denegada el 24 jul) — "
+                  "se sube como borrador, que es lo previsto.")
+        else:
+            print(f"⚠️  TikTok init (directo) falló: HTTP {e.code} · {cuerpo}")
         return False
     except Exception as e:
         print(f"⚠️  Error TikTok init directo: {e}")
@@ -559,6 +589,11 @@ def publicar_draft_tiktok(video_url, titulo="", verificar_estado=False):
 
     print(f"🎵 TikTok (borrador): publish_id={publish_id} — "
           f"abre la app (Perfil → Borradores) para publicar")
+
+    # El borrador no puede llevar título ni hashtags (la API no los admite),
+    # así que se mandan por Telegram en un bloque copiable de un toque.
+    if titulo:
+        _alertar_admin(_mensaje_borrador(titulo))
 
     if verificar_estado:
         print("🔎 Consultando estado real del borrador (status/fetch)…")
