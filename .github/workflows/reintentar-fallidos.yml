@@ -1,0 +1,76 @@
+name: Reintentar workflow fallido
+
+# GitHub a veces no consigue asignar máquina a un job y lo cancela solo:
+#   "The job was not acquired by Runner of type hosted even after multiple attempts"
+# Pasó el 24 jul 2026 a las 16:16 con "RSS News Updates" (primera vez en 100
+# ejecuciones). No es un fallo del código y no hay nada que corregir en él,
+# pero si le toca al BOE diario —que corre UNA vez al día— se pierde la
+# jornada entera: sin convocatorias, sin newsletter y sin redes.
+#
+# Esto relanza el workflow UNA sola vez y avisa por Telegram.
+
+on:
+  workflow_run:
+    workflows:
+      - "Daily BOE Check"
+      - "Enviar newsletter diario"
+      - "RSS News Updates"
+      - "Compartir Blog en Redes"
+      - "Generar Blog IA"
+    types: [completed]
+
+permissions:
+  actions: write     # para relanzar el run
+
+jobs:
+  reintentar:
+    # Solo si acabó mal Y es el primer intento: sin esta segunda condición, un
+    # workflow que falla de verdad (bug, no infraestructura) se relanzaría en
+    # bucle infinito.
+    if: >
+      (github.event.workflow_run.conclusion == 'failure' ||
+       github.event.workflow_run.conclusion == 'cancelled') &&
+      github.event.workflow_run.run_attempt == 1
+    runs-on: ubuntu-latest
+    steps:
+      - name: Relanzar y avisar
+        env:
+          GH_TOKEN:   ${{ secrets.GITHUB_TOKEN }}
+          REPO:       ${{ github.repository }}
+          RUN_ID:     ${{ github.event.workflow_run.id }}
+          NOMBRE:     ${{ github.event.workflow_run.name }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          URL:        ${{ github.event.workflow_run.html_url }}
+          TELEGRAM_TOKEN:         ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
+        run: |
+          echo "«$NOMBRE» terminó como $CONCLUSION — relanzando una vez…"
+          if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" --silent; then
+            RESULTADO="🔁 Relanzado automáticamente."
+            echo "✓ relanzado"
+          else
+            RESULTADO="⚠️ No se pudo relanzar solo, míralo a mano."
+            echo "✗ no se pudo relanzar"
+          fi
+
+          # Aviso al admin: enterarse importa más que el reintento en sí.
+          if [ -n "$TELEGRAM_TOKEN" ] && [ -n "$TELEGRAM_ADMIN_CHAT_ID" ]; then
+            python3 - <<PY
+          import os, urllib.parse, urllib.request, html
+          n = html.escape(os.environ["NOMBRE"])
+          c = html.escape(os.environ["CONCLUSION"])
+          texto = (f"⚠️ <b>{n}</b> terminó como <b>{c}</b>.\n"
+                   f"{os.environ['RESULTADO']}\n\n{os.environ['URL']}")
+          datos = urllib.parse.urlencode({
+              "chat_id": os.environ["TELEGRAM_ADMIN_CHAT_ID"],
+              "text": texto, "parse_mode": "HTML",
+              "disable_web_page_preview": "true",
+          }).encode()
+          url = f"https://api.telegram.org/bot{os.environ['TELEGRAM_TOKEN']}/sendMessage"
+          try:
+              urllib.request.urlopen(urllib.request.Request(url, data=datos), timeout=10).read()
+              print("✓ avisado por Telegram")
+          except Exception as e:
+              print(f"aviso Telegram falló (no bloquea): {e}")
+          PY
+          fi
