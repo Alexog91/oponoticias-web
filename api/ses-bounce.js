@@ -14,6 +14,7 @@
 
 const { supabasePatch } = require('./_lib/http');
 const { verificarFirmaSNS, descargar } = require('./_lib/sns');
+const { debeDarDeBaja } = require('./_lib/rebotes');
 
 async function marcar(email, estado) {
   const filtro = `suscriptores?email=eq.${encodeURIComponent(email)}`;
@@ -65,14 +66,17 @@ export default async function handler(req, res) {
     try { ev = JSON.parse(msg.Message); } catch (_) { return res.status(200).json({ ok: true }); }
 
     if (ev.notificationType === 'Bounce') {
-      // Solo los permanentes dan de baja: un transitorio (buzón lleno, servidor
-      // caído) puede resolverse solo y no debe perder al suscriptor.
-      if (ev.bounce?.bounceType === 'Permanent') {
+      // Los permanentes dan de baja siempre. Los transitorios solo si el
+      // diagnóstico dice que la entrega ya no va a ocurrir nunca (ver
+      // _lib/rebotes.js): un buzón lleno se vacía, pero un dominio que rechaza
+      // el relay seguirá rechazándolo mañana, y nos deja en bucle diario.
+      if (debeDarDeBaja(ev.bounce)) {
         for (const d of ev.bounce.bouncedRecipients || []) {
           if (d.emailAddress) await marcar(d.emailAddress, 'rebote');
         }
       } else {
-        console.log('Rebote transitorio ignorado:', ev.bounce?.bounceType);
+        console.log('Rebote transitorio recuperable, se mantiene:',
+                    ev.bounce?.bounceType, ev.bounce?.bounceSubType);
       }
     } else if (ev.notificationType === 'Complaint') {
       // Marcó el correo como spam: fuera de la lista inmediatamente.
