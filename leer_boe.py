@@ -5,7 +5,7 @@ import xml.etree.ElementTree as ET
 import json
 import os
 from web_utils import limpiar_hrefs
-from boe_utils import extraer_organismo
+from boe_utils import extraer_organismo, es_convocatoria
 import time
 import re
 import subprocess
@@ -78,10 +78,7 @@ def leer_boe_rss():
                     if "id=" in enlace:
                         ref_boe = enlace.split("id=")[-1]
 
-                    palabras_clave = ['oposición', 'oposiciones', 'selectivo', 'convocatoria', 'plazas']
-                    es_oposicion = any(palabra in titulo.lower() for palabra in palabras_clave)
-
-                    if es_oposicion:
+                    if es_convocatoria(titulo):
                         convocatoria = {
                             'fecha': fecha,
                             'titulo': titulo,

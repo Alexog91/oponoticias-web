@@ -15,6 +15,39 @@ MESES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun',
                'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
 
 
+# ── ¿Es este título del BOE una convocatoria que nos interesa? ──────────────
+# Se buscan RAÍCES, no palabras exactas: el BOE alterna género, número y forma
+# verbal («pruebas selectivas», «plaza de», «se convoca») y un filtro de
+# palabras completas se deja fuera ~1 convocatoria real al día — medido sobre
+# 39 días de BOE (1.415 publicaciones, 39 perdidas en silencio).
+_ES_CONVOCATORIA = re.compile(r'oposici|selectiv|convocatori|se convoca|plaza', re.I)
+
+# Lo anterior es demasiado ancho por sí solo: «se convoca» también encabeza los
+# movimientos internos entre funcionarios, que NO son acceso al empleo público
+# y no le sirven a un opositor.
+_NO_ES_ACCESO = re.compile(
+    # Provisión de puestos entre quienes YA son funcionarios (a dedo o por concurso).
+    r'libre designaci'
+    r'|provisi[óo]n de puesto'
+    r'|concurso espec[íi]fico'
+    # Cátedras y titularidades: nicho distinto del opositor (decisión de producto,
+    # 24 jul 2026). El PAS universitario SÍ entra: no casa con ninguno de estos.
+    r'|cuerpos docentes universitarios'
+    r'|plaza vinculada'
+    r'|profesorado'
+    r'|catedr[áa]tic'
+    r'|profesor titular'
+    r'|titular de universidad',
+    re.I,
+)
+
+
+def es_convocatoria(titulo):
+    """True si el título del BOE es una convocatoria de acceso al empleo público."""
+    t = titulo or ""
+    return bool(_ES_CONVOCATORIA.search(t)) and not _NO_ES_ACCESO.search(t)
+
+
 def _parse_fecha(fecha):
     """Parsea fecha RFC ('Sat, 13 Jun 2026 …') o ISO. Devuelve datetime o None."""
     if not fecha:
