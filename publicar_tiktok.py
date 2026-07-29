@@ -94,25 +94,22 @@ def _guardar_tokens(tokens):
 
 
 def _mensaje_borrador(pie):
-    """Mensaje de Telegram con el pie del vídeo listo para pegar en TikTok.
+    """Mensaje de Telegram con SOLO el pie del vídeo, listo para pegar en TikTok.
 
     TikTok denegó el Direct Post, así que el vídeo se queda en Borradores y hay
     que publicarlo a mano. Y su endpoint de borradores NO admite título ni
     hashtags (solo acepta el vídeo), así que no hay forma de dejar el texto ya
     escrito dentro del borrador.
 
-    Lo más cerca que se puede llegar: mandarlo aquí dentro de un bloque <code>,
-    que en Telegram se copia **con un solo toque**. El trabajo diario pasa de
-    escribir el título y 6 hashtags a: tocar, abrir TikTok, pegar.
+    El mensaje es EXCLUSIVAMENTE el pie, sin ninguna línea de contexto: así, se
+    copie como se copie (toque en el bloque <code> o "seleccionar todo"), lo que
+    va al portapapeles es el texto puro, sin nada que borrar antes de pegar.
 
     Se escapa el HTML porque el envío usa parse_mode=HTML y un solo '<' en el
     pie tumbaría el mensaje entero.
     """
     texto = html_lib.escape(pie or "", quote=False)
-    return ("🎵 <b>Vídeo del día subido a TikTok</b> (borrador)\n"
-            "Ábrelo en la app: Perfil → Borradores.\n\n"
-            "Toca el texto para copiar el pie:\n"
-            f"<code>{texto}</code>")
+    return f"<code>{texto}</code>"
 
 
 def _alertar_admin(mensaje):

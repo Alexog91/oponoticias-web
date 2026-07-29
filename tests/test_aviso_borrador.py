@@ -34,8 +34,27 @@ casos = []
 test = lambda n, f: casos.append((n, f))  # noqa: E731
 
 
+# Quita el <code>…</code> para ver el texto tal cual quedaría al copiarlo.
+def _copiado(pie):
+    m = tt._mensaje_borrador(pie)
+    return m.replace("<code>", "").replace("</code>", "")
+
+
+test("🔴 el mensaje es SOLO el pie, tal cual — nada que borrar al pegar", lambda: (
+    # Al quitar las etiquetas de formato, lo que queda es EXACTAMENTE el pie.
+    _copiado(PIE) == PIE
+))
+
 test("el pie va dentro de un <code> (Telegram lo copia de un toque)", lambda: (
-    "<code>" in tt._mensaje_borrador(PIE) and "</code>" in tt._mensaje_borrador(PIE)
+    tt._mensaje_borrador(PIE).startswith("<code>")
+    and tt._mensaje_borrador(PIE).endswith("</code>")
+))
+
+test("NADA de avisos: ni 'borrador', ni 'Perfil', ni 'vídeo del día'", lambda: (
+    "borrador" not in tt._mensaje_borrador(PIE).lower()
+    and "perfil" not in tt._mensaje_borrador(PIE).lower()
+    and "vídeo del día" not in tt._mensaje_borrador(PIE).lower()
+    and "toca el texto" not in tt._mensaje_borrador(PIE).lower()
 ))
 
 test("el texto del pie llega íntegro, con sus hashtags", lambda: (
@@ -44,26 +63,15 @@ test("el texto del pie llega íntegro, con sus hashtags", lambda: (
     and "oponoticias.com" in tt._mensaje_borrador(PIE)
 ))
 
-test("dice dónde encontrarlo (Perfil → Borradores)", lambda: (
-    "orrador" in tt._mensaje_borrador(PIE)
-))
-
 # El envío usa parse_mode=HTML: sin escapar, un '<' rompe el mensaje entero.
 test("🔴 escapa < > & para que HTML no rompa el envío", lambda: (
     (lambda m: "&lt;" in m and "&gt;" in m and "&amp;" in m)(
         tt._mensaje_borrador("Plazas <100> & más"))
 ))
 
-# Ojo: el mensaje lleva un <b> propio en la cabecera, que es legítimo. Lo que
-# no puede haber son etiquetas crudas DENTRO del bloque copiable.
-def _dentro_del_code(pie):
-    m = tt._mensaje_borrador(pie)
-    return m.split("<code>", 1)[1].rsplit("</code>", 1)[0]
-
-
 test("no deja etiquetas HTML crudas venidas del pie", lambda: (
-    "<b>" not in _dentro_del_code("texto con <b>negrita</b> inyectada")
-    and "&lt;b&gt;" in _dentro_del_code("texto con <b>negrita</b> inyectada")
+    "<b>" not in _copiado("texto con <b>negrita</b> inyectada")
+    and "&lt;b&gt;" in tt._mensaje_borrador("texto con <b>negrita</b> inyectada")
 ))
 
 test("un pie vacío no revienta", lambda: isinstance(tt._mensaje_borrador(""), str))
