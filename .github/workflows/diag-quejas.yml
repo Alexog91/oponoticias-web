@@ -1,0 +1,61 @@
+name: Diagnóstico de quejas (manual)
+
+# ¿El sistema está dando de baja SOLO a quien marca la newsletter como spam?
+# SES manda un "Complaint" cuando alguien pulsa "correo no deseado". Si esa
+# dirección sigue 'activo', se le vuelve a escribir y se vuelve a quejar, y la
+# tasa de quejas sube — SES suspende la cuenta por encima del 0,1%.
+#
+# Solo LEE. Comprueba el estado de las direcciones que se pasen (coma) y da el
+# recuento global por estado.
+
+on:
+  workflow_dispatch:
+    inputs:
+      emails:
+        description: 'Emails a comprobar, separados por coma'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Consultar Supabase
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          EMAILS:           ${{ github.event.inputs.emails }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, urllib.parse, collections
+          base = os.environ['SUPABASE_URL'].rstrip('/')
+          key  = os.environ['SUPABASE_API_KEY']
+          def get(path):
+              r = urllib.request.Request(f"{base}/rest/v1/{path}",
+                  headers={'apikey': key, 'Authorization': f'Bearer {key}'})
+              with urllib.request.urlopen(r, timeout=25) as resp:
+                  return json.loads(resp.read())
+
+          emails = [e.strip() for e in os.environ.get('EMAILS','').split(',') if e.strip()]
+          if emails:
+              print("Estado de las direcciones consultadas:\n")
+              for e in emails:
+                  q = urllib.parse.quote(e)
+                  rows = get(f"suscriptores?email=eq.{q}&select=email,estado,fecha_baja")
+                  if rows:
+                      for r in rows:
+                          print(f"  {r['email']:34} estado={r.get('estado')}  baja={(r.get('fecha_baja') or '')[:19]}")
+                  else:
+                      print(f"  {e:34} (no está en la tabla)")
+              print()
+
+          todos = get("suscriptores?select=estado&limit=5000")
+          c = collections.Counter(x.get('estado') or '(vacío)' for x in todos)
+          print("Desglose global por estado:")
+          for k, v in c.most_common():
+              print(f"  {k:10} {v}")
+          print(f"\n  TOTAL: {len(todos)}  ·  activos (reciben newsletter): {c.get('activo',0)}")
+          PY
