@@ -75,6 +75,21 @@ def es_relevante(titulo, descripcion):
     return any(_sin_tildes(p) in blob for p in PALABRAS_RELEVANTES)
 
 
+# Marcas/empresas cuyo contenido es publicidad, no noticia. Los feeds de
+# academias a veces cuelan promociones que SÍ hablan de oposiciones y por eso
+# pasan es_relevante(). Se bloquean por nombre para no censurar noticias reales.
+# Para añadir otra: mete su nombre (en minúsculas, sin tildes) a la lista.
+MARCAS_PUBLICIDAD = [
+    "socialva",
+]
+
+
+def es_publicidad(titulo, descripcion):
+    """True si el item es contenido promocional de una marca conocida."""
+    blob = _sin_tildes((titulo or '') + ' ' + (descripcion or ''))
+    return any(m in blob for m in MARCAS_PUBLICIDAD)
+
+
 def leer_feed(nombre, url):
     """Descarga y parsea un feed RSS. Devuelve lista de dicts de noticias."""
     print(f"🔄 Leyendo feed de {nombre}: {url}")
@@ -106,6 +121,9 @@ def leer_feed(nombre, url):
         if any(b in titulo.upper() for b in TITULOS_BASURA):
             continue
         if not es_relevante(titulo, desc):
+            continue
+        if es_publicidad(titulo, desc):
+            print(f"  🚫 Publicidad descartada: {titulo[:65]}…")
             continue
 
         # Imagen (enclosure), si la hay
