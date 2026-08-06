@@ -2,9 +2,15 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oponoticias.com/blog</loc>
-    <lastmod>2026-08-03</lastmod>
+    <lastmod>2026-08-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/gestion-de-la-ansiedad-y-los-nervios-en-el-examen</loc>
+    <lastmod>2026-08-06</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://oponoticias.com/blog/como-mantener-la-motivacion-opositando</loc>
@@ -103,6 +109,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://oponoticias.com/blog/oposiciones-justicia-2026-convocatorias-abiertas-202606</loc>
+    <lastmod>2026-06-25</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://oponoticias.com/blog/plan-de-estudio-realista-para-oposiciones</loc>
     <lastmod>2026-06-25</lastmod>
     <changefreq>monthly</changefreq>
@@ -110,12 +122,6 @@
   </url>
   <url>
     <loc>https://oponoticias.com/blog/como-elegir-la-oposicion-adecuada-a-tu-perfil</loc>
-    <lastmod>2026-06-25</lastmod>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://oponoticias.com/blog/oposiciones-justicia-2026-convocatorias-abiertas-202606</loc>
     <lastmod>2026-06-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
