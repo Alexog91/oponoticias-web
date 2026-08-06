@@ -1,0 +1,67 @@
+name: Borrar noticia (manual)
+
+# Borra de la tabla `noticias_rss` de Supabase las noticias cuyo titular o
+# descripción contengan una palabra clave (p. ej. el nombre de una empresa que
+# se ha colado como publicidad). Útil cuando un feed publica contenido
+# promocional que pasa el filtro de relevancia.
+#
+# Por seguridad: si accion=buscar (por defecto) SOLO lista lo que borraría;
+# hay que relanzar con accion=borrar para eliminar de verdad.
+
+on:
+  workflow_dispatch:
+    inputs:
+      palabra:
+        description: 'Palabra clave a buscar en titular/descripción (p. ej. socialva)'
+        required: true
+      accion:
+        description: 'buscar (solo lista) o borrar'
+        required: true
+        default: 'buscar'
+
+permissions:
+  contents: read
+
+jobs:
+  borrar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Buscar / borrar en Supabase
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          PALABRA:          ${{ github.event.inputs.palabra }}
+          ACCION:           ${{ github.event.inputs.accion }}
+        run: |
+          python3 - <<'PY'
+          import os, json, urllib.request, urllib.parse
+          base = os.environ['SUPABASE_URL'].rstrip('/')
+          key  = os.environ['SUPABASE_API_KEY']
+          palabra = os.environ['PALABRA'].strip()
+          accion  = os.environ['ACCION'].strip().lower()
+
+          def req(method, path):
+              r = urllib.request.Request(f"{base}/rest/v1/{path}", method=method, headers={
+                  'apikey': key, 'Authorization': f'Bearer {key}',
+                  'Prefer': 'return=representation'})
+              with urllib.request.urlopen(r, timeout=25) as resp:
+                  return json.loads(resp.read() or '[]')
+
+          # ilike busca sin distinguir mayúsculas. or() cubre titular y descripción.
+          patron = urllib.parse.quote(f"*{palabra}*")
+          filtro = f"noticias_rss?or=(titulo.ilike.{patron},descripcion.ilike.{patron})&select=id,titulo,fuente,fecha_pub"
+          filas = req('GET', filtro)
+
+          print(f"Noticias que contienen «{palabra}»: {len(filas)}\n")
+          for f in filas:
+              print(f"  · [id {f['id']}] ({f.get('fuente','?')}) {f['titulo'][:90]}")
+
+          if not filas:
+              print("\n✓ No hay ninguna. Nada que borrar.")
+          elif accion == 'borrar':
+              ids = ",".join(str(f['id']) for f in filas)
+              borradas = req('DELETE', f"noticias_rss?id=in.({ids})")
+              print(f"\n🗑️  Borradas {len(borradas)} noticia(s).")
+          else:
+              print(f"\n(modo BUSCAR: no se ha borrado nada. Relanza con accion=borrar.)")
+          PY
