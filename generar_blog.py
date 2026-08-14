@@ -726,75 +726,6 @@ def _strip_markdown(texto):
     return texto.strip()
 
 
-def _publicar_en_redes(art):
-    """Publica el artículo en Facebook (foto nativa + enlace en comentario) e Instagram (screenshot).
-
-    Best-effort: cualquier fallo se reporta sin interrumpir el flujo.
-    Requiere FB_PAGE_TOKEN, FB_PAGE_ID, FB_IG_ID y Supabase configurados.
-    """
-    try:
-        import publicar_meta
-        import generar_imagen_instagram as gii
-    except ImportError as e:
-        print(f"  ℹ️  Redes: módulo no disponible ({e}), omitiendo.")
-        return
-
-    if not publicar_meta.configurado():
-        print("  ℹ️  Redes: FB_PAGE_TOKEN no configurado, omitiendo.")
-        return
-
-    url_articulo = f"{BASE_URL}/{BLOG_DIR}/{art['slug']}.html"
-    hashtags = f"#oposiciones #{art['categoria']} #BOE #empleopublico #opositar"
-
-    # ── Screenshot del HTML del artículo (FB foto nativa + IG) ──────────────
-    html_path = os.path.join(BLOG_DIR, f"{art['slug']}.html")
-    slug_corto = art["slug"][:40]
-    nombre_remoto = f"blog/ig-{datetime.now().strftime('%Y%m')}-{slug_corto}.jpg"
-    img_url = gii.screenshot_blog_html(html_path, nombre_remoto)
-
-    contenido_limpio = _strip_markdown(art.get("contenido", ""))
-    # Recorta al primer párrafo natural o a 2 500 chars para no saturar el post
-    parrafos = [p.strip() for p in contenido_limpio.split("\n\n") if p.strip()]
-    extracto = ""
-    for p in parrafos:
-        if len(extracto) + len(p) + 2 > 2500:
-            break
-        extracto = (extracto + "\n\n" + p).strip()
-
-    # ── Facebook: foto NATIVA + enlace en primer comentario ─────────────────
-    # FB penaliza el alcance de los posts con enlace en el cuerpo; la imagen va
-    # nativa y el enlace al artículo queda como primer comentario. Sin
-    # screenshot se cae al post de texto+enlace.
-    if img_url:
-        msg_fb = (
-            f"📚 {art['titulo']}\n\n"
-            f"{extracto}\n\n"
-            f"📖 Artículo completo en el primer comentario 👇\n\n"
-            f"{hashtags}"
-        )
-        publicar_meta.publicar_foto_facebook_enlace(img_url, msg_fb, url_articulo)
-    else:
-        msg_fb = (
-            f"📚 {art['titulo']}\n\n"
-            f"{extracto}\n\n"
-            f"👉 Lee el artículo completo:\n{url_articulo}\n\n"
-            f"{hashtags}"
-        )
-        publicar_meta.publicar_enlace_facebook(msg_fb)
-
-    # ── Instagram: misma imagen del artículo ────────────────────────────────
-    if img_url:
-        caption_ig = (
-            f"📚 {art['titulo']}\n\n"
-            f"{art.get('resumen', '')}\n\n"
-            f"🔗 Enlace en bio · oponoticias.com\n\n"
-            f"{hashtags}"
-        )
-        publicar_meta.publicar_foto_instagram(img_url, caption_ig)
-    else:
-        print("  ⚠️  Redes: no se pudo generar screenshot para Instagram, omitiendo IG.")
-
-
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main():
@@ -838,16 +769,12 @@ def main():
         print(f"  📝 {art['titulo'][:60]}…")
         if guardar_articulo(art, categoria):
             generados += 1
-            # El artículo ya está guardado (Supabase + HTML); un fallo al
-            # publicarlo en redes es secundario y NO debe abortar el resto
-            # del bucle ni saltarse regenerar_indice_y_sitemap() de abajo
-            # (antes, una excepción sin capturar aquí dejaba sin procesar las
-            # categorías restantes y sin actualizar blog.html/sitemap-blog.xml
-            # pese a tener ya artículos nuevos guardados).
-            try:
-                _publicar_en_redes(art)
-            except Exception as e:
-                print(f"  ⚠️  Guardado, pero falló la publicación en redes: {e}")
+            # NO se publica en redes aquí: el artículo queda con
+            # compartido_redes=false y de eso se encarga, una sola vez, el
+            # script dedicado compartir_blog_redes.py (cron diario). Antes se
+            # publicaba también aquí sin marcar el flag, así que el sharer lo
+            # veía como pendiente y lo volvía a publicar → cada artículo salía
+            # DUPLICADO en Facebook e Instagram.
         time.sleep(3)
 
     if generados:
