@@ -159,20 +159,28 @@ def comentar_facebook(post_id, mensaje):
         return False
 
 
-def publicar_foto_facebook_enlace(image_url, mensaje, link_url):
-    """Post de FOTO NATIVA + enlace como PRIMER COMENTARIO.
+def _cuerpo_con_enlace(mensaje, link_url):
+    """Devuelve el mensaje con el enlace al artículo al final (si no lo lleva ya)."""
+    mensaje = mensaje or ""
+    if not link_url:
+        return mensaje
+    if link_url in mensaje:
+        return mensaje
+    return f"{mensaje}\n\n👉 {link_url}".strip()
 
-    Patrón de máximo alcance orgánico en Facebook: la página penaliza los posts
-    con enlace en el cuerpo, así que se sube la imagen como contenido nativo y el
-    enlace se añade como primer comentario nada más publicar. Devuelve True si la
-    foto se publicó (el comentario es best-effort: si falla, el post sigue ahí).
+
+def publicar_foto_facebook_enlace(image_url, mensaje, link_url):
+    """Post de FOTO NATIVA con el enlace al artículo EN EL CUERPO.
+
+    Antes el enlace se ponía como primer comentario (mejor alcance orgánico en
+    FB: la página penaliza los posts con enlace externo en el texto). Pero el
+    Page token NO tiene permiso `pages_manage_engagement` para comentar → la
+    llamada daba 403 y el enlace no aparecía en ningún sitio, dejando el post
+    sin forma de llegar al artículo. Ahora va en el cuerpo para que SIEMPRE sea
+    alcanzable. Si algún día se añade ese permiso al token, se puede volver a la
+    versión de enlace-en-comentario (mejor alcance).
     """
-    pid = publicar_foto_facebook(image_url, mensaje)
-    if not pid:
-        return False
-    if link_url:
-        comentar_facebook(pid, f"👉 Aquí lo tienes: {link_url}")
-    return True
+    return bool(publicar_foto_facebook(image_url, _cuerpo_con_enlace(mensaje, link_url)))
 
 
 def publicar_enlace_facebook(mensaje, link_url=None):

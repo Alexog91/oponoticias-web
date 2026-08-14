@@ -124,16 +124,16 @@ def compartir_articulo(art):
             break
         extracto = (extracto + "\n\n" + p).strip()
 
-    # ── Facebook: foto NATIVA + enlace en primer comentario ─────────────────
-    # FB penaliza el alcance de los posts con enlace en el cuerpo, así que la
-    # imagen va nativa y el enlace al artículo queda como primer comentario.
+    # ── Facebook: foto NATIVA + enlace al artículo en el cuerpo ─────────────
+    # El enlace lo añade publicar_foto_facebook_enlace() al final del texto (el
+    # Page token no puede comentar, así que no se usa el enlace-en-comentario).
     # Si no hay screenshot, se cae al post de texto+enlace de toda la vida.
     print("  📝 Publicando en Facebook…")
     if img_url:
         msg_fb = (
             f"📚 {art['titulo']}\n\n"
             f"{extracto}\n\n"
-            f"📖 Artículo completo en el primer comentario 👇\n\n"
+            f"📖 Lee el artículo completo 👇\n\n"
             f"{hashtags}"
         )
         ok_fb = publicar_meta.publicar_foto_facebook_enlace(img_url, msg_fb, url_articulo)
