@@ -10,13 +10,26 @@ import time
 import re
 import subprocess
 import html as html_lib
-from email.utils import parsedate_to_datetime
+from email.utils import parsedate_to_datetime, format_datetime
 from datetime import datetime, timedelta
 from pathlib import Path
 import unicodedata
 
+try:                                    # zona horaria de Madrid para el campo 'fecha'
+    from zoneinfo import ZoneInfo
+    _TZ_MADRID = ZoneInfo("Europe/Madrid")
+except Exception:                       # pragma: no cover — fallback si no hay tzdata
+    _TZ_MADRID = None
+
 # CONFIGURACIÓN - Desde GitHub Secrets
 RSS_URL = "https://www.boe.es/rss/boe.php?s=2B"
+# Fuente PRIMARIA (determinista): sumario oficial del BOE por fecha (datos abiertos).
+# A diferencia del RSS (ventana móvil), pedir una fecha concreta devuelve SIEMPRE el
+# boletín completo de ese día. Leemos una ventana de varios días para auto-recuperar
+# cualquier día que un run madrugador no capturara (el RSS aún servía el de ayer).
+SUMARIO_API = "https://boe.es/datosabiertos/api/boe/sumario/{fecha}"
+SECCION_OPOSICIONES = "2B"   # II.B — Oposiciones y concursos
+BOE_DIAS_VENTANA = int(os.environ.get("BOE_DIAS_VENTANA", "3"))  # hoy + 2 anteriores
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -32,6 +45,145 @@ WEB_REPO_PATH = os.environ.get("WEB_REPO_PATH", "./oponoticias-web")
 # Rutas al proyecto web
 WEB_CONVOCATORIA_DIR = Path(WEB_REPO_PATH) / "convocatoria"
 WEB_SITEMAP_PATH = Path(WEB_REPO_PATH) / "sitemap.xml"
+
+
+def _as_list(x):
+    """Normaliza un nodo del sumario a lista (la API usa dict si hay 1 solo)."""
+    if x is None:
+        return []
+    return x if isinstance(x, list) else [x]
+
+
+def _walk_items(node):
+    """Recorre un nodo del sumario y devuelve [(identificador, titulo)] de las
+    disposiciones hoja (las que tienen ambos campos)."""
+    out = []
+    if isinstance(node, list):
+        for n in node:
+            out += _walk_items(n)
+    elif isinstance(node, dict):
+        if node.get("identificador") and node.get("titulo"):
+            out.append((node["identificador"], node["titulo"]))
+        for k in ("departamento", "epigrafe", "item"):
+            if k in node:
+                out += _walk_items(node[k])
+    return out
+
+
+def _parse_sumario_2b(data, fecha_rfc):
+    """De un sumario ya cargado (JSON de la API) extrae [(ref_boe, titulo,
+    fecha_rfc)] SOLO de la sección de Oposiciones y concursos (2B). Pura (sin
+    red) para poder testearla."""
+    sumario = (data or {}).get("data", {}).get("sumario", {})
+    out = []
+    for diario in _as_list(sumario.get("diario")):
+        for sec in _as_list(diario.get("seccion")):
+            if str(sec.get("codigo", "")).upper() == SECCION_OPOSICIONES:
+                out += [(i, t, fecha_rfc) for (i, t) in _walk_items(sec)]
+    return out
+
+
+def _fecha_rfc(yyyymmdd):
+    """'20260815' → 'Fri, 15 Aug 2026 00:00:00 +0200' (RFC 2822, hora de Madrid).
+    IMPORTANTE: el campo 'fecha' se parsea aguas abajo con parsedate_to_datetime
+    (newsletter y Telegram), así que DEBE conservar exactamente este formato — el
+    mismo que producía el pubDate del RSS."""
+    d = datetime.strptime(yyyymmdd, "%Y%m%d")
+    if _TZ_MADRID is not None:
+        d = d.replace(tzinfo=_TZ_MADRID)
+    return format_datetime(d)
+
+
+def _sumario_un_dia(yyyymmdd):
+    """Descarga el sumario del BOE de UNA fecha y devuelve [(ref_boe, titulo,
+    fecha_rfc)] de la sección 2B. Lista vacía si ese día no hay boletín (domingo,
+    festivo o aún no publicado → 404)."""
+    url = SUMARIO_API.format(fecha=yyyymmdd)
+    headers = {"Accept": "application/json",
+               "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            return []
+        raise
+    return _parse_sumario_2b(data, _fecha_rfc(yyyymmdd))
+
+
+def leer_boe_sumario(dias=None):
+    """Lee el sumario oficial del BOE (API de datos abiertos) de los últimos
+    `dias` días (hoy incluido) y devuelve las convocatorias de la sección 2B con
+    la MISMA forma de dict que leer_boe_rss().
+
+    Por qué así: el RSS es una ventana móvil y un run temprano podía leerlo antes
+    de que el BOE publicara el boletín del día, releyendo el de ayer (0 nuevas) y
+    dejando las convocatorias de hoy sin capturar hasta que la ventana rodara y
+    las perdiera. Pedir el sumario POR FECHA es determinista, y releer ayer/
+    anteayer es barato (el enlace es la clave de deduplicación → guardar da 409;
+    además el pre-check en Supabase evita gastar Claude en ellos)."""
+    dias = dias or BOE_DIAS_VENTANA
+    print(f"🔄 Leyendo sumario oficial del BOE (ventana de {dias} días)…")
+    hoy = datetime.now(_TZ_MADRID).date() if _TZ_MADRID else datetime.now().date()
+    vistos, convocatorias = set(), []
+    for delta in range(dias):
+        d = hoy - timedelta(days=delta)
+        clave = d.strftime("%Y%m%d")
+        try:
+            items = _sumario_un_dia(clave)
+        except Exception as e:
+            print(f"⚠️  Sumario {clave}: {e}")
+            continue
+        n_dia = 0
+        for ref_boe, titulo, fecha_rfc in items:
+            if ref_boe in vistos:
+                continue
+            vistos.add(ref_boe)
+            if es_convocatoria(titulo):
+                convocatorias.append({
+                    "fecha":   fecha_rfc,
+                    "titulo":  titulo,
+                    "enlace":  f"https://www.boe.es/diario_boe/txt.php?id={ref_boe}",
+                    "resumen": "",   # el texto real lo baja obtener_datos_boe()
+                    "ref_boe": ref_boe,
+                })
+                n_dia += 1
+        if items:
+            print(f"  📅 {d.isoformat()}: {n_dia} convocatoria(s) de {len(items)} en 2B")
+    print(f"✓ {len(convocatorias)} convocatoria(s) candidatas en la ventana\n")
+    return convocatorias
+
+
+def rows_existentes_supabase(enlaces):
+    """{enlace: fila} para los enlaces que YA están en Supabase (una consulta por
+    lotes). Permite (a) saltarse Claude en los duplicados de la ventana multi-día
+    y (b) reenviar a Telegram las pendientes con su resumen REAL hidratado desde
+    la BD, sin recomputarlo. Si la consulta falla → {} y se procesa todo (guardar
+    deduplica igual)."""
+    out = {}
+    if not (SUPABASE_URL and SUPABASE_API_KEY and enlaces):
+        return out
+    lista = list(enlaces)
+    for i in range(0, len(lista), 40):
+        trozo = lista[i:i + 40]
+        en = ",".join('"' + e.replace('"', '') + '"' for e in trozo)
+        q = urllib.parse.urlencode({
+            "select": "enlace,resumen_claude,categoria,comunidad_autonoma",
+            "enlace": f"in.({en})",
+        })
+        try:
+            req = urllib.request.Request(
+                f"{SUPABASE_URL}/rest/v1/convocatorias?{q}",
+                headers={"apikey": SUPABASE_API_KEY,
+                         "Authorization": f"Bearer {SUPABASE_API_KEY}"})
+            with urllib.request.urlopen(req, timeout=15) as r:
+                for row in json.loads(r.read()):
+                    if row.get("enlace"):
+                        out[row["enlace"]] = row
+        except Exception as e:
+            print(f"⚠️  Pre-check Supabase ({e}); se procesa sin filtrar.")
+    return out
 
 
 def leer_boe_rss():
@@ -1856,7 +2008,12 @@ def commit_a_github(mensaje, archivos):
 
 
 if __name__ == "__main__":
-    convocatorias = leer_boe_rss()
+    # Fuente PRIMARIA: sumario oficial por fecha (determinista). Si falla o está
+    # vacío (p. ej. la API no responde), se cae al RSS de toda la vida.
+    convocatorias = leer_boe_sumario()
+    if not convocatorias:
+        print("ℹ️  Sumario vacío o no disponible; probando el RSS como respaldo…")
+        convocatorias = leer_boe_rss()
 
     if not convocatorias:
         print("\n❌ No se encontraron convocatorias")
@@ -1865,8 +2022,24 @@ if __name__ == "__main__":
     nuevas = 0
     slugs_generados = []
 
+    # Pre-check: qué enlaces de la ventana YA están en Supabase. Evita re-analizar
+    # con Claude los duplicados (ayer/anteayer) e hidrata el backlog de Telegram.
+    existentes = rows_existentes_supabase({c['enlace'] for c in convocatorias})
+    if existentes:
+        print(f"⏭️  {len(existentes)} ya en Supabase (sin Claude) · "
+              f"{len(convocatorias) - len(existentes)} nuevas a analizar.\n")
+
     # ── 1) Procesar: resumen IA + comunidad + guardar en Supabase + HTML ──────
     for conv in convocatorias:
+        fila = existentes.get(conv['enlace'])
+        if fila is not None:
+            # Ya está en la BD: NO gastamos Claude. Hidratamos desde la BD para que
+            # el posible reenvío a Telegram (paso 2, backlog) salga completo.
+            conv['resumen_ia'] = fila.get('resumen_claude') or 'Convocatoria disponible'
+            conv['categoria'] = fila.get('categoria') or extraer_cuerpo(conv['titulo'])[1]
+            conv['comunidad_autonoma'] = fila.get('comunidad_autonoma')
+            continue
+
         cuerpo, categoria = extraer_cuerpo(conv['titulo'])
 
         print(f"\n🤖 Analizando: {conv['titulo'][:60]}...")

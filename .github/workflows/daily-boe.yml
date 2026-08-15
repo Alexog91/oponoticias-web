@@ -7,10 +7,12 @@ on:
   schedule:
     # UNA sola ejecución diaria. NO añadir crons de respaldo: el newsletter se
     # encadena con workflow_run a "Daily BOE Check", así que cada ejecución
-    # extra dispara OTRO correo de Brevo (el 26 jun 2026 hubo 3 ejecuciones →
-    # 3 correos + vídeos/posts duplicados). La resiliencia ante un timeout del
-    # BOE la dan los reintentos internos de leer_boe_rss() (5 intentos, ~3,5 min).
-    - cron: '0 5 * * 1-6'  # 7:00 CEST (UTC+2) · lunes-sábado (el BOE no publica domingos)
+    # extra dispara OTRO correo (el 26 jun 2026 hubo 3 ejecuciones → 3 correos +
+    # vídeos/posts duplicados). A las 8:00 CEST el sumario oficial del día ya
+    # está publicado (a las 7:00 a veces no lo estaba → se leía el de ayer). La
+    # red de seguridad definitiva es leer_boe_sumario(), que lee una ventana de
+    # varios días por fecha y auto-recupera cualquier día que no se capturara.
+    - cron: '0 6 * * 1-6'  # 8:00 CEST (UTC+2) · lunes-sábado (el BOE no publica domingos)
   workflow_dispatch:        # Permite ejecución manual desde GitHub UI
 
 permissions:
