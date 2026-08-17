@@ -2,9 +2,33 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oponoticias.com/blog</loc>
-    <lastmod>2026-08-13</lastmod>
+    <lastmod>2026-08-17</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-administracion-2026-plazas-y-convocatorias-202608</loc>
+    <lastmod>2026-08-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-justicia-2026-plazas-y-novedades-202608</loc>
+    <lastmod>2026-08-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-sanidad-2026-convocatorias-del-ingesa-202608</loc>
+    <lastmod>2026-08-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/preparar-la-prueba-fisica-de-oposiciones</loc>
+    <lastmod>2026-08-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://oponoticias.com/blog/oposiciones-de-seguridad-2026-plazas-requisitos-y-proceso-202608</loc>
