@@ -211,11 +211,24 @@ def generar_html(ccaa_nombre, slug, convocatorias):
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Oposiciones en {ccaa_nombre} {AÑO} | OpoNoticias</title>
+  <title>Oposiciones y empleo público en {ccaa_nombre} {AÑO} | OpoNoticias</title>
   <meta name="description" content="{html_lib.escape(meta_desc)}">
   <link rel="canonical" href="{canonical}">
   <meta name="robots" content="{robots}">
   <meta name="theme-color" content="#5A5047">
+
+  <!-- Open Graph / Twitter: preview al compartir en Telegram/Facebook/X -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpoNoticias">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="Oposiciones y empleo público en {ccaa_nombre} {AÑO}">
+  <meta property="og:description" content="{html_lib.escape(meta_desc)}">
+  <meta property="og:url" content="{canonical}">
+  <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Oposiciones y empleo público en {ccaa_nombre} {AÑO}">
+  <meta name="twitter:description" content="{html_lib.escape(meta_desc)}">
+  <meta name="twitter:image" content="https://oponoticias.com/social/telegram-banner.png">
   <script>document.documentElement.className += ' js';</script>
 
   <link rel="icon" type="image/svg+xml" href="../assets/icon-512.svg">
@@ -278,7 +291,7 @@ def generar_html(ccaa_nombre, slug, convocatorias):
       <article class="legal-doc">
         <header class="article-header">
           <span class="article-tag">Comunidad Autónoma</span>
-          <h1>Oposiciones en {ccaa_nombre} {AÑO}</h1>
+          <h1>Oposiciones y empleo público en {ccaa_nombre} {AÑO}</h1>
           <div class="article-meta">
             <span>Actualizado: <b>{HOY}</b></span>
             &nbsp;·&nbsp;

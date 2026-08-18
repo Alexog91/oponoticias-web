@@ -212,6 +212,12 @@ def generar_html(destacadas):
   <meta property="og:title" content="Convocatorias de oposiciones en España {AÑO} | OpoNoticias">
   <meta property="og:description" content="Todas las convocatorias de oposiciones activas en España, organizadas por categoría y comunidad autónoma.">
   <meta property="og:url" content="https://oponoticias.com/convocatorias">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Convocatorias de oposiciones en España {AÑO} | OpoNoticias">
+  <meta name="twitter:description" content="Todas las convocatorias de oposiciones activas en España, organizadas por categoría y comunidad autónoma.">
+  <meta name="twitter:image" content="https://oponoticias.com/social/telegram-banner.png">
 
   <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">

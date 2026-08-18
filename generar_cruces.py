@@ -221,6 +221,19 @@ def generar_html(cat_nombre, cat_slug, ccaa_nombre, ccaa_slug, convocatorias, n_
   <link rel="canonical" href="{canonical}">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#5A5047">
+
+  <!-- Open Graph / Twitter: preview al compartir en Telegram/Facebook/X -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpoNoticias">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="Oposiciones de {cat_nombre} en {ccaa_nombre} {AÑO}">
+  <meta property="og:description" content="{html_lib.escape(meta_desc)}">
+  <meta property="og:url" content="{canonical}">
+  <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Oposiciones de {cat_nombre} en {ccaa_nombre} {AÑO}">
+  <meta name="twitter:description" content="{html_lib.escape(meta_desc)}">
+  <meta name="twitter:image" content="https://oponoticias.com/social/telegram-banner.png">
   <script>document.documentElement.className += ' js';</script>
 
   <link rel="icon" type="image/svg+xml" href="../../assets/icon-512.svg">

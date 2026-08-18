@@ -205,6 +205,19 @@ def generar_html(cat_nombre, slug, descripcion, convocatorias):
   <link rel="canonical" href="{canonical}">
   <meta name="robots" content="{robots}">
   <meta name="theme-color" content="#5A5047">
+
+  <!-- Open Graph / Twitter: preview al compartir en Telegram/Facebook/X -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="OpoNoticias">
+  <meta property="og:locale" content="es_ES">
+  <meta property="og:title" content="Oposiciones de {cat_nombre} {AÑO}">
+  <meta property="og:description" content="{html_lib.escape(meta_desc)}">
+  <meta property="og:url" content="{canonical}">
+  <meta property="og:image" content="https://oponoticias.com/social/telegram-banner.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Oposiciones de {cat_nombre} {AÑO}">
+  <meta name="twitter:description" content="{html_lib.escape(meta_desc)}">
+  <meta name="twitter:image" content="https://oponoticias.com/social/telegram-banner.png">
   <script>document.documentElement.className += ' js';</script>
 
   <link rel="icon" type="image/svg+xml" href="../assets/icon-512.svg">
@@ -224,7 +237,6 @@ def generar_html(cat_nombre, slug, descripcion, convocatorias):
     "publisher": {{"@type": "Organization", "name": "OpoNoticias", "url": "https://oponoticias.com"}}
   }}
   </script>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4832095429696459" crossorigin="anonymous"></script>
 </head>
 <body>
 
