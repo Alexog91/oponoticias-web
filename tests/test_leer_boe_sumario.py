@@ -105,6 +105,65 @@ test("dedup: la misma disposición en varios días aparece una sola vez",
      lambda: len(_run_mismo_todos_los_dias()) == 2)
 
 
+# ── Aviso al admin los días sin convocatorias (2B vacía) ───────────────────────
+def _run_con_sumario(fake_un_dia):
+    orig = lb._sumario_un_dia
+    lb._sumario_un_dia = fake_un_dia
+    try:
+        return lb.leer_boe_sumario(dias=3)
+    finally:
+        lb._sumario_un_dia = orig
+
+# Hoy CON convocatorias → no se avisa; _STATS_HOY refleja 3 crudas / 2 válidas.
+def _hoy_con():
+    llam = {"n": 0}
+    def fake(_d):
+        llam["n"] += 1
+        return lb._parse_sumario_2b(SAMPLE, "Fri, 15 Aug 2026 00:00:00 +0200") if llam["n"] == 1 else []
+    _run_con_sumario(fake)
+    return lb._STATS_HOY
+
+test("día con convocatorias: publicado=True, validas>0, NO se avisa",
+     lambda: (_hoy_con()["publicado"] is True and _hoy_con()["validas"] == 2
+              and lb._debe_avisar_admin(lb._STATS_HOY) is False))
+
+# Hoy con 2B VACÍA (boletín existe, [] ) → SÍ se avisa.
+def _hoy_vacio():
+    _run_con_sumario(lambda _d: [])          # todos los días: boletín existe, 2B vacía
+    return lb._STATS_HOY
+
+test("día con 2B vacía: publicado=True, raw=0, validas=0 → SÍ se avisa",
+     lambda: (_hoy_vacio()["publicado"] is True and _hoy_vacio()["raw"] == 0
+              and lb._debe_avisar_admin(lb._STATS_HOY) is True))
+
+# Hoy SIN boletín (404 → None) → NO se avisa (falso día vacío).
+def _hoy_sin_boletin():
+    _run_con_sumario(lambda _d: None)        # 404 en todos
+    return lb._STATS_HOY
+
+test("día sin boletín (404): publicado=False → NO se avisa",
+     lambda: (_hoy_sin_boletin()["publicado"] is False
+              and lb._debe_avisar_admin(lb._STATS_HOY) is False))
+
+# Hoy con entradas pero TODAS libre designación (0 válidas) → SÍ se avisa.
+SOLO_LIBRE = {"data": {"sumario": {"diario": [{"seccion": [
+    {"codigo": "2B", "departamento": [{"item": [
+        {"identificador": "BOE-A-2026-900",
+         "titulo": "Resolución por la que se convoca la provisión de puestos por libre designación."},
+    ]}]}]}]}}}
+def _hoy_solo_libre():
+    llam = {"n": 0}
+    def fake(_d):
+        llam["n"] += 1
+        return lb._parse_sumario_2b(SOLO_LIBRE, "x") if llam["n"] == 1 else []
+    _run_con_sumario(fake)
+    return lb._STATS_HOY
+
+test("día con solo libre designación: raw>0 pero validas=0 → SÍ se avisa",
+     lambda: (_hoy_solo_libre()["raw"] == 1 and _hoy_solo_libre()["validas"] == 0
+              and lb._debe_avisar_admin(lb._STATS_HOY) is True))
+
+
 if __name__ == "__main__":
     fallos = 0
     for nombre, fn in casos:

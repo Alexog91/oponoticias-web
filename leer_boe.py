@@ -30,6 +30,12 @@ RSS_URL = "https://www.boe.es/rss/boe.php?s=2B"
 SUMARIO_API = "https://boe.es/datosabiertos/api/boe/sumario/{fecha}"
 SECCION_OPOSICIONES = "2B"   # II.B — Oposiciones y concursos
 BOE_DIAS_VENTANA = int(os.environ.get("BOE_DIAS_VENTANA", "3"))  # hoy + 2 anteriores
+
+# leer_boe_sumario() rellena esto con la situación de HOY (el 1er día de la
+# ventana) para poder avisar al admin los días que el BOE sale sin convocatorias.
+#   publicado: True si hay boletín hoy (None = no publicado / no se pudo leer)
+#   raw:       nº de entradas en la sección 2B hoy · validas: cuántas son convocatorias
+_STATS_HOY = {"fecha": None, "publicado": None, "raw": None, "validas": None}
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -96,8 +102,10 @@ def _fecha_rfc(yyyymmdd):
 
 def _sumario_un_dia(yyyymmdd):
     """Descarga el sumario del BOE de UNA fecha y devuelve [(ref_boe, titulo,
-    fecha_rfc)] de la sección 2B. Lista vacía si ese día no hay boletín (domingo,
-    festivo o aún no publicado → 404)."""
+    fecha_rfc)] de la sección 2B. Devuelve None si ese día NO hay boletín
+    (domingo, festivo o aún no publicado → 404) — distinto de [] (el boletín
+    existe pero la sección 2B viene vacía), que sí interesa para el aviso al
+    admin de 'día sin convocatorias'."""
     url = SUMARIO_API.format(fecha=yyyymmdd)
     headers = {"Accept": "application/json",
                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"}
@@ -107,7 +115,7 @@ def _sumario_un_dia(yyyymmdd):
             data = json.loads(r.read())
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            return []
+            return None
         raise
     return _parse_sumario_2b(data, _fecha_rfc(yyyymmdd))
 
@@ -130,11 +138,12 @@ def leer_boe_sumario(dias=None):
     for delta in range(dias):
         d = hoy - timedelta(days=delta)
         clave = d.strftime("%Y%m%d")
+        crudo = None            # None = sin boletín (404); [] = 2B vacía; [...] = con entradas
         try:
-            items = _sumario_un_dia(clave)
+            crudo = _sumario_un_dia(clave)
         except Exception as e:
             print(f"⚠️  Sumario {clave}: {e}")
-            continue
+        items = crudo or []
         n_dia = 0
         for ref_boe, titulo, fecha_rfc in items:
             if ref_boe in vistos:
@@ -149,6 +158,13 @@ def leer_boe_sumario(dias=None):
                     "ref_boe": ref_boe,
                 })
                 n_dia += 1
+        if delta == 0:          # HOY: guardar la foto para el aviso al admin
+            _STATS_HOY.update(
+                fecha=d.isoformat(),
+                publicado=(crudo is not None),
+                raw=(len(items) if crudo is not None else None),
+                validas=(n_dia if crudo is not None else None),
+            )
         if items:
             print(f"  📅 {d.isoformat()}: {n_dia} convocatoria(s) de {len(items)} en 2B")
     print(f"✓ {len(convocatorias)} convocatoria(s) candidatas en la ventana\n")
@@ -900,6 +916,58 @@ def enviar_resumen_privado(convocatorias_enviadas):
                   "@OPONOTICIAS_BOT (debe pulsar Start y usar su chat_id personal).")
     except Exception as e:
         print(f"⚠️  Resumen privado: {e}")
+
+
+def enviar_aviso_admin(mensaje_html):
+    """Envía un mensaje suelto (HTML) al chat privado del admin. Best-effort."""
+    if not (TELEGRAM_ADMIN_CHAT_ID and TELEGRAM_TOKEN):
+        return
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        data = {
+            'chat_id': TELEGRAM_ADMIN_CHAT_ID,
+            'text': mensaje_html,
+            'parse_mode': 'HTML',
+            'disable_web_page_preview': True,
+        }
+        req = urllib.request.Request(
+            url,
+            data=urllib.parse.urlencode(data).encode('utf-8'),
+            headers={'Content-Type': 'application/x-www-form-urlencoded'},
+        )
+        urllib.request.urlopen(req, timeout=10).read()
+        print("✅ Aviso enviado al admin por privado")
+    except Exception as e:
+        print(f"⚠️  Aviso al admin: {e}")
+
+
+def _debe_avisar_admin(stats):
+    """True si hay que avisar al admin: hay boletín hoy (publicado) pero HOY no
+    trajo convocatorias nuevas de oposiciones (validas == 0). Si no hay boletín
+    (publicado=False, p. ej. 404 porque aún no se publicó) NO se avisa, para no
+    dar un falso 'día vacío' cuando en realidad el BOE aún no estaba disponible."""
+    return bool(stats.get("publicado")) and stats.get("validas") == 0
+
+
+def avisar_si_boe_sin_convocatorias():
+    """Los días que el BOE sale sin convocatorias NUEVAS de oposiciones (sección
+    2B vacía o solo con libre designación/trámites), avisa al admin por privado
+    para que sepa que ver 0-1 convocatorias en el canal ese día es CORRECTO
+    (backlog), no un fallo. Usa la foto de HOY que dejó leer_boe_sumario()."""
+    if not _debe_avisar_admin(_STATS_HOY):
+        return
+    if _STATS_HOY.get("raw") == 0:
+        detalle = "la sección 2B (Oposiciones y concursos) ha salido <b>vacía</b>"
+    else:
+        detalle = (f"la sección 2B trae {_STATS_HOY['raw']} entrada(s), pero ninguna "
+                   f"es convocatoria nueva (libre designación / trámites)")
+    fecha_str = datetime.now().strftime("%d/%m/%Y")
+    enviar_aviso_admin(
+        f"ℹ️ <b>BOE del {fecha_str}: sin convocatorias nuevas de oposiciones</b>\n\n"
+        f"Hoy {detalle}. Es normal en agosto y en días sueltos.\n\n"
+        f"Si hoy ves 0-1 convocatorias en el canal, es <b>backlog</b> (pendientes "
+        f"de días anteriores), <b>no un fallo</b> del sistema."
+    )
 
 
 def publicar_tweet_resumen(convocatorias_enviadas):
@@ -2135,3 +2203,6 @@ if __name__ == "__main__":
 
     print(f"\n✅ Procesadas {len(convocatorias)} convocatorias. "
           f"Nuevas: {nuevas} · Enviadas a Telegram: {enviadas_tg}")
+
+    # Aviso al admin los días que el BOE sale sin convocatorias nuevas (2B vacía).
+    avisar_si_boe_sin_convocatorias()
