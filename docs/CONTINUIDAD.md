@@ -26,7 +26,7 @@ sirve para *hacer cambios*, no para *funcionar*.
 | Sistema | Qué guarda | ¿Sobrevive si se rompe el Mac? | ¿Backup? |
 |---|---|:---:|---|
 | GitHub | Todo el código + workflows + secretos | ✅ Sí | El propio Git (historial completo) |
-| Supabase | Convocatorias, **suscriptores**, blog | ✅ Sí | ⚠️ **Ninguno** (ver "Riesgos") |
+| Supabase | Convocatorias, **suscriptores**, blog | ✅ Sí | ✅ Suscriptores: backup semanal por email (`backup-suscriptores.yml`) |
 | Vercel | Hosting de la web | ✅ Sí | Se redespliega desde GitHub |
 | AWS SES | Envío de correo | ✅ Sí | N/A (infraestructura) |
 | Registrador del dominio | `oponoticias.com` | ✅ Sí | N/A |
@@ -104,11 +104,12 @@ ya no se usa.)
 - **Se pierde el dominio** → se recompra/recupera en el registrador; la web y el
   correo vuelven al re-apuntar el DNS.
 
-## PENDIENTE (lo único que falta montar)
+## PENDIENTE (lo que falta, y solo lo puedes hacer tú)
 
-- [ ] **Backup automático de la tabla `suscriptores`** fuera de Supabase (es lo
-  único irremplazable sin copia). Propuesta: un workflow semanal que exporte los
-  suscriptores y los guarde en un sitio privado (correo al admin o repo privado).
+- [x] ~~Backup automático de la tabla `suscriptores`~~ → **HECHO**: `backup_suscriptores.py`
+  + workflow `backup-suscriptores.yml` envían un CSV por email a `info@oponoticias.com`
+  cada domingo. Guarda esos correos (o muévelos a una carpeta) para tener la copia
+  fuera de Supabase.
 - [ ] Guardar el valor de los secretos en el gestor de contraseñas.
 - [ ] Activar renovación automática del dominio y anotar su caducidad.
 - [ ] Verificar 2FA + códigos de recuperación de todas las cuentas.
