@@ -1,0 +1,36 @@
+name: Backup Suscriptores
+
+# Copia de seguridad semanal de la tabla `suscriptores` (lo único irremplazable):
+# exporta a CSV y lo envía por Amazon SES al buzón de backup. Ver
+# docs/CONTINUIDAD.md y backup_suscriptores.py.
+on:
+  schedule:
+    # Domingos 07:00 CEST. El BOE no publica en domingo, así que no coincide con
+    # el flujo diario ni con el newsletter encadenado.
+    - cron: '0 5 * * 0'
+  workflow_dispatch:        # ejecución manual bajo demanda
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Enviar backup de suscriptores por email (SES)
+        env:
+          SUPABASE_URL:     ${{ secrets.SUPABASE_URL }}
+          SUPABASE_API_KEY: ${{ secrets.SUPABASE_API_KEY }}
+          SES_SMTP_USER:    ${{ secrets.SES_SMTP_USER }}
+          SES_SMTP_PASS:    ${{ secrets.SES_SMTP_PASS }}
+          # BACKUP_EMAIL: por defecto info@oponoticias.com (buzón Proton del negocio).
+          # Descomenta para cambiarlo:
+          # BACKUP_EMAIL: 'otro@correo.com'
+        run: python3 backup_suscriptores.py
