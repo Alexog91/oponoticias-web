@@ -65,6 +65,9 @@ SITE_URL     = os.environ.get("SITE_URL", "https://oponoticias.com").rstrip("/")
 TEST_EMAILS    = [e.strip() for e in os.environ.get("TEST_EMAILS", "").split(",") if e.strip()]
 TEST_COMUNIDAD = os.environ.get("TEST_COMUNIDAD", "")
 TEST_CATEGORIA = os.environ.get("TEST_CATEGORIA", "")
+# El banner de "novedad: filtro por categoría" se muestra en el newsletter hasta
+# esta fecha (incl.) y luego desaparece solo. Fecha del despliegue + ~1 semana.
+AVISO_CATEGORIA_HASTA = os.environ.get("AVISO_CATEGORIA_HASTA", "2026-08-27")
 DRY_RUN        = os.environ.get("DRY_RUN") == "1"
 # Pausa entre envíos (seg). Producción SES admite 14/seg; en sandbox es 1/seg,
 # así que en pruebas conviene subirlo (p.ej. SEND_INTERVAL=1.1).
@@ -243,6 +246,21 @@ def construir_html(convocatorias_suyas, total_hoy, comunidad, unsubscribe_url):
     fecha_larga = formatear_fecha_larga(HOY)
     n = len(convocatorias_suyas)
 
+    # Banner de aviso de la nueva preferencia de categoría (autolimitado por fecha).
+    aviso_cat = ""
+    if HOY <= AVISO_CATEGORIA_HASTA:   # HOY es ISO 'YYYY-MM-DD' → orden lexicográfico OK
+        aviso_cat = (
+            '<tr><td style="padding:0 24px 8px;">'
+            '<div style="background:#f4efe6;border:1px solid #e6ddcb;border-radius:10px;'
+            'padding:14px 16px;font-size:14px;color:#5a5047;line-height:1.6;">'
+            '📢 <strong>Novedad:</strong> ahora puedes recibir en el correo solo tu '
+            '<strong>comunidad</strong> y/o tu <strong>categoría</strong> '
+            '(Administración, Sanidad, Educación…). '
+            f'<a href="{SITE_URL}/preferencias" '
+            'style="color:#c4a574;font-weight:600;text-decoration:none;">Ajusta tus preferencias&nbsp;→</a>'
+            '</div></td></tr>'
+        )
+
     if convocatorias_suyas:
         cuerpo_tabla = "".join(tarjeta_html(c) for c in convocatorias_suyas)
     else:
@@ -283,6 +301,7 @@ def construir_html(convocatorias_suyas, total_hoy, comunidad, unsubscribe_url):
   <tr><td style="padding:20px 24px 8px;">
     <p style="margin:0;color:#5a5047;font-size:14px;">Buenos días. Estas son las nuevas convocatorias publicadas hoy en el BOE:</p>
   </td></tr>
+  {aviso_cat}
   {cuerpo_tabla}
   <tr><td style="padding:20px 24px;">
     <a href="{SITE_URL}" style="display:inline-block;background:#5a5047;color:#fff;text-decoration:none;padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;">
