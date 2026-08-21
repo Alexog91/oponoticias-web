@@ -64,6 +64,7 @@ SITE_URL     = os.environ.get("SITE_URL", "https://oponoticias.com").rstrip("/")
 
 TEST_EMAILS    = [e.strip() for e in os.environ.get("TEST_EMAILS", "").split(",") if e.strip()]
 TEST_COMUNIDAD = os.environ.get("TEST_COMUNIDAD", "")
+TEST_CATEGORIA = os.environ.get("TEST_CATEGORIA", "")
 DRY_RUN        = os.environ.get("DRY_RUN") == "1"
 # Pausa entre envíos (seg). Producción SES admite 14/seg; en sandbox es 1/seg,
 # así que en pruebas conviene subirlo (p.ej. SEND_INTERVAL=1.1).
@@ -128,10 +129,10 @@ def obtener_suscriptores():
     if TEST_EMAILS:
         print(f"  🧪 Modo prueba: {len(TEST_EMAILS)} destinatario(s) de TEST_EMAILS "
               f"(comunidad simulada: '{TEST_COMUNIDAD or 'todas'}')")
-        return [{"email": e, "comunidad": TEST_COMUNIDAD, "token_baja": "test"}
+        return [{"email": e, "comunidad": TEST_COMUNIDAD, "categoria": TEST_CATEGORIA, "token_baja": "test"}
                 for e in TEST_EMAILS]
     subs = supabase_get("suscriptores", {
-        "select": "email,comunidad,token_baja",
+        "select": "email,comunidad,categoria,token_baja",
         "estado": "eq.activo",
         # Orden estable: obligatorio para que la paginación no repita ni pierda
         # filas cuando la lista pase de 1.000 (tope por petición de Supabase).
@@ -157,7 +158,7 @@ def con_contenido(suscriptores, convocatorias):
     """
     con, sin = [], 0
     for s in suscriptores:
-        suyas = convocatorias_para(s.get("comunidad") or "", convocatorias)
+        suyas = convocatorias_para(s.get("comunidad") or "", s.get("categoria") or "", convocatorias)
         if suyas:
             con.append((s, suyas))
         else:
@@ -167,17 +168,26 @@ def con_contenido(suscriptores, convocatorias):
     return con
 
 
-def convocatorias_para(comunidad, convocatorias):
-    """Devuelve las convocatorias que le tocan a un suscriptor según su comunidad.
-    - Sin comunidad (o estatal) → las ve TODAS.
-    - Con una CCAA concreta → solo las suyas + las de ámbito estatal.
-    Misma regla que la condición {% if %} que usaba Brevo, resuelta en Python."""
-    if _es_estatal(comunidad):
-        return list(convocatorias)
-    objetivo = comunidad.strip()
-    return [c for c in convocatorias
-            if _es_estatal(c.get("comunidad_autonoma"))
-            or (c.get("comunidad_autonoma") or "").strip() == objetivo]
+def convocatorias_para(comunidad, categoria, convocatorias):
+    """Convocatorias que le tocan a un suscriptor. DOS filtros independientes con
+    Y lógico; cada uno es no-op si su preferencia está vacía:
+    - Comunidad: vacía/estatal → todas; si no → las de su CCAA + las estatales.
+    - Categoría: vacía → todas; si no → solo las de esa categoría (nombre exacto)."""
+    cat = (categoria or "").strip()
+    objetivo = (comunidad or "").strip()
+
+    def pasa_comunidad(c):
+        if _es_estatal(comunidad):
+            return True
+        return (_es_estatal(c.get("comunidad_autonoma"))
+                or (c.get("comunidad_autonoma") or "").strip() == objetivo)
+
+    def pasa_categoria(c):
+        if not cat:
+            return True
+        return (c.get("categoria") or "").strip() == cat
+
+    return [c for c in convocatorias if pasa_comunidad(c) and pasa_categoria(c)]
 
 
 # ── Construcción del HTML (reutiliza la estética de la versión Brevo) ─
