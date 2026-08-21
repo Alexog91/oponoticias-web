@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Elige tu comunidad — OpoNoticias</title>
-  <meta name="description" content="Elige tu comunidad autónoma para recibir en el correo diario solo las convocatorias de oposiciones que te interesan.">
+  <title>Elige tus preferencias — OpoNoticias</title>
+  <meta name="description" content="Elige tu comunidad autónoma y/o tu categoría para recibir en el correo diario solo las convocatorias de oposiciones que te interesan.">
   <link rel="canonical" href="https://oponoticias.com/preferencias">
   <meta name="robots" content="noindex, follow">
   <meta name="theme-color" content="#5A5047">
@@ -50,8 +50,8 @@
     <div class="pref-wrap">
       <div class="pref-head">
         <span class="eyebrow">Tu correo diario, a tu medida</span>
-        <h1>Elige tu comunidad</h1>
-        <p class="lead">Dinos de qué comunidad autónoma quieres recibir las convocatorias y ajustaremos tu correo diario. Puedes cambiarlo cuando quieras.</p>
+        <h1>Elige tus preferencias</h1>
+        <p class="lead">Dinos tu comunidad autónoma y/o tu categoría, y ajustaremos tu correo diario para que recibas solo lo que te interesa. Los dos filtros son independientes y puedes cambiarlos cuando quieras.</p>
       </div>
 
       <div class="pref-card">
@@ -88,7 +88,22 @@
             </select>
           </div>
 
-          <button type="submit" class="btn btn-primary pref-btn" id="prefSubmit">Guardar mi preferencia</button>
+          <div class="pref-field">
+            <label for="prefCat">Categoría (opcional)</label>
+            <select id="prefCat" class="pref-select">
+              <option value="">Todas las categorías</option>
+              <option>Educación</option>
+              <option>Sanidad</option>
+              <option>Justicia</option>
+              <option>Seguridad</option>
+              <option>Administración</option>
+              <option>Hacienda</option>
+              <option>Correos</option>
+              <option>Técnica</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary pref-btn" id="prefSubmit">Guardar mis preferencias</button>
           <p class="pref-msg" id="prefMsg" role="status"></p>
         </form>
 
@@ -126,6 +141,7 @@
       ev.preventDefault();
       var mail = email || (emailInput.value || '').trim();
       var com  = document.getElementById('prefCom').value;
+      var cat  = document.getElementById('prefCat').value;
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) {
         emailField.hidden = false;
         msg.textContent = 'Escribe un correo válido.'; msg.className = 'pref-msg err';
@@ -139,21 +155,24 @@
       xhr.onload = function(){
         var r = {}; try { r = JSON.parse(xhr.responseText); } catch(_){}
         if (xhr.status === 200 && r.ok) {
-          var etiqueta = com || 'todas las comunidades';
-          msg.textContent = '✓ Listo. A partir de ahora recibirás las convocatorias de ' + etiqueta + '.';
+          var partes = [];
+          if (com) partes.push(com);
+          if (cat) partes.push(cat.toLowerCase());
+          var etiqueta = partes.length ? partes.join(' · ') : 'todas las convocatorias';
+          msg.textContent = '✓ Listo. A partir de ahora recibirás: ' + etiqueta + '.';
           msg.className = 'pref-msg ok';
-          btn.textContent = 'Preferencia guardada';
+          btn.textContent = 'Preferencias guardadas';
         } else {
-          btn.disabled = false; btn.textContent = 'Guardar mi preferencia';
+          btn.disabled = false; btn.textContent = 'Guardar mis preferencias';
           msg.textContent = 'No se ha podido guardar. Inténtalo de nuevo o escríbenos a info@oponoticias.com';
           msg.className = 'pref-msg err';
         }
       };
       xhr.onerror = function(){
-        btn.disabled = false; btn.textContent = 'Guardar mi preferencia';
+        btn.disabled = false; btn.textContent = 'Guardar mis preferencias';
         msg.textContent = 'Error de conexión. Inténtalo de nuevo.'; msg.className = 'pref-msg err';
       };
-      xhr.send(JSON.stringify({ email: mail, comunidad: com }));
+      xhr.send(JSON.stringify({ email: mail, comunidad: com, categoria: cat }));
     });
   })();
   </script>
