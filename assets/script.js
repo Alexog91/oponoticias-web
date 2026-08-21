@@ -169,6 +169,10 @@
               '<option value="">Tu comunidad (opcional) — recibir todas</option>' +
               '<option>Andalucía</option><option>Aragón</option><option>Asturias</option><option>Baleares</option><option>Canarias</option><option>Cantabria</option><option>Castilla-La Mancha</option><option>Castilla y León</option><option>Cataluña</option><option>Comunidad Valenciana</option><option>Extremadura</option><option>Galicia</option><option>La Rioja</option><option>Madrid</option><option>Murcia</option><option>Navarra</option><option>País Vasco</option><option>Ceuta</option><option>Melilla</option><option>Nacional/Estatal</option>' +
             '</select>' +
+            '<select id="nlPopCategoria" name="categoria" aria-label="Categoría (opcional)" style="width:100%;margin-top:10px;padding:12px 14px;border:1.5px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font-family:var(--sans);font-size:0.95rem;">' +
+              '<option value="">Categoría (opcional) — todas</option>' +
+              '<option>Educación</option><option>Sanidad</option><option>Justicia</option><option>Seguridad</option><option>Administración</option><option>Hacienda</option><option>Correos</option><option>Técnica</option>' +
+            '</select>' +
             '<button type="submit" class="btn btn-primary" style="margin-top:10px;">Enviarme el Kit →</button>' +
             '<p class="newsletter-legal">Al suscribirte aceptas nuestra <a href="' + privacyHref() + '">política de privacidad</a>. Sin spam.</p>' +
             '<div class="newsletter-msg" id="nlPopMsg" aria-live="polite"></div>' +
@@ -231,6 +235,8 @@
       var btn   = overlay.querySelector('button[type="submit"]');
       var email = (input.value || '').trim();
       var comunidad = comSel ? comSel.value : '';
+      var catSel = overlay.querySelector('#nlPopCategoria');
+      var categoria = catSel ? catSel.value : '';
       if (!email) return;
 
       btn.disabled = true; btn.textContent = 'Enviando…';
@@ -260,7 +266,7 @@
         msg.textContent = 'Error de conexión. Inténtalo de nuevo.';
         msg.className = 'newsletter-msg err';
       };
-      xhr.send(JSON.stringify({ email: email, comunidad: comunidad }));
+      xhr.send(JSON.stringify({ email: email, comunidad: comunidad, categoria: categoria }));
     }
 
     /* ── Disparadores ── */
