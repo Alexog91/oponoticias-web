@@ -14,19 +14,20 @@ const COMUNIDADES = new Set([
   'País Vasco', 'Ceuta', 'Melilla', 'Nacional/Estatal',
 ]);
 
-// Actualiza la comunidad del suscriptor en Supabase. Upsert por email
-// (merge-duplicates); se omiten estado y token_baja (se conservan; el default
-// cubre las filas nuevas, p. ej. si el enlace se abre antes del alta).
-function supabaseUpsertComunidad(email, comunidad) {
-  return supabaseUpsert('suscriptores', [{ email, comunidad }]);
-}
+// Categorías válidas (nombre tal cual se guarda en convocatorias.categoria).
+// "" = todas las categorías.
+const CATEGORIAS = new Set([
+  'Educación', 'Sanidad', 'Justicia', 'Seguridad',
+  'Administración', 'Hacienda', 'Correos', 'Técnica',
+]);
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, comunidad } = req.body || {};
+  const body = req.body || {};
+  const { email, comunidad, categoria } = body;
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'Email inválido' });
@@ -37,9 +38,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Comunidad no válida' });
   }
 
-  // Guarda la comunidad en Supabase (fuente de verdad). Upsert por email:
-  // actualiza si ya existe, o crea la fila si el enlace se abre antes del alta.
-  const sb = await supabaseUpsertComunidad(email, com);
+  // La comunidad se escribe siempre (permite volver a "todas" con ""). La
+  // categoría solo si viene en el body: así una página antigua que no la manda no
+  // la pisa; y "" (o un valor desconocido) la limpia → todas las categorías.
+  const fila = { email, comunidad: com };
+  if ('categoria' in body) {
+    const c = typeof categoria === 'string' ? categoria.trim() : '';
+    fila.categoria = CATEGORIAS.has(c) ? c : '';
+  }
+
+  // Upsert por email: actualiza si ya existe, o crea la fila si el enlace se abre
+  // antes del alta (el default de la BD cubre estado y token_baja).
+  const sb = await supabaseUpsert('suscriptores', [fila]);
   if (sb.skipped) {
     console.error('Faltan SUPABASE_URL / SUPABASE_API_KEY');
     return res.status(500).json({ error: 'Configuración incompleta' });
