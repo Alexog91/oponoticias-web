@@ -22,7 +22,8 @@ ambos, o ninguno.
 3. Selector de categoría en los **tres** puntos de captura: formulario de la home,
    popup de suscripción, y página `/preferencias`.
 4. APIs `subscribe.js` y `preferencias.js` aceptan y validan `categoria`.
-5. Aviso a los suscriptores de la novedad (redes sociales + email).
+5. Aviso de la novedad: banner en el newsletter diario (autolimitado por fecha) + copys
+   para redes sociales. Se publica después de desplegar la función.
 
 ## 1. Modelo de datos
 
@@ -75,10 +76,14 @@ Una convocatoria se envía al suscriptor **si pasa AMBOS filtros**.
   evita correos vacíos (protege la tasa de quejas de SES).
 
 **Nota de producto (expectativas):** ~95% de las convocatorias diarias del BOE son de
-`Administración` (ayuntamientos/diputaciones). El filtro de categoría sirve sobre todo
-para **estrechar a un nicho** (p. ej. un sanitario que solo quiere Sanidad se quita el
-ruido administrativo). Quien elija Administración seguirá recibiendo casi todo — que es
-justo lo que pidió Moisés. Categorías raras (Correos, Hacienda) recibirán pocos correos.
+`Administración` (ayuntamientos/diputaciones). Por tanto:
+- Elegir **solo Administración** apenas reduce el volumen (sigue llegando casi todo) —
+  que es justo lo que pidió Moisés, así que le vale.
+- Elegir **comunidad + Administración** SÍ reduce el ruido de verdad: solo las de
+  Administración de su comunidad (+ estatales de Administración). Ahí está el valor real
+  de combinar los dos filtros.
+- Elegir una categoría de nicho (Sanidad, Educación…) quita el ruido administrativo por
+  completo. Categorías raras (Correos, Hacienda) recibirán pocos correos.
 
 ## 3. Interfaz — selector de categoría en 3 sitios
 
@@ -116,17 +121,18 @@ Siguen el MISMO patrón que ya tiene `comunidad` (importante, resuelve el "limpi
 
 ## 5. Aviso a los suscriptores (novedad)
 
-Anunciar la nueva función en **todas las redes** + a los suscriptores por email.
-
-- **Copys por red** (Telegram, Facebook, Instagram, X): mensaje breve tipo
-  *"📢 Novedad: ahora puedes recibir en tu correo solo las oposiciones de tu comunidad
-  Y/O de tu categoría (Administración, Sanidad, Educación…). Ajusta tus preferencias
-  aquí 👉 oponoticias.com/preferencias"*, adaptado al tono de cada red.
-- **Email a los 343 suscriptores** (recomendado, son los beneficiarios directos): un
-  correo único anunciando que ya pueden elegir su categoría en `/preferencias`. Se puede
-  reutilizar la mecánica SMTP de SES del newsletter (envío puntual, no el diario).
-- **Publicación:** los copys se preparan como entregable; la publicación en redes se hace
-  con confirmación explícita (acción pública). El email puntual, igual.
+- **A los suscriptores: dentro del newsletter diario** (NO un correo aparte). Se añade un
+  banner de anuncio en la plantilla del newsletter (`construir_html` de
+  `enviar_newsletter_ses.py`), autolimitado por fecha: se muestra mientras
+  `hoy <= AVISO_CATEGORIA_HASTA` (p. ej. una semana) y luego desaparece solo, sin tocar
+  código (mismo patrón que las FIJADAS de la portada). El texto invita a elegir su
+  categoría en `/preferencias`.
+- **Redes sociales** (Telegram, Facebook, Instagram, X): copys breves adaptados a cada red,
+  con enlace a `oponoticias.com/preferencias`. Se preparan como entregable; el usuario los
+  publica (acción pública).
+- **Orden importante:** el aviso (newsletter + redes) se publica **una vez la función esté
+  desplegada y funcionando**, no antes — si no, quien entre en `/preferencias` no verá el
+  selector de categoría. Implementar primero, anunciar después.
 
 ## Fuera de alcance (YAGNI)
 
