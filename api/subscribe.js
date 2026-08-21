@@ -48,6 +48,13 @@ const MATERIALES = {
 };
 const MATERIAL_DEFECTO = 'kit-del-opositor';
 
+// Categorías válidas (nombre tal cual se guarda en convocatorias.categoria →
+// permite segmentar el envío diario por categoría). "" = todas.
+const CATEGORIAS = new Set([
+  'Educación', 'Sanidad', 'Justicia', 'Seguridad',
+  'Administración', 'Hacienda', 'Correos', 'Técnica',
+]);
+
 // Alta/actualización del suscriptor en Supabase (tabla `suscriptores`). Upsert
 // por email (merge-duplicates). Se omite token_baja (lo pone el default de la BD
 // en las filas nuevas y se conserva en las existentes).
@@ -101,9 +108,9 @@ function emailBienvenidaHtml(material, email) {
         <a href="https://oponoticias.com/boe-hoy" style="color:#c4a574;text-decoration:none;font-weight:600;">Verlas ahora&nbsp;→</a>
       </p>
       <p style="margin:0 0 10px;color:#4a4540;font-size:14px;line-height:1.6;">
-        📍 <strong>Recibe solo lo de tu zona:</strong> elige tu comunidad y el correo diario te traerá solo
-        tus convocatorias (más las de ámbito estatal).
-        <a href="${prefUrl}" style="color:#c4a574;text-decoration:none;font-weight:600;">Elegir comunidad&nbsp;→</a>
+        📍 <strong>Recibe solo lo que te interesa:</strong> elige tu comunidad y/o tu categoría
+        (Administración, Sanidad, Educación…) y el correo diario te traerá solo eso.
+        <a href="${prefUrl}" style="color:#c4a574;text-decoration:none;font-weight:600;">Elegir preferencias&nbsp;→</a>
       </p>
       <p style="margin:0;color:#4a4540;font-size:14px;line-height:1.6;">
         📲 <strong>Síguenos también</strong> para no perderte nada al instante:
@@ -141,7 +148,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, material, comunidad } = req.body || {};
+  const { email, material, comunidad, categoria } = req.body || {};
 
   // Validación básica
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
@@ -149,6 +156,9 @@ export default async function handler(req, res) {
   }
   // Comunidad opcional (viene de un <select> controlado; validación laxa).
   const com = typeof comunidad === 'string' ? comunidad.trim().slice(0, 40) : '';
+  // Categoría opcional; solo se acepta si es una de las válidas ("" = todas).
+  const cat = (typeof categoria === 'string' && CATEGORIAS.has(categoria.trim()))
+    ? categoria.trim() : '';
 
   // Material a entregar (por slug). Si no llega o es desconocido → MATERIAL_DEFECTO.
   const matSlug = MATERIALES[material] ? material : MATERIAL_DEFECTO;
@@ -163,6 +173,7 @@ export default async function handler(req, res) {
     origen: material ? 'recursos' : 'web',
     material: matSlug,
     ...(com ? { comunidad: com } : {}),
+    ...(cat ? { categoria: cat } : {}),
   });
   if (sb.skipped) {
     console.error('Faltan SUPABASE_URL / SUPABASE_API_KEY');
