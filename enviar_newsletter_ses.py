@@ -67,7 +67,7 @@ TEST_COMUNIDAD = os.environ.get("TEST_COMUNIDAD", "")
 TEST_CATEGORIA = os.environ.get("TEST_CATEGORIA", "")
 # El banner de "novedad: filtro por categoría" se muestra en el newsletter hasta
 # esta fecha (incl.) y luego desaparece solo. Fecha del despliegue + ~1 semana.
-AVISO_CATEGORIA_HASTA = os.environ.get("AVISO_CATEGORIA_HASTA", "2026-08-27")
+AVISO_CATEGORIA_HASTA = os.environ.get("AVISO_CATEGORIA_HASTA", "2026-08-31")
 DRY_RUN        = os.environ.get("DRY_RUN") == "1"
 # Pausa entre envíos (seg). Producción SES admite 14/seg; en sandbox es 1/seg,
 # así que en pruebas conviene subirlo (p.ej. SEND_INTERVAL=1.1).
