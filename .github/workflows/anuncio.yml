@@ -1,0 +1,38 @@
+name: Publicar Anuncio
+
+# Publica un anuncio PUNTUAL en las redes (Telegram, Facebook, Instagram, X) con
+# las mismas credenciales que la automatización diaria. Solo ejecución manual.
+# Ver publicar_anuncio.py.
+on:
+  workflow_dispatch:
+    inputs:
+      canales:
+        description: 'Canales (coma-separado): telegram,facebook,instagram,x'
+        default: 'telegram,facebook,instagram,x'
+      dry_run:
+        description: 'DRY_RUN (1 = NO publica, solo comprueba)'
+        default: '0'
+
+permissions:
+  contents: read
+
+jobs:
+  anuncio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Publicar anuncio en redes
+        env:
+          TELEGRAM_TOKEN:   ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FB_PAGE_TOKEN:    ${{ secrets.FB_PAGE_TOKEN }}
+          FB_PAGE_ID:       ${{ secrets.FB_PAGE_ID }}
+          FB_IG_ID:         ${{ secrets.FB_IG_ID }}
+          MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+          CANALES:  ${{ github.event.inputs.canales }}
+          DRY_RUN:  ${{ github.event.inputs.dry_run }}
+        run: python3 publicar_anuncio.py
