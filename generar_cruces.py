@@ -371,7 +371,7 @@ def generar_html(cat_nombre, cat_slug, ccaa_nombre, ccaa_slug, convocatorias, n_
     </div>
   </footer>
 
-  <script src="../../assets/script.js?v=8" defer></script>
+  <script src="../../assets/script.js?v=9" defer></script>
 </body>
 </html>"""
 
