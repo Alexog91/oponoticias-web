@@ -24,7 +24,9 @@ TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 MAKE_WEBHOOK_URL = os.environ.get("MAKE_WEBHOOK_URL", "")
 
 LINK   = "https://oponoticias.com/preferencias"
-BANNER = "https://oponoticias.com/social/telegram-banner.png"
+# Instagram SOLO acepta JPEG (con PNG da "Media ID is not available"); por eso una
+# versión .jpg del banner. Telegram/FB/X aceptan PNG sin problema.
+IG_IMG = "https://oponoticias.com/social/anuncio-preferencias.jpg"
 TWEET_CARD = "https://oponoticias.com/social/tweet-card.png"
 
 CANALES = {c.strip().lower() for c in
@@ -82,7 +84,7 @@ def post_instagram():
         return "sin credenciales"
     if DRY:
         return "DRY (credenciales OK)"
-    return "OK" if publicar_meta.publicar_foto_instagram(BANNER, IG_CAP) else "fallo"
+    return "OK" if publicar_meta.publicar_foto_instagram(IG_IMG, IG_CAP) else "fallo"
 
 
 def post_x():
