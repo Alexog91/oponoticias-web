@@ -57,6 +57,19 @@ SES_SMTP_HOST = os.environ.get("SES_SMTP_HOST", "email-smtp.eu-west-1.amazonaws.
 SES_SMTP_PORT = int(os.environ.get("SES_SMTP_PORT", "587"))
 SES_SMTP_USER = os.environ.get("SES_SMTP_USER", "")
 SES_SMTP_PASS = os.environ.get("SES_SMTP_PASS", "")
+# SES cierra la sesión SMTP tras un máximo de mensajes (error 421 "Maximum
+# message count per session reached"). Con una sola conexión para todo el lote,
+# al superarlo fallaba TODA la cola restante ("please run connect() first").
+# Reconectamos proactivamente cada N envíos (y reactivamente si se cae).
+RECONECTAR_CADA = int(os.environ.get("SES_RECONECTAR_CADA", "100"))
+
+
+def _conectar_smtp():
+    """Abre una conexión SMTP con SES (STARTTLS + login) y la devuelve."""
+    srv = smtplib.SMTP(SES_SMTP_HOST, SES_SMTP_PORT, timeout=30)
+    srv.starttls(context=ssl.create_default_context())
+    srv.login(SES_SMTP_USER, SES_SMTP_PASS)
+    return srv
 
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "info@oponoticias.com")
 SENDER_NAME  = os.environ.get("SENDER_NAME", "OpoNoticias")
@@ -407,11 +420,9 @@ def main():
         if not SES_SMTP_USER or not SES_SMTP_PASS:
             print("  ❌ Faltan SES_SMTP_USER / SES_SMTP_PASS.")
             return 1
-        servidor = smtplib.SMTP(SES_SMTP_HOST, SES_SMTP_PORT, timeout=30)
-        servidor.starttls(context=ssl.create_default_context())
-        servidor.login(SES_SMTP_USER, SES_SMTP_PASS)
+        servidor = _conectar_smtp()
 
-    n_ok, n_err = 0, 0
+    n_ok, n_err, en_sesion = 0, 0, 0
     try:
         for s, suyas in con_contenido(suscriptores, convocatorias):
             email = (s.get("email") or "").strip()
@@ -431,11 +442,39 @@ def main():
                 n_ok += 1
                 continue
 
+            # Reconexión PROACTIVA antes de llegar al tope de mensajes/sesión de SES.
+            if en_sesion >= RECONECTAR_CADA:
+                try:
+                    servidor.quit()
+                except Exception:
+                    pass
+                servidor = _conectar_smtp()
+                en_sesion = 0
+
+            msg = construir_mensaje(email, html, texto, unsub, asunto)
             try:
-                msg = construir_mensaje(email, html, texto, unsub, asunto)
                 servidor.sendmail(SENDER_EMAIL, [email], msg.as_string())
                 n_ok += 1
+                en_sesion += 1
                 print(f"  ✓ {email} — {len(suyas)}/{total_hoy}")
+            except (smtplib.SMTPServerDisconnected, smtplib.SMTPResponseException, OSError) as e:
+                # Conexión caída (p. ej. 421 max messages/session) → reconectar y
+                # reintentar ESTE correo una vez, para no perder al suscriptor.
+                print(f"  ↻ SMTP caído ({e}); reconectando y reintentando…")
+                try:
+                    try:
+                        servidor.close()
+                    except Exception:
+                        pass
+                    servidor = _conectar_smtp()
+                    en_sesion = 0
+                    servidor.sendmail(SENDER_EMAIL, [email], msg.as_string())
+                    n_ok += 1
+                    en_sesion += 1
+                    print(f"  ✓ {email} (reintento) — {len(suyas)}/{total_hoy}")
+                except Exception as e2:
+                    n_err += 1
+                    print(f"  ❌ {email}: {e2}")
             except Exception as e:
                 n_err += 1
                 print(f"  ❌ {email}: {e}")
