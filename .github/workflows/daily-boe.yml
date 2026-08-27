@@ -5,14 +5,18 @@ name: Daily BOE Check
 # Todo en un único repo: scripts + workflows + web juntos.
 on:
   schedule:
-    # UNA sola ejecución diaria. NO añadir crons de respaldo: el newsletter se
-    # encadena con workflow_run a "Daily BOE Check", así que cada ejecución
-    # extra dispara OTRO correo (el 26 jun 2026 hubo 3 ejecuciones → 3 correos +
-    # vídeos/posts duplicados). A las 8:00 CEST el sumario oficial del día ya
-    # está publicado (a las 7:00 a veces no lo estaba → se leía el de ayer). La
-    # red de seguridad definitiva es leer_boe_sumario(), que lee una ventana de
-    # varios días por fecha y auto-recupera cualquier día que no se capturara.
-    - cron: '0 6 * * 1-6'  # 8:00 CEST (UTC+2) · lunes-sábado (el BOE no publica domingos)
+    # Principal + 2 respaldos, porque los crons de GitHub Actions a veces NO se
+    # disparan (pasó el 27 ago 2026: no corrió NINGÚN workflow, con 29
+    # convocatorias esperando). Tener varios es SEGURO: en un día normal el 1º
+    # hace el trabajo y los demás son no-ops —
+    #   · leer_boe_sumario() deduplica por fecha → nuevas=0 → se omiten redes/vídeo;
+    #   · el newsletter es idempotente por día (tabla envios_newsletter, 409 → no
+    #     reenvía), así que NO se duplican correos (esto invalida la vieja regla de
+    #     "un solo cron", que era de antes de la idempotencia).
+    # El repo es público → minutos de Actions ilimitados, sin coste.
+    - cron: '0 6 * * 1-6'   # 8:00 CEST (UTC+2) · principal — lun-sáb (el BOE no publica domingos)
+    - cron: '0 8 * * 1-6'   # 10:00 CEST · respaldo 1 (si el principal no se disparó)
+    - cron: '0 10 * * 1-6'  # 12:00 CEST · respaldo 2
   workflow_dispatch:        # Permite ejecución manual desde GitHub UI
 
 permissions:
