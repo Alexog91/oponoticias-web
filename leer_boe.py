@@ -11,7 +11,7 @@ import re
 import subprocess
 import html as html_lib
 from email.utils import parsedate_to_datetime, format_datetime
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import unicodedata
 
@@ -36,6 +36,20 @@ BOE_DIAS_VENTANA = int(os.environ.get("BOE_DIAS_VENTANA", "3"))  # hoy + 2 anter
 #   publicado: True si hay boletín hoy (None = no publicado / no se pudo leer)
 #   raw:       nº de entradas en la sección 2B hoy · validas: cuántas son convocatorias
 _STATS_HOY = {"fecha": None, "publicado": None, "raw": None, "validas": None}
+
+# Ventana horaria de envío: solo se PUBLICA (Telegram/redes) si el run cae ANTES
+# de esta hora UTC. Los crons de GitHub a veces se disparan con horas de retraso
+# (tarde/noche); fuera de la ventana se captura el BOE en la base pero NO se
+# envía, y lo pendiente sale a la mañana siguiente (Telegram por su flag
+# telegram_enviado). Así se molesta a la gente UNA sola vez, por la mañana.
+ENVIO_LIMITE_UTC = os.environ.get("ENVIO_LIMITE_UTC", "11:00")  # 13:00 CEST
+
+
+def dentro_ventana_envio(ahora_hhmm=None):
+    """True si estamos dentro de la ventana matinal de envío (hora UTC ≤ límite).
+    Comparación de 'HH:MM' (ancho fijo) → orden lexicográfico correcto."""
+    ahora = ahora_hhmm or datetime.now(timezone.utc).strftime("%H:%M")
+    return ahora <= ENVIO_LIMITE_UTC
 TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
@@ -2133,6 +2147,13 @@ if __name__ == "__main__":
         print("\n⏭️  SKIP_SOCIAL activo: NO se publica en redes (solo Supabase + web).")
         for conv in convocatorias:
             marcar_telegram_enviado(conv['enlace'])
+    elif not dentro_ventana_envio():
+        # Fuera de la ventana matinal (cron de GitHub disparado tarde): se ha
+        # capturado el BOE y generado la web, pero NO se publica en redes para no
+        # molestar a deshora. Lo pendiente (telegram_enviado=false) saldrá en el
+        # primer run de mañana. NO se marca nada.
+        print(f"\n🌙 Fuera de la ventana matinal de envío (límite {ENVIO_LIMITE_UTC} UTC): "
+              f"no se publica en redes hoy; lo pendiente saldrá mañana por la mañana.")
     else:
         # ── Telegram: enviar SOLO las que aún no se hayan enviado (retry-safe) ──
         # Desacoplado del guardado: si un envío falla, el flag queda en false y se
