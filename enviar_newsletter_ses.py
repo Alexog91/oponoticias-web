@@ -46,7 +46,7 @@ import urllib.parse
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import parsedate_to_datetime, formataddr
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 
 import newsletter_utils
 
@@ -120,13 +120,25 @@ def supabase_write(endpoint, body, method="POST", params=None):
         return e.code, e.read() or b""
 
 
-def obtener_convocatorias_hoy():
-    # `fecha` se guarda como string RFC, no ISO → traemos recientes y filtramos
-    # en Python comparando la fecha parseada con hoy (igual que la versión Brevo).
+# Ventana matinal de envío (misma idea que en leer_boe.py): fuera de esta hora
+# UTC NO se envía; se difiere a mañana. Evita correos a deshora cuando el cron de
+# GitHub se dispara con retraso (tarde/noche).
+ENVIO_LIMITE_UTC = os.environ.get("ENVIO_LIMITE_UTC", "11:00")  # 13:00 CEST
+
+
+def dentro_ventana_envio(ahora_hhmm=None):
+    """True si estamos dentro de la ventana matinal (hora UTC ≤ límite)."""
+    ahora = ahora_hhmm or datetime.now(timezone.utc).strftime("%H:%M")
+    return ahora <= ENVIO_LIMITE_UTC
+
+
+def obtener_convocatorias_por_fecha():
+    """[Fallback, sin columna email_enviado] Convocatorias con fecha == hoy.
+    `fecha` es string RFC → se parsea y compara con hoy en Python."""
     rows = supabase_get("convocatorias", {
         "order": "id.desc",
         "limit": "150",
-        "select": "titulo,fecha,enlace,resumen_claude,categoria,comunidad_autonoma",
+        "select": "id,titulo,fecha,enlace,resumen_claude,categoria,comunidad_autonoma",
     })
     hoy = date.today()
     de_hoy = []
@@ -136,8 +148,42 @@ def obtener_convocatorias_hoy():
                 de_hoy.append(r)
         except Exception:
             continue
-    print(f"  {len(de_hoy)} convocatorias de hoy ({hoy}) — de {len(rows)} recientes")
+    print(f"  {len(de_hoy)} convocatorias de hoy ({hoy}) — de {len(rows)} recientes [por fecha]")
     return de_hoy
+
+
+def obtener_convocatorias_pendientes():
+    """Convocatorias que aún NO se han enviado por email. Prefiere el flag
+    `email_enviado` (permite DIFERIR: lo que no sale un día sale el siguiente,
+    como telegram_enviado). Si la columna aún no existe, cae a la selección por
+    fecha (comportamiento actual). Devuelve (convocatorias, usa_flag)."""
+    try:
+        rows = supabase_get("convocatorias", {
+            "order": "id.desc",
+            "limit": "150",
+            "email_enviado": "eq.false",
+            "select": "id,titulo,fecha,enlace,resumen_claude,categoria,comunidad_autonoma",
+        })
+        print(f"  {len(rows)} convocatorias pendientes de email [flag email_enviado]")
+        return rows, True
+    except Exception as e:
+        print(f"  ⚠️  Sin columna email_enviado ({e}); uso selección por fecha.")
+        return obtener_convocatorias_por_fecha(), False
+
+
+def marcar_enviadas_email(convocatorias):
+    """Marca email_enviado=true (por id) para no reenviarlas. Best-effort."""
+    if DRY_RUN or TEST_EMAILS:
+        return
+    ids = [c["id"] for c in convocatorias if c.get("id") is not None]
+    for i in range(0, len(ids), 100):
+        trozo = ids[i:i + 100]
+        params = {"id": f"in.({','.join(str(x) for x in trozo)})"}
+        try:
+            supabase_write("convocatorias", {"email_enviado": True},
+                           method="PATCH", params=params)
+        except Exception as e:                       # noqa: BLE001
+            print(f"  ⚠️  No se pudo marcar email_enviado ({e}).")
 
 
 def obtener_suscriptores():
@@ -390,9 +436,17 @@ def main():
           + ("  (DRY RUN)" if DRY_RUN else "")
           + ("  (TEST)" if TEST_EMAILS else ""))
 
-    convocatorias = obtener_convocatorias_hoy()
+    convocatorias, usa_flag = obtener_convocatorias_pendientes()
     if not convocatorias and not TEST_EMAILS:
-        print("  ℹ️  Sin convocatorias hoy — no se envía (evita email vacío).")
+        print("  ℹ️  Nada pendiente de enviar — no se envía (evita email vacío).")
+        return 0
+
+    # Ventana matinal: fuera de horario NO se envía (cron de GitHub disparado
+    # tarde) → se difiere a mañana. Con el flag email_enviado las convocatorias
+    # siguen pendientes y salen el primer run matinal del día siguiente.
+    if not DRY_RUN and not TEST_EMAILS and not dentro_ventana_envio():
+        print(f"  🌙 Fuera de la ventana matinal ({ENVIO_LIMITE_UTC} UTC): no se "
+              f"envía ahora; saldrá mañana por la mañana.")
         return 0
 
     # Idempotencia: reclamamos el día insertando la fila. Si ya existe (día ya
@@ -487,6 +541,11 @@ def main():
                 pass
 
     print(f"\n  Resumen: {n_ok} enviados, {n_err} errores.")
+
+    # Marca las convocatorias como enviadas por email (email_enviado=true) para
+    # no reenviarlas: da idempotencia por convocatoria y habilita el diferido.
+    if usa_flag and not DRY_RUN and not TEST_EMAILS:
+        marcar_enviadas_email(convocatorias)
 
     # Actualiza los contadores del día (best-effort; no crítico).
     if not DRY_RUN and not TEST_EMAILS:
