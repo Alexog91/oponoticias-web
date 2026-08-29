@@ -1,14 +1,17 @@
-// api/cron-diario.js — Vercel Serverless Function llamada por un Vercel Cron cada
-// mañana. Dispara el workflow "Daily BOE Check" de GitHub Actions vía la API,
-// SIN depender del scheduler de GitHub (que en ago 2026 falló 3 días seguidos,
-// disparando los crons con 9-11h de retraso o nada). Los crons de Vercel son
-// mucho más fiables. El propio leer_boe respeta la ventana matinal de envío.
+// api/cron-diario.js — Serverless Function que dispara el workflow "Daily BOE
+// Check" de GitHub Actions vía la API. La llama cada mañana un CRON EXTERNO
+// (cron-job.org, gratis y fiable) — porque el scheduler de GitHub falló 3 días
+// seguidos (ago 2026) y los crons de Vercel necesitan plan Pro. El propio
+// leer_boe respeta la ventana matinal de envío.
 //
-// Requiere (variables de entorno en Vercel):
+// El cron externo debe hacer POST a https://oponoticias.com/api/cron-diario con
+// la cabecera:  Authorization: Bearer <CRON_SECRET>
+//
+// Requiere (variables de entorno en Vercel, ambas GRATIS en Hobby):
 //   GH_DISPATCH_TOKEN — PAT de GitHub (fine-grained) con permiso Actions: R/W
 //                       sobre el repo Alexog91/oponoticias-web.
-//   CRON_SECRET       — (opcional pero recomendado) secreto que Vercel envía en
-//                       la cabecera Authorization de las peticiones de cron.
+//   CRON_SECRET       — secreto que el cron externo envía en Authorization para
+//                       que nadie más pueda disparar el proceso.
 
 const REPO = 'Alexog91/oponoticias-web';
 const WORKFLOW = 'daily-boe.yml';

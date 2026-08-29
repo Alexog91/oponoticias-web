@@ -33,8 +33,5 @@
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
       ]
     }
-  ],
-  "crons": [
-    { "path": "/api/cron-diario", "schedule": "0 6 * * *" }
   ]
 }
