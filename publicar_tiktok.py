@@ -113,10 +113,14 @@ def _mensaje_borrador(pie):
 
 
 def _alertar_admin(mensaje):
-    """Aviso puntual al chat privado del admin por Telegram. Best-effort:
-    nunca lanza (si falla, se queda solo en el print que ya hizo el llamador)."""
+    """Aviso puntual al chat privado del admin por Telegram. Best-effort: no
+    lanza, pero SÍ deja rastro en el log si no se pudo enviar. Antes tragaba el
+    error en silencio (except: pass) y por eso un fallo del aviso del pie de
+    TikTok era indetectable. Devuelve True si Telegram aceptó el mensaje."""
     if not (TELEGRAM_TOKEN and TELEGRAM_ADMIN_CHAT_ID):
-        return
+        print("⚠️  Aviso admin (TikTok) omitido: falta TELEGRAM_TOKEN o "
+              "TELEGRAM_ADMIN_CHAT_ID en el entorno.")
+        return False
     try:
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         data = urllib.parse.urlencode({
@@ -129,8 +133,14 @@ def _alertar_admin(mensaje):
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         urllib.request.urlopen(req, timeout=10).read()
-    except Exception:
-        pass
+        return True
+    except urllib.error.HTTPError as e:
+        cuerpo = e.read().decode("utf-8", "replace")[:200]
+        print(f"⚠️  Aviso admin (TikTok) falló: HTTP {e.code} · {cuerpo}")
+        return False
+    except Exception as e:
+        print(f"⚠️  Aviso admin (TikTok) falló: {e}")
+        return False
 
 
 # ── OAuth token refresh ────────────────────────────────────────────────────────
@@ -588,9 +598,17 @@ def publicar_draft_tiktok(video_url, titulo="", verificar_estado=False):
           f"abre la app (Perfil → Borradores) para publicar")
 
     # El borrador no puede llevar título ni hashtags (la API no los admite),
-    # así que se mandan por Telegram en un bloque copiable de un toque.
+    # así que se mandan por Telegram. Cabecera visible aparte (para que no se
+    # pase por alto entre los demás avisos) + el pie SOLO en su propio mensaje,
+    # para que al copiar el bloque <code> no arrastre nada más.
     if titulo:
-        _alertar_admin(_mensaje_borrador(titulo))
+        _alertar_admin(
+            "🎵 <b>Pie para el TikTok de hoy</b>\n"
+            "Ya hay un borrador en TikTok → Perfil → Borradores. Publícalo y "
+            "pega este texto (el mensaje siguiente, un toque para copiar):"
+        )
+        if _alertar_admin(_mensaje_borrador(titulo)):
+            print("✅ Pie de TikTok enviado al admin por privado")
 
     if verificar_estado:
         print("🔎 Consultando estado real del borrador (status/fetch)…")
