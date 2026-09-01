@@ -4,17 +4,20 @@ name: Daily BOE Check
 # → hace commit/push al PROPIO repo (oponoticias-web). Vercel despliega solo.
 # Todo en un único repo: scripts + workflows + web juntos.
 on:
-  schedule:
-    # DOS intentos SOLO por la mañana. La publicación está acotada a una ventana
-    # matinal (ENVIO_LIMITE_UTC, por defecto 11:00 UTC = 13:00 CEST): si un cron
-    # se dispara tarde (los crons de GitHub a veces llegan con HORAS de retraso —
-    # el 28 ago 2026 saltó a las 17:45 UTC), leer_boe SOLO captura el BOE y NO
-    # publica; lo pendiente sale al día siguiente por la mañana (Telegram por su
-    # flag telegram_enviado, email por email_enviado). Así se molesta a la gente
-    # UNA sola vez, por la mañana, nunca por la tarde/noche.
-    - cron: '0 6 * * 1-6'   # 8:00 CEST (UTC+2) · lun-sáb (el BOE no publica domingos)
-    - cron: '0 8 * * 1-6'   # 10:00 CEST · 2º intento matinal (si el 1º no se disparó)
-  workflow_dispatch:        # Permite ejecución manual desde GitHub UI
+  # UN SOLO disparador matinal, desde un CRON EXTERNO (cron-job.org, 9:30
+  # Europe/Madrid) que hace POST a la API de dispatches de este workflow. Ver
+  # [[oponoticias-arquitectura-repos]] en la memoria y api/cron-diario.js.
+  #
+  # Por qué NO usamos los `schedule:` de GitHub: (1) llegan con HORAS de retraso
+  # o no se disparan (27/28/29/31 ago 2026); (2) aunque tardíos, si caen ANTES
+  # del corte de la ventana (ENVIO_LIMITE_UTC=11:00 UTC = 13:00 CEST) PUBLICAN —
+  # y al convivir con el cron externo de las 9:30 provocaban un SEGUNDO aviso a
+  # media mañana (p. ej. el 1 sep 2026 un cron de GitHub saltó a las 12:35 CEST
+  # y reenvió). Con un único disparador (cron-job.org) se molesta a la gente
+  # UNA sola vez. La ventana matinal sigue vigente como red de seguridad: si el
+  # dispatch llegara tarde, leer_boe capta el BOE pero no publica, y lo pendiente
+  # sale al día siguiente (flags telegram_enviado / email_enviado).
+  workflow_dispatch:        # Disparo del cron externo + ejecución manual (GitHub UI / gh)
 
 permissions:
   contents: write           # Necesario para que leer_boe.py pueda hacer push
