@@ -185,22 +185,27 @@ def leer_boe_sumario(dias=None):
     return convocatorias
 
 
-def rows_existentes_supabase(enlaces):
-    """{enlace: fila} para los enlaces que YA están en Supabase (una consulta por
+def rows_existentes_supabase(titulos):
+    """{titulo: fila} para los títulos que YA están en Supabase (una consulta por
     lotes). Permite (a) saltarse Claude en los duplicados de la ventana multi-día
     y (b) reenviar a Telegram las pendientes con su resumen REAL hidratado desde
     la BD, sin recomputarlo. Si la consulta falla → {} y se procesa todo (guardar
-    deduplica igual)."""
+    deduplica igual).
+
+    Clave = TÍTULO, no enlace: la tabla es UNIQUE(titulo) y el enlace se construye
+    desde ref_boe (txt.php?id=ref_boe), así que si el BOE republica el mismo
+    título con otro ref_boe el enlace cambia y el dedupe por enlace fallaba
+    (reanálisis + reenvío en cada run). Ver [[oponoticias-reenvio-enlace-titulo]]."""
     out = {}
-    if not (SUPABASE_URL and SUPABASE_API_KEY and enlaces):
+    if not (SUPABASE_URL and SUPABASE_API_KEY and titulos):
         return out
-    lista = list(enlaces)
+    lista = list(titulos)
     for i in range(0, len(lista), 40):
         trozo = lista[i:i + 40]
-        en = ",".join('"' + e.replace('"', '') + '"' for e in trozo)
+        en = ",".join('"' + t.replace('"', '') + '"' for t in trozo)
         q = urllib.parse.urlencode({
-            "select": "enlace,resumen_claude,categoria,comunidad_autonoma",
-            "enlace": f"in.({en})",
+            "select": "titulo,resumen_claude,categoria,comunidad_autonoma",
+            "titulo": f"in.({en})",
         })
         try:
             req = urllib.request.Request(
@@ -209,8 +214,8 @@ def rows_existentes_supabase(enlaces):
                          "Authorization": f"Bearer {SUPABASE_API_KEY}"})
             with urllib.request.urlopen(req, timeout=15) as r:
                 for row in json.loads(r.read()):
-                    if row.get("enlace"):
-                        out[row["enlace"]] = row
+                    if row.get("titulo"):
+                        out[row["titulo"]] = row
         except Exception as e:
             print(f"⚠️  Pre-check Supabase ({e}); se procesa sin filtrar.")
     return out
@@ -764,12 +769,17 @@ def guardar_en_supabase(conv):
         return False
 
 
-def telegram_ya_enviado(enlace):
+def telegram_ya_enviado(titulo):
     """Comprueba en Supabase si la convocatoria ya se envió a Telegram.
-    Devuelve True si la fila existe y telegram_enviado=true."""
+    Devuelve True si la fila existe y telegram_enviado=true.
+
+    Filtra por TÍTULO (la clave UNIQUE de la tabla), no por enlace: el enlace
+    cambia si el BOE republica el mismo título con otro ref_boe, y entonces el
+    filtro por enlace no casaba → se reenviaba en cada run. Ver
+    [[oponoticias-reenvio-enlace-titulo]]."""
     try:
         qs = urllib.parse.urlencode({
-            'enlace': f'eq.{enlace}',
+            'titulo': f'eq.{titulo}',
             'select': 'telegram_enviado',
         })
         url = f"{SUPABASE_URL}/rest/v1/convocatorias?{qs}"
@@ -786,10 +796,12 @@ def telegram_ya_enviado(enlace):
         return False
 
 
-def marcar_telegram_enviado(enlace):
-    """Marca la convocatoria como ya enviada a Telegram (flag en Supabase)."""
+def marcar_telegram_enviado(titulo):
+    """Marca la convocatoria como ya enviada a Telegram (flag en Supabase).
+    Filtra por TÍTULO (clave UNIQUE), no por enlace. Ver
+    [[oponoticias-reenvio-enlace-titulo]]."""
     try:
-        qs = urllib.parse.urlencode({'enlace': f'eq.{enlace}'})
+        qs = urllib.parse.urlencode({'titulo': f'eq.{titulo}'})
         url = f"{SUPABASE_URL}/rest/v1/convocatorias?{qs}"
         headers = {
             'apikey': SUPABASE_API_KEY,
@@ -2104,16 +2116,17 @@ if __name__ == "__main__":
     nuevas = 0
     slugs_generados = []
 
-    # Pre-check: qué enlaces de la ventana YA están en Supabase. Evita re-analizar
+    # Pre-check: qué títulos de la ventana YA están en Supabase. Evita re-analizar
     # con Claude los duplicados (ayer/anteayer) e hidrata el backlog de Telegram.
-    existentes = rows_existentes_supabase({c['enlace'] for c in convocatorias})
+    # Por TÍTULO (clave UNIQUE), no por enlace. Ver [[oponoticias-reenvio-enlace-titulo]].
+    existentes = rows_existentes_supabase({c['titulo'] for c in convocatorias})
     if existentes:
         print(f"⏭️  {len(existentes)} ya en Supabase (sin Claude) · "
               f"{len(convocatorias) - len(existentes)} nuevas a analizar.\n")
 
     # ── 1) Procesar: resumen IA + comunidad + guardar en Supabase + HTML ──────
     for conv in convocatorias:
-        fila = existentes.get(conv['enlace'])
+        fila = existentes.get(conv['titulo'])
         if fila is not None:
             # Ya está en la BD: NO gastamos Claude. Hidratamos desde la BD para que
             # el posible reenvío a Telegram (paso 2, backlog) salga completo.
@@ -2146,7 +2159,7 @@ if __name__ == "__main__":
     if os.environ.get('SKIP_SOCIAL'):
         print("\n⏭️  SKIP_SOCIAL activo: NO se publica en redes (solo Supabase + web).")
         for conv in convocatorias:
-            marcar_telegram_enviado(conv['enlace'])
+            marcar_telegram_enviado(conv['titulo'])
     elif not dentro_ventana_envio():
         # Fuera de la ventana matinal (cron de GitHub disparado tarde): se ha
         # capturado el BOE y generado la web, pero NO se publica en redes para no
@@ -2165,11 +2178,11 @@ if __name__ == "__main__":
         # corte el token por spam. Telegram, web y Facebook siguen recibiendo todas.
         enviadas_hoy = []
         for conv in convocatorias:
-            if telegram_ya_enviado(conv['enlace']):
+            if telegram_ya_enviado(conv['titulo']):
                 print(f"⏭️  Ya estaba en Telegram: {conv['titulo'][:50]}...")
                 continue
             if enviar_a_telegram(conv):
-                marcar_telegram_enviado(conv['enlace'])
+                marcar_telegram_enviado(conv['titulo'])
                 enviadas_hoy.append(conv)
                 enviadas_tg += 1
                 time.sleep(2)
