@@ -27,11 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -55,7 +55,7 @@ jobs:
       - name: Instalar Chrome
         id: setup-chrome
         continue-on-error: true
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v2
 
       # Fuentes de marca (Merriweather + Inter) para que el render coincida con
       # el diseño. Sin esto Chrome usaría fuentes genéricas del sistema.
@@ -71,7 +71,7 @@ jobs:
 
       # Node + Remotion: render del vídeo diario animado (motion graphics).
       - name: Configurar Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '20'
 
