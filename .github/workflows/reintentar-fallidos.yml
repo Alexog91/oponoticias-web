@@ -45,11 +45,15 @@ jobs:
           TELEGRAM_ADMIN_CHAT_ID: ${{ secrets.TELEGRAM_ADMIN_CHAT_ID }}
         run: |
           echo "«$NOMBRE» terminó como $CONCLUSION — relanzando una vez…"
+          # export: el bloque Python de más abajo lee RESULTADO con os.environ,
+          # y un subproceso solo hereda las variables EXPORTADAS. Sin export daba
+          # KeyError: 'RESULTADO' → el paso fallaba y GitHub mandaba un correo de
+          # "All jobs have failed" AUNQUE el relanzamiento hubiera funcionado.
           if gh api --method POST "repos/$REPO/actions/runs/$RUN_ID/rerun" --silent; then
-            RESULTADO="🔁 Relanzado automáticamente."
+            export RESULTADO="🔁 Relanzado automáticamente."
             echo "✓ relanzado"
           else
-            RESULTADO="⚠️ No se pudo relanzar solo, míralo a mano."
+            export RESULTADO="⚠️ No se pudo relanzar solo, míralo a mano."
             echo "✗ no se pudo relanzar"
           fi
 
