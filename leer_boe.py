@@ -656,13 +656,14 @@ def extraer_cuerpo(titulo):
     """Extrae el tipo de puesto del título"""
     texto_busqueda = titulo.upper()
 
-    if "POLIC" in texto_busqueda:
+    if "POLIC" in texto_busqueda or "BOMBERO" in texto_busqueda:
         return ("👮 Policía", "Seguridad")
     elif "ADMINIST" in texto_busqueda:
         return ("📋 Administrativo", "Administración")
     elif "SANITARI" in texto_busqueda or "ENFERM" in texto_busqueda or "MÉDIC" in texto_busqueda:
         return ("🏥 Sanitario", "Sanidad")
-    elif "JUSTICIA" in texto_busqueda or "JUZGADO" in texto_busqueda:
+    elif any(k in texto_busqueda for k in
+             ("JUSTICIA", "JUZGADO", "JUEZ", "FISCAL", "MAGISTRAD", "JUDICIAL", "PROCESAL")):
         return ("⚖️ Justicia", "Justicia")
     elif "TÉCNIC" in texto_busqueda or "INGENIER" in texto_busqueda:
         return ("🔧 Técnico", "Técnica")
@@ -672,8 +673,32 @@ def extraer_cuerpo(titulo):
         return ("📚 Educación", "Educación")
     elif "CORREOS" in texto_busqueda:
         return ("✉️ Correos", "Correos")
+    elif any(k in texto_busqueda for k in (
+             "ALBAÑIL", "PEÓN", "PEON", "OPERARI", "JARDINER", "CONDUCTOR",
+             "FONTANER", "ELECTRICIST", "CARPINTER", "SOLDADOR", "MECÁNIC",
+             "MECANIC", "LIMPIE", "MANTENIMIENTO", "COCINER", "SOCORRIST",
+             "PINTOR", "OFICIAL DE")):
+        return ("🔨 Oficios", "Oficios")
     else:
         return ("📄 Convocatoria", "Administración")
+
+
+def clasificar_categoria(titulo, resumen_ia=""):
+    """Categoría de la convocatoria para el filtro del newsletter. Prioriza el
+    TÍTULO; si el título no nombra un puesto reconocible (cajón "📄 Convocatoria"),
+    reclasifica por el PUESTO del resumen —que ya viene del texto oficial del BOE
+    ('N PLAZAS - PUESTO - LUGAR')—. Si ni el título ni el puesto casan, devuelve
+    "Otras": un cajón NEUTRO que NO es una opción de filtro, para no contaminar
+    "Administración" con albañiles/jueces/etc. Ver [[oponoticias-arquitectura-repos]]."""
+    cuerpo, cat = extraer_cuerpo(titulo)
+    if cuerpo != "📄 Convocatoria":          # el título ya da una categoría específica
+        return cat
+    partes = [p.strip() for p in (resumen_ia or "").split(" - ")]
+    puesto = partes[1] if len(partes) >= 3 else ""
+    cuerpo2, cat2 = extraer_cuerpo(puesto)
+    if cuerpo2 != "📄 Convocatoria":
+        return cat2
+    return "Otras"
 
 
 def obtener_icono_puesto(detalles):
@@ -729,7 +754,10 @@ def limpiar_titulo(titulo):
 
 def guardar_en_supabase(conv):
     """Guarda UNA convocatoria en Supabase. Retorna True si se guardó, False si ya existía."""
-    cuerpo, categoria = extraer_cuerpo(conv['titulo'])
+    cuerpo, _ = extraer_cuerpo(conv['titulo'])
+    # Categoría reclasificada por el puesto (la que fija main); recalcula por si
+    # se llama sin pasar por main. Ver [[oponoticias-arquitectura-repos]].
+    categoria = conv.get('categoria') or clasificar_categoria(conv['titulo'], conv.get('resumen_ia', ''))
     data = {
         'fecha': conv['fecha'],
         'titulo': conv['titulo'],
@@ -2160,12 +2188,13 @@ if __name__ == "__main__":
             conv['comunidad_autonoma'] = fila.get('comunidad_autonoma')
             continue
 
-        cuerpo, categoria = extraer_cuerpo(conv['titulo'])
-
         print(f"\n🤖 Analizando: {conv['titulo'][:60]}...")
-        conv['categoria'] = categoria               # se usa luego en Facebook
         conv['resumen_ia'] = generar_resumen_con_claude(conv['titulo'], conv['resumen'], conv.get('ref_boe'))
         conv['comunidad_autonoma'] = clasificar_comunidad(conv['titulo'], conv['resumen'])
+        # Categoría por el PUESTO real: si el título es mudo, mira el resumen del
+        # BOE; "Otras" si nada casa, para no contaminar el filtro de Administración.
+        categoria = clasificar_categoria(conv['titulo'], conv['resumen_ia'])
+        conv['categoria'] = categoria               # se usa luego en Facebook
 
         es_nueva = guardar_en_supabase(conv)        # inserta con telegram_enviado=false (default)
         slug = generar_html_convocatoria(conv, categoria)
