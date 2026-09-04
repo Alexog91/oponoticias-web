@@ -323,11 +323,30 @@ def _sanitizar_resumen(texto):
     return None
 
 
-def _resumen_fallback(titulo, resumen, notas_boe=""):
+def _puesto_desde_boe(texto):
+    """Extrae el PUESTO del texto/notas oficiales del BOE con el patrón típico
+    'N plaza(s) de <PUESTO>' (p. ej. "Una plaza de Operario de Mantenimiento de
+    la plantilla…" → "OPERARIO DE MANTENIMIENTO"). Se usa en el fallback cuando
+    el TÍTULO no nombra el puesto (muy común en el 2B municipal). Devuelve "" si
+    no encuentra nada fiable. Ver [[oponoticias-arquitectura-repos]]."""
+    if not texto:
+        return ""
+    m = re.search(
+        r'[Pp]lazas?\s+[Dd]e\s+'
+        r'([A-ZÁÉÍÓÚÑ].+?)'
+        r'(?:\s+de\s+la\s|\s+por\s+el\s|\s+pertenecient|\s+vacante|[,.;]|$)',
+        texto)
+    if not m:
+        return ""
+    p = re.sub(r'\s+', ' ', m.group(1)).strip(' .,;·').upper()
+    return p if 3 <= len(p) <= 60 else ""
+
+
+def _resumen_fallback(titulo, resumen, notas_boe="", texto_boe=""):
     """Construye un resumen válido 'PLAZAS - PUESTO - LUGAR' SOLO con reglas
     locales (sin IA). Se usa cuando Claude no devuelve un formato utilizable,
     para que nunca se publique texto en bruto. Si se le pasan las anotaciones
-    del BOE (p. ej. "Convocatoria. 2.704 plazas") las usa como fuente del número."""
+    y el texto del BOE los usa como fuente del número de plazas Y del puesto."""
     texto = f"{notas_boe} {titulo} {resumen}"
     low = texto.lower()
 
@@ -353,6 +372,12 @@ def _resumen_fallback(titulo, resumen, notas_boe=""):
     else:
         cuerpo, _ = extraer_cuerpo(titulo)            # "📋 Administrativo" …
         puesto = re.sub(r'^[^\wÁÉÍÓÚÑ]+', '', cuerpo).strip().upper()
+        # Si el título no da un puesto específico (cae al genérico "CONVOCATORIA"),
+        # intenta sacarlo del texto/notas oficiales del BOE ("N plaza(s) de X").
+        if puesto == "CONVOCATORIA":
+            p = _puesto_desde_boe(f"{notas_boe} {texto_boe}")
+            if p:
+                puesto = p
 
     # 3 · Lugar: paréntesis del título o el organismo convocante
     lugar = "ESPAÑA"
@@ -565,13 +590,13 @@ Si realmente no encuentras el puesto, pon: 1 PLAZA - PERSONAL - [LUGAR]"""
             print(f"✨ Claude generó: {limpio}")
             return limpio
 
-        fallback = _resumen_fallback(titulo, resumen, notas_boe)
+        fallback = _resumen_fallback(titulo, resumen, notas_boe, texto_boe)
         print(f"⚠️  Respuesta sin formato válido ({resumen_generado[:50]!r}). "
               f"Fallback: {fallback}")
         return fallback
 
     except Exception as e:
-        fallback = _resumen_fallback(titulo, resumen, notas_boe)
+        fallback = _resumen_fallback(titulo, resumen, notas_boe, texto_boe)
         print(f"⚠️  Error con Claude: {e}. Fallback: {fallback}")
         return fallback
 
