@@ -19,9 +19,9 @@ jobs:
   publicar:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4   # necesario: las páginas HTML dan los enlaces
+      - uses: actions/checkout@v7   # necesario: las páginas HTML dan los enlaces
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.11'
           cache: 'pip'
@@ -48,7 +48,7 @@ jobs:
       - name: Instalar Chrome (respaldo del render)
         id: setup-chrome
         continue-on-error: true
-        uses: browser-actions/setup-chrome@v1
+        uses: browser-actions/setup-chrome@v2
 
       - name: Publicar convocatorias de hoy en FB e IG
         env:
