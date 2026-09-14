@@ -2,9 +2,33 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://oponoticias.com/blog</loc>
-    <lastmod>2026-09-10</lastmod>
+    <lastmod>2026-09-14</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-justicia-2026-plazas-y-convocatorias-clave-202609</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-sanidad-2026-plazas-y-convocatorias-activas-202609</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/oposiciones-de-educacion-2026-plazas-y-convocatorias-activas-202609</loc>
+    <lastmod>2026-09-14</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
+    <loc>https://oponoticias.com/blog/preparar-la-entrevista-personal-y-el-psicotecnico</loc>
+    <lastmod>2026-09-11</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
   </url>
   <url>
     <loc>https://oponoticias.com/blog/descanso-sueno-y-ejercicio-en-el-rendimiento</loc>
