@@ -518,6 +518,35 @@ def plantilla_indice(articulos):
     if not cards:
         cards = '<p class="blog-empty">Pronto publicaremos los primeros artículos. ¡Vuelve pronto!</p>'
 
+    year = datetime.now().year
+    og_image = f"{BASE_URL}/social/telegram-banner.png"
+    # JSON-LD Blog (schema.org). Se construye con json.dumps para no romperse con
+    # comillas en los títulos; se escapa "<" a \\u003c por seguridad en el <script>.
+    ld = {
+        "@context": "https://schema.org",
+        "@type": "Blog",
+        "name": f"Noticias y actualidad de oposiciones {year} | OpoNoticias",
+        "description": "Noticias, actualidad y análisis de oposiciones y empleo público en España.",
+        "url": f"{BASE_URL}/blog",
+        "inLanguage": "es",
+        "publisher": {
+            "@type": "Organization",
+            "name": "OpoNoticias",
+            "url": BASE_URL,
+            "logo": {"@type": "ImageObject", "url": og_image},
+        },
+        "blogPost": [
+            {
+                "@type": "BlogPosting",
+                "headline": a.get("titulo", ""),
+                "url": f"{BASE_URL}/{BLOG_DIR}/{a['slug']}",
+                "datePublished": a.get("fecha_pub", ""),
+            }
+            for a in articulos
+        ],
+    }
+    ld_json = json.dumps(ld, ensure_ascii=False).replace("<", "\\u003c")
+
     return f"""<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -535,6 +564,12 @@ def plantilla_indice(articulos):
   <meta property="og:title" content="Noticias y actualidad de oposiciones {datetime.now().year} | OpoNoticias">
   <meta property="og:description" content="Noticias, actualidad y análisis de oposiciones y empleo público en España.">
   <meta property="og:url" content="{BASE_URL}/blog">
+  <meta property="og:image" content="{og_image}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Noticias y actualidad de oposiciones {year} | OpoNoticias">
+  <meta name="twitter:description" content="Noticias, actualidad y análisis de oposiciones y empleo público en España.">
+  <meta name="twitter:image" content="{og_image}">
+  <script type="application/ld+json">{ld_json}</script>
 
   <link rel="icon" type="image/svg+xml" href="assets/icon-512.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
