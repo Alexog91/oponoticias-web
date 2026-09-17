@@ -151,14 +151,26 @@ def links_cruces_categoria(ccaa_slug):
 
 # ── Generador HTML ────────────────────────────────────────────────────────────
 
+def _meta_desc_ccaa(ccaa_nombre, n):
+    """Meta description del hub CCAA, optimizada para CTR e intención de búsqueda
+    ('empleo público [ciudad]', 'ayuntamiento…'): casa la query, aporta valor
+    (plazas/requisitos/plazos) y frescura, y cabe sin truncarse (~≤160). Sin el
+    número cuando n=0 (hub vacío, que además va noindex). Ver [[oponoticias-seo-web]]."""
+    if n > 0:
+        return (f"Oposiciones y empleo público en {ccaa_nombre} {AÑO}: {n} "
+                f"convocatorias del BOE (ayuntamiento, comunidad y Estado). "
+                f"Plazas, requisitos y plazos, al día.")
+    return (f"Oposiciones y empleo público en {ccaa_nombre} {AÑO}: ayuntamiento, "
+            f"comunidad y Estado. Plazas, requisitos y plazos del BOE, al día.")
+
+
 def generar_html(ccaa_nombre, slug, convocatorias):
     n = len(convocatorias)
     # Sin convocatorias no hay contenido real que ofrecer — noindex evita el
     # riesgo de contenido fino (motivo del rechazo de AdSense del 24 jun 2026).
     # Se sigue generando el archivo (no se rompen enlaces desde otras páginas).
     robots = "index, follow" if n > 0 else "noindex, follow"
-    meta_desc = (f"Convocatorias de oposiciones en {ccaa_nombre} {AÑO} publicadas en el BOE. "
-                 f"{n} plazas de empleo público actualizadas diariamente por OpoNoticias.")
+    meta_desc = _meta_desc_ccaa(ccaa_nombre, n)
     canonical = f"https://oponoticias.com/ccaa/{slug}"
     cruces_html = links_cruces_categoria(slug)
     seccion_cruces = f"""
